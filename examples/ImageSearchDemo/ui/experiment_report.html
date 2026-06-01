@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>한국 판촉물 이미지 검색 실험 리포트</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7f9;
+      --panel: #ffffff;
+      --ink: #17212b;
+      --muted: #647282;
+      --line: #d9e1ea;
+      --teal: #0f766e;
+      --teal-dark: #115e59;
+      --amber: #b45309;
+      --blue: #1d4ed8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", Roboto, sans-serif;
+      line-height: 1.55;
+    }
+    header { background: #10212f; color: #fff; padding: 36px 28px 30px; }
+    .wrap { max-width: 1180px; margin: 0 auto; }
+    h1 { margin: 0 0 10px; font-size: clamp(28px, 4vw, 44px); letter-spacing: 0; }
+    h2 { margin: 0 0 14px; font-size: 24px; letter-spacing: 0; }
+    h3 { margin: 0 0 10px; font-size: 18px; letter-spacing: 0; }
+    p { margin: 0 0 12px; }
+    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .subtitle { color: #cbd5df; max-width: 900px; font-size: 16px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .pill { border: 1px solid rgba(255,255,255,.24); padding: 7px 10px; border-radius: 6px; color: #e6edf5; font-size: 13px; }
+    main { padding: 28px; }
+    section { margin: 0 auto 28px; max-width: 1180px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 20px; box-shadow: 0 1px 2px rgba(20,30,40,.04); }
+    .grid { display: grid; gap: 16px; }
+    .grid.kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+    .kpi strong { display: block; font-size: 24px; margin-top: 4px; }
+    .kpi span { color: var(--muted); font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 10px 9px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: #324152; background: #f2f5f8; font-weight: 700; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .callout { border-left: 4px solid var(--teal); background: #eef8f6; padding: 14px 16px; border-radius: 6px; }
+    .gallery { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .thumb { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; min-width: 0; }
+    .thumb img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; background: #eef2f6; }
+    .thumb div { padding: 8px; font-size: 12px; color: var(--muted); }
+    .thumb b { display: block; color: var(--ink); font-size: 12px; line-height: 1.35; margin-bottom: 3px; }
+    .results { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .product-card { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); min-width: 0; }
+    .product-card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: #eef2f6; }
+    .product-body { padding: 12px; }
+    .product-body h4 { margin: 4px 0 5px; font-size: 14px; line-height: 1.35; }
+    .product-body p { margin: 0 0 5px; color: var(--muted); font-size: 12px; }
+    .caption { min-height: 34px; }
+    .score { color: var(--teal-dark); font-weight: 700; font-size: 12px; }
+    .query-block { margin-top: 18px; }
+    .query-title { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin: 0 0 10px; }
+    .query-title code { background: #eef2f6; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font-size: 13px; }
+    .source-image { display: grid; grid-template-columns: 180px 1fr; gap: 16px; align-items: start; margin-bottom: 14px; }
+    .source-image img { width: 180px; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+    .note { color: var(--muted); font-size: 13px; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    @media (max-width: 900px) {
+      .grid.kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      header, main { padding-left: 16px; padding-right: 16px; }
+      .grid.kpis, .gallery, .results { grid-template-columns: 1fr; }
+      .source-image { grid-template-columns: 1fr; }
+      .source-image img { width: 100%; max-width: 260px; }
+      table { font-size: 12px; }
+      th, td { padding: 8px 6px; }
+    }
+    @media print {
+      @page { size: A4; margin: 12mm; }
+      html, body {
+        background: #fff;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      header {
+        padding: 18px 0 14px;
+        background: #10212f;
+      }
+      main {
+        padding: 12px 0 0;
+      }
+      section {
+        margin-bottom: 14px;
+        break-inside: avoid-page;
+        page-break-inside: avoid;
+      }
+      .panel, .kpi, .thumb, .product-card, .query-block, tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .panel {
+        padding: 14px;
+        box-shadow: none;
+      }
+      .grid.kpis {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .gallery {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .results {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .product-card img {
+        aspect-ratio: 5 / 3;
+      }
+      .product-body {
+        padding: 9px;
+      }
+      .source-image {
+        grid-template-columns: 120px 1fr;
+        gap: 12px;
+      }
+      .source-image img {
+        width: 120px;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 19px;
+      }
+      h3 {
+        font-size: 15px;
+      }
+      table {
+        font-size: 11px;
+      }
+      th, td {
+        padding: 6px 5px;
+      }
+      .note, .thumb div, .product-body p, .score {
+        font-size: 10px;
+      }
+      .product-body h4 {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>한국 판촉물 이미지 검색 실험 리포트</h1>
+      <p class="subtitle">한국 판촉물 사이트의 텍스트-이미지 상품검색과 이미지-이미지 상품검색을 위해 모델과 검색 구조를 비교했습니다. 최종 추천은 Qwen 2B 임베딩 + Marqo/Vespa + 텍스트/이미지 벡터 분리 구조입니다.</p>
+      <div class="meta">
+        <span class="pill">생성 시각: 2026-05-27 09:06:56 KST</span>
+        <span class="pill">데모 API: http://localhost:8110</span>
+        <span class="pill">데이터: gift.url.kr 상품 79개</span>
+      </div>
+    </div>
+  </header>
+  <main>
+    <section class="grid kpis">
+      <div class="kpi"><span>현재 인덱스</span><strong>qwen-promo-image-demo</strong></div>
+      <div class="kpi"><span>문서 / 벡터</span><strong>79 / 158</strong></div>
+      <div class="kpi"><span>채택 모델</span><strong>Qwen 2B</strong></div>
+      <div class="kpi"><span>이미지 검색 Exact@1</span><strong>1.0</strong></div>
+    </section>
+    <section class="panel">
+      <h2>결론</h2>
+      <div class="callout">
+        <p><b>최적 조합:</b> <code>Qwen/Qwen3-VL-Embedding-2B</code>로 텍스트 벡터와 이미지 벡터를 따로 만들고, Marqo structured index의 custom vector 필드 <code>qwen_text_vector</code>, <code>qwen_image_vector</code>에 각각 저장합니다.</p>
+        <p>한국어 텍스트 검색은 <code>qwen_text_vector</code>만 검색하고, 이미지-이미지 검색은 <code>qwen_image_vector</code>만 검색합니다. 혼합 벡터보다 이미지 자기유사도와 검색 의도가 안정적입니다.</p>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>모델 비교</h2>
+      <table>
+        <thead><tr><th>후보</th><th>모델</th><th>최고 텍스트 구조</th><th class="num">Text MRR</th><th class="num">Text R@1</th><th class="num">Text P@5</th><th>최고 이미지 구조</th><th class="num">Image Exact@1</th><th class="num">Image Self</th></tr></thead>
+        <tbody>
+            <tr>
+              <td><b>Qwen 2B</b></td>
+              <td>Qwen/Qwen3-VL-Embedding-2B</td>
+              <td>text_vector_only</td>
+              <td class="num">0.9231</td>
+              <td class="num">0.8462</td>
+              <td class="num">0.6769</td>
+              <td>image_vector_only</td>
+              <td class="num">1</td>
+              <td class="num">1.0006</td>
+            </tr>
+            
+
+            <tr>
+              <td><b>Qwen 8B</b></td>
+              <td>Qwen/Qwen3-VL-Embedding-8B</td>
+              <td>text_vector_only</td>
+              <td class="num">0.8846</td>
+              <td class="num">0.7692</td>
+              <td class="num">0.7231</td>
+              <td>image_vector_only</td>
+              <td class="num">1</td>
+              <td class="num">1.0024</td>
+            </tr>
+            
+
+            <tr>
+              <td><b>Jina CLIP v2</b></td>
+              <td>jinaai/jina-clip-v2</td>
+              <td>text_vector_only</td>
+              <td class="num">0.8462</td>
+              <td class="num">0.7692</td>
+              <td class="num">0.5846</td>
+              <td>image_vector_only</td>
+              <td class="num">1</td>
+              <td class="num">1</td>
+            </tr>
+            </tbody>
+      </table>
+      <p class="note">Qwen 8B는 공식 벤치마크상 더 큰 모델이지만, 이 79개 한국 판촉물 샘플에서는 Qwen 2B가 텍스트 MRR/R@1에서 더 좋았습니다. Jina CLIP v2도 이미지 검색은 가능하지만 한국어 텍스트 검색은 Qwen 2B보다 낮았습니다.</p>
+    </section>
+    <section class="panel">
+      <h2>Qwen 2B 구조 비교</h2>
+      <h3>텍스트 검색 구조</h3>
+      <table>
+        <thead><tr><th>구조</th><th class="num">MRR</th><th class="num">R@1</th><th class="num">R@5</th><th class="num">P@5</th></tr></thead>
+        <tbody>
+        <tr>
+          <td>text_vector_only</td>
+          <td class="num">0.9231</td>
+          <td class="num">0.8462</td>
+          <td class="num">1</td>
+          <td class="num">0.6769</td>
+        </tr>
+        
+
+        <tr>
+          <td>image_vector_cross_modal</td>
+          <td class="num">0.3768</td>
+          <td class="num">0.1538</td>
+          <td class="num">0.6923</td>
+          <td class="num">0.2308</td>
+        </tr>
+        
+
+        <tr>
+          <td>multimodal_text_image_vector</td>
+          <td class="num">0.8654</td>
+          <td class="num">0.7692</td>
+          <td class="num">1</td>
+          <td class="num">0.5538</td>
+        </tr>
+        
+
+        <tr>
+          <td>fused_text_0.75_image_0.25</td>
+          <td class="num">0.8462</td>
+          <td class="num">0.6923</td>
+          <td class="num">1</td>
+          <td class="num">0.6615</td>
+        </tr>
+        </tbody>
+      </table>
+      <h3 style="margin-top:22px">이미지 검색 구조</h3>
+      <table>
+        <thead><tr><th>구조</th><th class="num">Exact@1</th><th class="num">Self MRR</th><th class="num">Category R@5</th><th class="num">Mean Self</th><th class="num">Min Self</th></tr></thead>
+        <tbody>
+        <tr>
+          <td>image_vector_only</td>
+          <td class="num">1</td>
+          <td class="num">1</td>
+          <td class="num">1</td>
+          <td class="num">1.0006</td>
+          <td class="num">0.9961</td>
+        </tr>
+        
+
+        <tr>
+          <td>multimodal_text_image_vector</td>
+          <td class="num">1</td>
+          <td class="num">1</td>
+          <td class="num">1</td>
+          <td class="num">0.7027</td>
+          <td class="num">0.4983</td>
+        </tr>
+        
+
+        <tr>
+          <td>text_vector_only</td>
+          <td class="num">0.6203</td>
+          <td class="num">0.7314</td>
+          <td class="num">0.9747</td>
+          <td class="num">0.3193</td>
+          <td class="num">0.1708</td>
+        </tr>
+        </tbody>
+      </table>
+    </section>
+    <section class="panel">
+      <h2>카탈로그 샘플 이미지</h2>
+      <p class="note">실험에 사용한 한국 판촉물 이미지 일부입니다.</p>
+      <div class="grid gallery">
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2510874.webp" alt="eva 방수 수영가방" loading="lazy">
+          <div><b>eva 방수 수영가방</b>가정/생활용품</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2318524.webp" alt="70x76mm 노트형 포스트잇 먹1도인쇄" loading="lazy">
+          <div><b>70x76mm 노트형 포스트잇 먹1도인쇄</b>사무용잡화</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2013220.webp" alt="스텔라 컵 트로피 중" loading="lazy">
+          <div><b>스텔라 컵 트로피 중</b>트로피</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2206339.webp" alt="협립 3단완전자동 야옹이 암막우산" loading="lazy">
+          <div><b>협립 3단완전자동 야옹이 암막우산</b>우산/우의</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2209365.webp" alt="써모스 스트랩 원터치 텀블러 550ml" loading="lazy">
+          <div><b>써모스 스트랩 원터치 텀블러 550ml</b>컵제품</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/141569.webp" alt="가제 마린 스카프" loading="lazy">
+          <div><b>가제 마린 스카프</b>수건/손수건</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2409670.webp" alt="비코즈 휴대용 버클형 10K 3단 자동 거꾸로 양우산" loading="lazy">
+          <div><b>비코즈 휴대용 버클형 10K 3단 자동 거꾸로 양우산</b>우산/우의</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2514477.webp" alt="뉴 시에나 텀블러 600ml" loading="lazy">
+          <div><b>뉴 시에나 텀블러 600ml</b>컵제품</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2308912.webp" alt="워터프론트 100g 카본 라이트 자외선 차단 6K 3단 ..." loading="lazy">
+          <div><b>워터프론트 100g 카본 라이트 자외선 차단 6K 3단 ...</b>우산/우의</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2202559.webp" alt="제너럴명함지갑" loading="lazy">
+          <div><b>제너럴명함지갑</b>사무용품</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2605048.webp" alt="소량 500개 전용상품 원형 반달팬시자루 5종" loading="lazy">
+          <div><b>소량 500개 전용상품 원형 반달팬시자루 5종</b>가정/생활용품</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2307466.webp" alt="카르페디엠 55암막 3단완전자동양우산" loading="lazy">
+          <div><b>카르페디엠 55암막 3단완전자동양우산</b>우산/우의</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2408969.webp" alt="녹색나라 도톰촉촉 물티슈 100매" loading="lazy">
+          <div><b>녹색나라 도톰촉촉 물티슈 100매</b>티슈</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2602124.webp" alt="코팅부직포가방_대형_420X320X100" loading="lazy">
+          <div><b>코팅부직포가방_대형_420X320X100</b>가정/생활용품</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/153638.webp" alt="아망떼 에스프레소 화이트 잔 80ml 2.8온스" loading="lazy">
+          <div><b>아망떼 에스프레소 화이트 잔 80ml 2.8온스</b>컵제품</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2500245.webp" alt="컴팩트 자동 암막 8K 3단 우양산 UPF50" loading="lazy">
+          <div><b>컴팩트 자동 암막 8K 3단 우양산 UPF50</b>우산/우의</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2502615.webp" alt="금속 주문제작 트로피 상패 -2" loading="lazy">
+          <div><b>금속 주문제작 트로피 상패 -2</b>상패/휘장</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2518987.webp" alt="디자인 제작 휴대용 캔티슈" loading="lazy">
+          <div><b>디자인 제작 휴대용 캔티슈</b>티슈</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2515131.webp" alt="십이지지 부부 수저세트" loading="lazy">
+          <div><b>십이지지 부부 수저세트</b>주방기구</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2304542.webp" alt="TGIC 날이없는 넥밴드 선풍기 2,000mAh" loading="lazy">
+          <div><b>TGIC 날이없는 넥밴드 선풍기 2,000mAh</b>가정/생활용품</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2409667.webp" alt="송월 호텔 벨리나 40수 220g 2p 세트" loading="lazy">
+          <div><b>송월 호텔 벨리나 40수 220g 2p 세트</b>수건/손수건</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2207812.webp" alt="세인트나인 Q소프트 화이트 골프공 12구" loading="lazy">
+          <div><b>세인트나인 Q소프트 화이트 골프공 12구</b>골프용품</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/2306468.webp" alt="원형파도부채 190x190mm" loading="lazy">
+          <div><b>원형파도부채 190x190mm</b>가정/생활용품</div>
+        </article>
+        
+
+        <article class="thumb">
+          <img src="https://gift.url.kr/assets/images/products/1813209.webp" alt="제브라클립온슬림3C" loading="lazy">
+          <div><b>제브라클립온슬림3C</b>필기구</div>
+        </article>
+        </div>
+    </section>
+    <section class="panel">
+      <h2>실제 텍스트 검색 결과</h2>
+      <p class="note">현재 실행 중인 데모 API를 호출해 받은 결과입니다. 라우팅 필드는 모두 <code>qwen_text_vector</code>입니다.</p>
+      
+            <div class="query-block">
+              <div class="query-title">
+                <h3>검색어 <code>텀블러</code></h3>
+                <span class="note">field qwen_text_vector, 189.2 ms</span>
+              </div>
+              <div class="grid results">
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2207502.webp" alt="텀블리언 레이첼텀블러 550ml" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.7481</div>
+          <h4>텀블리언 레이첼텀블러 550ml</h4>
+          <p>컵제품</p>
+          <p class="caption">컵제품 텀블리언 레이첼텀블러 550ml</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2512416.webp" alt="제로마크 슬로링텀블러 350ml" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.738</div>
+          <h4>제로마크 슬로링텀블러 350ml</h4>
+          <p>컵제품</p>
+          <p class="caption">컵제품 제로마크 슬로링텀블러 350ml</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2209365.webp" alt="써모스 스트랩 원터치 텀블러 550ml" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.7282</div>
+          <h4>써모스 스트랩 원터치 텀블러 550ml</h4>
+          <p>컵제품</p>
+          <p class="caption">컵제품 써모스 스트랩 원터치 텀블러 550ml</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2107514.webp" alt="락앤락 그립텀블러 500ml" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.7175</div>
+          <h4>락앤락 그립텀블러 500ml</h4>
+          <p>컵제품</p>
+          <p class="caption">컵제품 락앤락 그립텀블러 500ml</p>
+        </div>
+      </article>
+    </div>
+            </div>
+            
+
+            <div class="query-block">
+              <div class="query-title">
+                <h3>검색어 <code>우산</code></h3>
+                <span class="note">field qwen_text_vector, 42.9 ms</span>
+              </div>
+              <div class="grid results">
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2504544.webp" alt="아가타 3단 팬던트 슬림암막 우양산 UV코팅" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.7827</div>
+          <h4>아가타 3단 팬던트 슬림암막 우양산 UV코팅</h4>
+          <p>우산/우의</p>
+          <p class="caption">우산/우의 아가타 3단 팬던트 슬림암막 우양산 UV코팅</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2500245.webp" alt="컴팩트 자동 암막 8K 3단 우양산 UPF50" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.767</div>
+          <h4>컴팩트 자동 암막 8K 3단 우양산 UPF50</h4>
+          <p>우산/우의</p>
+          <p class="caption">우산/우의 컴팩트 자동 암막 8K 3단 우양산 UPF50</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2504397.webp" alt="걸작 UV차단 6살대 초경량 5단포켓 암막코팅 양우산" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.7645</div>
+          <h4>걸작 UV차단 6살대 초경량 5단포켓 암막코팅 양우산</h4>
+          <p>우산/우의</p>
+          <p class="caption">우산/우의 걸작 UV차단 6살대 초경량 5단포켓 암막코팅 양우산</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2307466.webp" alt="카르페디엠 55암막 3단완전자동양우산" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.7568</div>
+          <h4>카르페디엠 55암막 3단완전자동양우산</h4>
+          <p>우산/우의</p>
+          <p class="caption">우산/우의 카르페디엠 55암막 3단완전자동양우산</p>
+        </div>
+      </article>
+    </div>
+            </div>
+            
+
+            <div class="query-block">
+              <div class="query-title">
+                <h3>검색어 <code>포스트잇</code></h3>
+                <span class="note">field qwen_text_vector, 42.9 ms</span>
+              </div>
+              <div class="grid results">
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2318524.webp" alt="70x76mm 노트형 포스트잇 먹1도인쇄" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.761</div>
+          <h4>70x76mm 노트형 포스트잇 먹1도인쇄</h4>
+          <p>사무용잡화</p>
+          <p class="caption">사무용잡화 70x76mm 노트형 포스트잇 먹1도인쇄</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/100446.webp" alt="종이 자석스티커 90x120mm" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.7284</div>
+          <h4>종이 자석스티커 90x120mm</h4>
+          <p>업소용품</p>
+          <p class="caption">업소용품 종이 자석스티커 90x120mm</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/184610.webp" alt="PP표찰" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.6975</div>
+          <h4>PP표찰</h4>
+          <p>사무용잡화</p>
+          <p class="caption">사무용잡화 PP표찰</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2601742.webp" alt="도무송 원형스티커 50x50mm" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.6897</div>
+          <h4>도무송 원형스티커 50x50mm</h4>
+          <p>현수막/스티커</p>
+          <p class="caption">현수막/스티커 도무송 원형스티커 50x50mm</p>
+        </div>
+      </article>
+    </div>
+            </div>
+            
+
+            <div class="query-block">
+              <div class="query-title">
+                <h3>검색어 <code>수건</code></h3>
+                <span class="note">field qwen_text_vector, 40.6 ms</span>
+              </div>
+              <div class="grid results">
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/141569.webp" alt="가제 마린 스카프" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.7722</div>
+          <h4>가제 마린 스카프</h4>
+          <p>수건/손수건</p>
+          <p class="caption">수건/손수건 가제 마린 스카프</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2602691.webp" alt="프리미엄 이중구조 텀블러 타올 선물세트" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.7582</div>
+          <h4>프리미엄 이중구조 텀블러 타올 선물세트</h4>
+          <p>수건/손수건</p>
+          <p class="caption">수건/손수건 프리미엄 이중구조 텀블러 타올 선물세트</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2409667.webp" alt="송월 호텔 벨리나 40수 220g 2p 세트" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.7573</div>
+          <h4>송월 호텔 벨리나 40수 220g 2p 세트</h4>
+          <p>수건/손수건</p>
+          <p class="caption">수건/손수건 송월 호텔 벨리나 40수 220g 2p 세트</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2500814.webp" alt="송월타올 컬러웨이 타올 180g" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.7491</div>
+          <h4>송월타올 컬러웨이 타올 180g</h4>
+          <p>수건/손수건</p>
+          <p class="caption">수건/손수건 송월타올 컬러웨이 타올 180g</p>
+        </div>
+      </article>
+    </div>
+            </div>
+            
+    </section>
+    <section class="panel">
+      <h2>실제 이미지-이미지 검색 결과</h2>
+      <p class="note">왼쪽 원본 이미지로 검색했을 때의 결과입니다. 라우팅 필드는 <code>qwen_image_vector</code>이고, 같은 이미지가 1위로 올라옵니다.</p>
+      
+            <div class="query-block">
+              <div class="source-image">
+                <img src="https://gift.url.kr/assets/images/products/2207502.webp" alt="query image">
+                <div>
+                  <h3>Query image: 텀블리언 레이첼텀블러 550ml</h3>
+                  <p class="note">field qwen_image_vector, 116.7 ms</p>
+                </div>
+              </div>
+              <div class="grid results">
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2207502.webp" alt="텀블리언 레이첼텀블러 550ml" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 1</div>
+          <h4>텀블리언 레이첼텀블러 550ml</h4>
+          <p>컵제품</p>
+          <p class="caption">컵제품 텀블리언 레이첼텀블러 550ml</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2514477.webp" alt="뉴 시에나 텀블러 600ml" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.6721</div>
+          <h4>뉴 시에나 텀블러 600ml</h4>
+          <p>컵제품</p>
+          <p class="caption">컵제품 시에나 텀블러 600ml</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2404521.webp" alt="파우더 핸들 이중진공텀블러 500ml" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.6556</div>
+          <h4>파우더 핸들 이중진공텀블러 500ml</h4>
+          <p>컵제품</p>
+          <p class="caption">컵제품 파우더 핸들 이중진공텀블러 500ml</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2209365.webp" alt="써모스 스트랩 원터치 텀블러 550ml" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.6426</div>
+          <h4>써모스 스트랩 원터치 텀블러 550ml</h4>
+          <p>컵제품</p>
+          <p class="caption">컵제품 써모스 스트랩 원터치 텀블러 550ml</p>
+        </div>
+      </article>
+    </div>
+            </div>
+            
+
+            <div class="query-block">
+              <div class="source-image">
+                <img src="https://gift.url.kr/assets/images/products/2504544.webp" alt="query image">
+                <div>
+                  <h3>Query image: 아가타 3단 팬던트 슬림암막 우양산 UV코팅</h3>
+                  <p class="note">field qwen_image_vector, 90.8 ms</p>
+                </div>
+              </div>
+              <div class="grid results">
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2504544.webp" alt="아가타 3단 팬던트 슬림암막 우양산 UV코팅" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.9956</div>
+          <h4>아가타 3단 팬던트 슬림암막 우양산 UV코팅</h4>
+          <p>우산/우의</p>
+          <p class="caption">우산/우의 아가타 3단 팬던트 슬림암막 우양산 UV코팅</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2307466.webp" alt="카르페디엠 55암막 3단완전자동양우산" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.6928</div>
+          <h4>카르페디엠 55암막 3단완전자동양우산</h4>
+          <p>우산/우의</p>
+          <p class="caption">우산/우의 카르페디엠 55암막 3단완전자동양우산</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2500245.webp" alt="컴팩트 자동 암막 8K 3단 우양산 UPF50" loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.6907</div>
+          <h4>컴팩트 자동 암막 8K 3단 우양산 UPF50</h4>
+          <p>우산/우의</p>
+          <p class="caption">우산/우의 컴팩트 자동 암막 8K 3단 우양산 UPF50</p>
+        </div>
+      </article>
+    
+
+      <article class="product-card">
+        <img src="https://gift.url.kr/assets/images/products/2308912.webp" alt="워터프론트 100g 카본 라이트 자외선 차단 6K 3단 ..." loading="lazy">
+        <div class="product-body">
+          <div class="score">score 0.6784</div>
+          <h4>워터프론트 100g 카본 라이트 자외선 차단 6K 3단 ...</h4>
+          <p>우산/우의</p>
+          <p class="caption">우산/우의 워터프론트 100g 카본 라이트 자외선 차단 6K 3단 ...</p>
+        </div>
+      </article>
+    </div>
+            </div>
+            
+    </section>
+    <section class="panel">
+      <h2>카테고리 분포</h2>
+      <table>
+        <thead><tr><th>카테고리</th><th class="num">상품 수</th></tr></thead>
+        <tbody><tr><td>가정/생활용품</td><td class="num">16</td></tr>
+<tr><td>우산/우의</td><td class="num">11</td></tr>
+<tr><td>컵제품</td><td class="num">10</td></tr>
+<tr><td>레저/운동용품</td><td class="num">4</td></tr>
+<tr><td>사무용잡화</td><td class="num">4</td></tr>
+<tr><td>수건/손수건</td><td class="num">4</td></tr>
+<tr><td>티슈</td><td class="num">4</td></tr>
+<tr><td>필기구</td><td class="num">4</td></tr>
+<tr><td>미용용품</td><td class="num">3</td></tr>
+<tr><td>사무용품</td><td class="num">3</td></tr></tbody>
+      </table>
+    </section>
+    <section class="panel">
+      <h2>파일 위치</h2>
+      <p>상세 원본 리포트: <code>examples/ImageSearchDemo/experiments/MODEL_DECISION.md</code></p>
+      <p>현재 HTML: <code>examples/ImageSearchDemo/ui/experiment_report.html</code></p>
+    </section>
+  </main>
+</body>
+</html>

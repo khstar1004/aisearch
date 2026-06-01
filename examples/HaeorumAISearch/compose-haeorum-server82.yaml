@@ -1,0 +1,34 @@
+name: haeorum-ai-search-marqo
+
+x-server82-runtime-env: &server82-runtime-env
+  HAEORUM_MALL_CONFIG_PATH: "${HAEORUM_MALL_CONFIG_PATH:-/etc/haeorum-ai-search/malls.json}"
+  HAEORUM_QUERY_SYNONYM_PATH: "${HAEORUM_QUERY_SYNONYM_PATH:-/etc/haeorum-ai-search/query-synonyms.json}"
+  HAEORUM_CORS_ORIGINS: "${HAEORUM_CORS_ORIGINS:-}"
+  HAEORUM_CORS_ORIGINS_FILE: "${HAEORUM_CORS_ORIGINS_FILE:-/etc/haeorum-ai-search/cors-origins.txt}"
+  HAEORUM_PRODUCT_CSV: "${HAEORUM_PRODUCT_CSV:-}"
+  HAEORUM_MSSQL_READONLY_CONNECTION_STRING: "${HAEORUM_MSSQL_READONLY_CONNECTION_STRING:-}"
+  HAEORUM_MSSQL_CONNECTION_STRING: "${HAEORUM_MSSQL_CONNECTION_STRING:-}"
+  HAEORUM_MSSQL_QUERY: "${HAEORUM_MSSQL_QUERY:-SELECT product_id, product_name, price, price_min, price_max, category_name, print_methods, materials, colors, min_order_qty, delivery_days, product_group_id, main_image_url, product_url, status, updated_at, is_deleted, display_yn, mall_id FROM dbo.v_ai_search_products}"
+  HAEORUM_MSSQL_PRODUCT_ID_COLUMN: "${HAEORUM_MSSQL_PRODUCT_ID_COLUMN:-product_id}"
+  HAEORUM_MSSQL_UPDATED_AT_COLUMN: "${HAEORUM_MSSQL_UPDATED_AT_COLUMN:-updated_at}"
+  HAEORUM_MSSQL_SYNC_FETCH_SIZE: "${HAEORUM_MSSQL_SYNC_FETCH_SIZE:-1000}"
+  HAEORUM_PRODUCT_URL_TEMPLATE: "${HAEORUM_PRODUCT_URL_TEMPLATE:-https://{mall_id}.haeorumgift.com/product_view.asp?p_idx={product_id}}"
+  HAEORUM_FILTER_BY_MALL_ID: "${HAEORUM_FILTER_BY_MALL_ID:-false}"
+
+x-server82-runtime-volumes: &server82-runtime-volumes
+  - /etc/haeorum-ai-search:/etc/haeorum-ai-search:ro
+  - /var/log/haeorum-ai-search:/app/logs
+
+services:
+  ai-search:
+    environment: *server82-runtime-env
+    volumes: *server82-runtime-volumes
+
+  reindex-once:
+    environment: *server82-runtime-env
+    volumes: *server82-runtime-volumes
+
+  sync-worker:
+    environment: *server82-runtime-env
+    volumes: *server82-runtime-volumes
+

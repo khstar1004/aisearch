@@ -1,0 +1,11 @@
+[project]
+name = "marqo-common"
+version = "0.1.0" # Version does not matter here as it is always released together with marqo
+description = "Marqo 컴포넌트가 공유하는 모델 레지스트리"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+
+[tool.hatch.build.targets.wheel]
+  packages = ["src/marqo_common"]

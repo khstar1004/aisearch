@@ -1,0 +1,2509 @@
+{
+  "model": "Qwen/Qwen3-VL-Embedding-2B",
+  "qwenUrl": "http://localhost:8111",
+  "document_count": 27,
+  "timingMs": {
+    "queryTextVectors": 713.1,
+    "docTextVectors": 77.3,
+    "docImageVectors": 34303.4,
+    "docMultimodalVectors": 33652.8,
+    "totalWall": 69232.1
+  },
+  "text_search": {
+    "text_vector_only": {
+      "mrr": 1.0,
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "precision@5": 0.4154,
+      "examples": [
+        {
+          "query": "로고 인쇄 볼펜",
+          "category": "pen",
+          "top5": [
+            {
+              "id": "pen-bic-set",
+              "category": "pen",
+              "title": "로고 인쇄용 볼펜 세트"
+            },
+            {
+              "id": "pen-green",
+              "category": "pen",
+              "title": "초록색 판촉용 볼펜"
+            },
+            {
+              "id": "pen-red",
+              "category": "pen",
+              "title": "빨간색 판촉용 볼펜"
+            },
+            {
+              "id": "tote-logo",
+              "category": "tote_bag",
+              "title": "로고 인쇄 에코백"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            }
+          ]
+        },
+        {
+          "query": "판촉용 머그컵",
+          "category": "mug",
+          "top5": [
+            {
+              "id": "mug-kfc",
+              "category": "mug",
+              "title": "판촉용 커피 머그컵"
+            },
+            {
+              "id": "mug-coffee",
+              "category": "mug",
+              "title": "커피숍 로고 머그컵"
+            },
+            {
+              "id": "bottle-festival",
+              "category": "bottle",
+              "title": "행사 기념품 물병"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            }
+          ]
+        },
+        {
+          "query": "텐블러 물병",
+          "category": "bottle",
+          "top5": [
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "bottle-festival",
+              "category": "bottle",
+              "title": "행사 기념품 물병"
+            },
+            {
+              "id": "tote-canvas",
+              "category": "tote_bag",
+              "title": "캔버스 토트백"
+            },
+            {
+              "id": "towel-paper",
+              "category": "towel",
+              "title": "페이퍼 타월 생활용품"
+            },
+            {
+              "id": "mug-kfc",
+              "category": "mug",
+              "title": "판촉용 커피 머그컵"
+            }
+          ]
+        },
+        {
+          "query": "접이식 우산 판촉물",
+          "category": "umbrella",
+          "top5": [
+            {
+              "id": "umbrella-folding",
+              "category": "umbrella",
+              "title": "접이식 우산 판촉물"
+            },
+            {
+              "id": "umbrella-cocktail",
+              "category": "umbrella",
+              "title": "작은 우산 디자인 소품"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "sticky-notes",
+              "category": "sticky_notes",
+              "title": "포스트잇 메모지 판촉물"
+            }
+          ]
+        },
+        {
+          "query": "에코백 캔버스 가방",
+          "category": "tote_bag",
+          "top5": [
+            {
+              "id": "tote-logo",
+              "category": "tote_bag",
+              "title": "로고 인쇄 에코백"
+            },
+            {
+              "id": "tote-canvas",
+              "category": "tote_bag",
+              "title": "캔버스 토트백"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "umbrella-cocktail",
+              "category": "umbrella",
+              "title": "작은 우산 디자인 소품"
+            }
+          ]
+        },
+        {
+          "query": "USB 메모리",
+          "category": "usb",
+          "top5": [
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "sticky-notes",
+              "category": "sticky_notes",
+              "title": "포스트잇 메모지 판촉물"
+            },
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            }
+          ]
+        },
+        {
+          "query": "수건 타월 답례품",
+          "category": "towel",
+          "top5": [
+            {
+              "id": "towel-roll",
+              "category": "towel",
+              "title": "호텔식 타월 답례품"
+            },
+            {
+              "id": "towel-paper",
+              "category": "towel",
+              "title": "페이퍼 타월 생활용품"
+            },
+            {
+              "id": "bottle-festival",
+              "category": "bottle",
+              "title": "행사 기념품 물병"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            }
+          ]
+        },
+        {
+          "query": "노트 다이어리",
+          "category": "notebook",
+          "top5": [
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "calendar-wp20",
+              "category": "calendar",
+              "title": "행사 기념 캘린더"
+            },
+            {
+              "id": "sticky-notes",
+              "category": "sticky_notes",
+              "title": "포스트잇 메모지 판촉물"
+            }
+          ]
+        },
+        {
+          "query": "목걸이 명찰 랜야드",
+          "category": "lanyard",
+          "top5": [
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "lanyard-wiki",
+              "category": "lanyard",
+              "title": "행사용 로고 랜야드"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "keychain-pink",
+              "category": "keychain",
+              "title": "키링 열쇠고리 소품"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "열쇠고리 키링",
+          "category": "keychain",
+          "top5": [
+            {
+              "id": "keychain-pink",
+              "category": "keychain",
+              "title": "키링 열쇠고리 소품"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "lanyard-wiki",
+              "category": "lanyard",
+              "title": "행사용 로고 랜야드"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "탁상 달력",
+          "category": "calendar",
+          "top5": [
+            {
+              "id": "calendar-1952",
+              "category": "calendar",
+              "title": "탁상 달력 판촉물"
+            },
+            {
+              "id": "calendar-wp20",
+              "category": "calendar",
+              "title": "행사 기념 캘린더"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "towel-paper",
+              "category": "towel",
+              "title": "페이퍼 타월 생활용품"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            }
+          ]
+        },
+        {
+          "query": "마우스패드",
+          "category": "mousepad",
+          "top5": [
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "mug-kfc",
+              "category": "mug",
+              "title": "판촉용 커피 머그컵"
+            }
+          ]
+        },
+        {
+          "query": "포스트잇 메모지",
+          "category": "sticky_notes",
+          "top5": [
+            {
+              "id": "sticky-notes",
+              "category": "sticky_notes",
+              "title": "포스트잇 메모지 판촉물"
+            },
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            }
+          ]
+        }
+      ]
+    },
+    "image_vector_cross_modal": {
+      "mrr": 0.722,
+      "recall@1": 0.6154,
+      "recall@3": 0.7692,
+      "recall@5": 0.8462,
+      "precision@5": 0.2462,
+      "examples": [
+        {
+          "query": "로고 인쇄 볼펜",
+          "category": "pen",
+          "top5": [
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "판촉용 머그컵",
+          "category": "mug",
+          "top5": [
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "calendar-wp20",
+              "category": "calendar",
+              "title": "행사 기념 캘린더"
+            },
+            {
+              "id": "mug-kfc",
+              "category": "mug",
+              "title": "판촉용 커피 머그컵"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            }
+          ]
+        },
+        {
+          "query": "텐블러 물병",
+          "category": "bottle",
+          "top5": [
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "bottle-festival",
+              "category": "bottle",
+              "title": "행사 기념품 물병"
+            },
+            {
+              "id": "towel-paper",
+              "category": "towel",
+              "title": "페이퍼 타월 생활용품"
+            },
+            {
+              "id": "calendar-wp20",
+              "category": "calendar",
+              "title": "행사 기념 캘린더"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            }
+          ]
+        },
+        {
+          "query": "접이식 우산 판촉물",
+          "category": "umbrella",
+          "top5": [
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "umbrella-folding",
+              "category": "umbrella",
+              "title": "접이식 우산 판촉물"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            }
+          ]
+        },
+        {
+          "query": "에코백 캔버스 가방",
+          "category": "tote_bag",
+          "top5": [
+            {
+              "id": "tote-canvas",
+              "category": "tote_bag",
+              "title": "캔버스 토트백"
+            },
+            {
+              "id": "keychain-pink",
+              "category": "keychain",
+              "title": "키링 열쇠고리 소품"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            }
+          ]
+        },
+        {
+          "query": "USB 메모리",
+          "category": "usb",
+          "top5": [
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "tote-logo",
+              "category": "tote_bag",
+              "title": "로고 인쇄 에코백"
+            }
+          ]
+        },
+        {
+          "query": "수건 타월 답례품",
+          "category": "towel",
+          "top5": [
+            {
+              "id": "towel-roll",
+              "category": "towel",
+              "title": "호텔식 타월 답례품"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            }
+          ]
+        },
+        {
+          "query": "노트 다이어리",
+          "category": "notebook",
+          "top5": [
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            }
+          ]
+        },
+        {
+          "query": "목걸이 명찰 랜야드",
+          "category": "lanyard",
+          "top5": [
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "lanyard-wiki",
+              "category": "lanyard",
+              "title": "행사용 로고 랜야드"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "열쇠고리 키링",
+          "category": "keychain",
+          "top5": [
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "lanyard-wiki",
+              "category": "lanyard",
+              "title": "행사용 로고 랜야드"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "탁상 달력",
+          "category": "calendar",
+          "top5": [
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            }
+          ]
+        },
+        {
+          "query": "마우스패드",
+          "category": "mousepad",
+          "top5": [
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "포스트잇 메모지",
+          "category": "sticky_notes",
+          "top5": [
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            }
+          ]
+        }
+      ]
+    },
+    "multimodal_text_image_vector": {
+      "mrr": 1.0,
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "precision@5": 0.4,
+      "examples": [
+        {
+          "query": "로고 인쇄 볼펜",
+          "category": "pen",
+          "top5": [
+            {
+              "id": "pen-bic-set",
+              "category": "pen",
+              "title": "로고 인쇄용 볼펜 세트"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "pen-green",
+              "category": "pen",
+              "title": "초록색 판촉용 볼펜"
+            },
+            {
+              "id": "tote-logo",
+              "category": "tote_bag",
+              "title": "로고 인쇄 에코백"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            }
+          ]
+        },
+        {
+          "query": "판촉용 머그컵",
+          "category": "mug",
+          "top5": [
+            {
+              "id": "mug-kfc",
+              "category": "mug",
+              "title": "판촉용 커피 머그컵"
+            },
+            {
+              "id": "mug-coffee",
+              "category": "mug",
+              "title": "커피숍 로고 머그컵"
+            },
+            {
+              "id": "calendar-wp20",
+              "category": "calendar",
+              "title": "행사 기념 캘린더"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "umbrella-folding",
+              "category": "umbrella",
+              "title": "접이식 우산 판촉물"
+            }
+          ]
+        },
+        {
+          "query": "텐블러 물병",
+          "category": "bottle",
+          "top5": [
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "bottle-festival",
+              "category": "bottle",
+              "title": "행사 기념품 물병"
+            },
+            {
+              "id": "towel-paper",
+              "category": "towel",
+              "title": "페이퍼 타월 생활용품"
+            },
+            {
+              "id": "mug-coffee",
+              "category": "mug",
+              "title": "커피숍 로고 머그컵"
+            },
+            {
+              "id": "towel-roll",
+              "category": "towel",
+              "title": "호텔식 타월 답례품"
+            }
+          ]
+        },
+        {
+          "query": "접이식 우산 판촉물",
+          "category": "umbrella",
+          "top5": [
+            {
+              "id": "umbrella-folding",
+              "category": "umbrella",
+              "title": "접이식 우산 판촉물"
+            },
+            {
+              "id": "umbrella-cocktail",
+              "category": "umbrella",
+              "title": "작은 우산 디자인 소품"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "pen-green",
+              "category": "pen",
+              "title": "초록색 판촉용 볼펜"
+            }
+          ]
+        },
+        {
+          "query": "에코백 캔버스 가방",
+          "category": "tote_bag",
+          "top5": [
+            {
+              "id": "tote-logo",
+              "category": "tote_bag",
+              "title": "로고 인쇄 에코백"
+            },
+            {
+              "id": "tote-canvas",
+              "category": "tote_bag",
+              "title": "캔버스 토트백"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "pen-green",
+              "category": "pen",
+              "title": "초록색 판촉용 볼펜"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            }
+          ]
+        },
+        {
+          "query": "USB 메모리",
+          "category": "usb",
+          "top5": [
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "umbrella-folding",
+              "category": "umbrella",
+              "title": "접이식 우산 판촉물"
+            },
+            {
+              "id": "keychain-pink",
+              "category": "keychain",
+              "title": "키링 열쇠고리 소품"
+            }
+          ]
+        },
+        {
+          "query": "수건 타월 답례품",
+          "category": "towel",
+          "top5": [
+            {
+              "id": "towel-roll",
+              "category": "towel",
+              "title": "호텔식 타월 답례품"
+            },
+            {
+              "id": "towel-paper",
+              "category": "towel",
+              "title": "페이퍼 타월 생활용품"
+            },
+            {
+              "id": "calendar-1952",
+              "category": "calendar",
+              "title": "탁상 달력 판촉물"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "노트 다이어리",
+          "category": "notebook",
+          "top5": [
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "calendar-wp20",
+              "category": "calendar",
+              "title": "행사 기념 캘린더"
+            },
+            {
+              "id": "calendar-1952",
+              "category": "calendar",
+              "title": "탁상 달력 판촉물"
+            },
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            }
+          ]
+        },
+        {
+          "query": "목걸이 명찰 랜야드",
+          "category": "lanyard",
+          "top5": [
+            {
+              "id": "lanyard-wiki",
+              "category": "lanyard",
+              "title": "행사용 로고 랜야드"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "keychain-pink",
+              "category": "keychain",
+              "title": "키링 열쇠고리 소품"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "열쇠고리 키링",
+          "category": "keychain",
+          "top5": [
+            {
+              "id": "keychain-pink",
+              "category": "keychain",
+              "title": "키링 열쇠고리 소품"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "lanyard-wiki",
+              "category": "lanyard",
+              "title": "행사용 로고 랜야드"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "mug-coffee",
+              "category": "mug",
+              "title": "커피숍 로고 머그컵"
+            }
+          ]
+        },
+        {
+          "query": "탁상 달력",
+          "category": "calendar",
+          "top5": [
+            {
+              "id": "calendar-1952",
+              "category": "calendar",
+              "title": "탁상 달력 판촉물"
+            },
+            {
+              "id": "calendar-wp20",
+              "category": "calendar",
+              "title": "행사 기념 캘린더"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "towel-paper",
+              "category": "towel",
+              "title": "페이퍼 타월 생활용품"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            }
+          ]
+        },
+        {
+          "query": "마우스패드",
+          "category": "mousepad",
+          "top5": [
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "mug-kfc",
+              "category": "mug",
+              "title": "판촉용 커피 머그컵"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "포스트잇 메모지",
+          "category": "sticky_notes",
+          "top5": [
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "sticky-notes",
+              "category": "sticky_notes",
+              "title": "포스트잇 메모지 판촉물"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            }
+          ]
+        }
+      ]
+    },
+    "fused_text_0.25_image_0.75": {
+      "mrr": 0.8667,
+      "recall@1": 0.8462,
+      "recall@3": 0.8462,
+      "recall@5": 0.8462,
+      "precision@5": 0.3077,
+      "examples": [
+        {
+          "query": "로고 인쇄 볼펜",
+          "category": "pen",
+          "top5": [
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            }
+          ]
+        },
+        {
+          "query": "판촉용 머그컵",
+          "category": "mug",
+          "top5": [
+            {
+              "id": "mug-kfc",
+              "category": "mug",
+              "title": "판촉용 커피 머그컵"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "calendar-wp20",
+              "category": "calendar",
+              "title": "행사 기념 캘린더"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            }
+          ]
+        },
+        {
+          "query": "텐블러 물병",
+          "category": "bottle",
+          "top5": [
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "bottle-festival",
+              "category": "bottle",
+              "title": "행사 기념품 물병"
+            },
+            {
+              "id": "towel-paper",
+              "category": "towel",
+              "title": "페이퍼 타월 생활용품"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "towel-roll",
+              "category": "towel",
+              "title": "호텔식 타월 답례품"
+            }
+          ]
+        },
+        {
+          "query": "접이식 우산 판촉물",
+          "category": "umbrella",
+          "top5": [
+            {
+              "id": "umbrella-folding",
+              "category": "umbrella",
+              "title": "접이식 우산 판촉물"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "umbrella-cocktail",
+              "category": "umbrella",
+              "title": "작은 우산 디자인 소품"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "에코백 캔버스 가방",
+          "category": "tote_bag",
+          "top5": [
+            {
+              "id": "tote-canvas",
+              "category": "tote_bag",
+              "title": "캔버스 토트백"
+            },
+            {
+              "id": "tote-logo",
+              "category": "tote_bag",
+              "title": "로고 인쇄 에코백"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            }
+          ]
+        },
+        {
+          "query": "USB 메모리",
+          "category": "usb",
+          "top5": [
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            }
+          ]
+        },
+        {
+          "query": "수건 타월 답례품",
+          "category": "towel",
+          "top5": [
+            {
+              "id": "towel-roll",
+              "category": "towel",
+              "title": "호텔식 타월 답례품"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            }
+          ]
+        },
+        {
+          "query": "노트 다이어리",
+          "category": "notebook",
+          "top5": [
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            }
+          ]
+        },
+        {
+          "query": "목걸이 명찰 랜야드",
+          "category": "lanyard",
+          "top5": [
+            {
+              "id": "lanyard-wiki",
+              "category": "lanyard",
+              "title": "행사용 로고 랜야드"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            }
+          ]
+        },
+        {
+          "query": "열쇠고리 키링",
+          "category": "keychain",
+          "top5": [
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "lanyard-wiki",
+              "category": "lanyard",
+              "title": "행사용 로고 랜야드"
+            },
+            {
+              "id": "keychain-pink",
+              "category": "keychain",
+              "title": "키링 열쇠고리 소품"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "탁상 달력",
+          "category": "calendar",
+          "top5": [
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "마우스패드",
+          "category": "mousepad",
+          "top5": [
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            }
+          ]
+        },
+        {
+          "query": "포스트잇 메모지",
+          "category": "sticky_notes",
+          "top5": [
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "sticky-notes",
+              "category": "sticky_notes",
+              "title": "포스트잇 메모지 판촉물"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            }
+          ]
+        }
+      ]
+    },
+    "fused_text_0.50_image_0.50": {
+      "mrr": 1.0,
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "precision@5": 0.3846,
+      "examples": [
+        {
+          "query": "로고 인쇄 볼펜",
+          "category": "pen",
+          "top5": [
+            {
+              "id": "pen-bic-set",
+              "category": "pen",
+              "title": "로고 인쇄용 볼펜 세트"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "pen-red",
+              "category": "pen",
+              "title": "빨간색 판촉용 볼펜"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "pen-green",
+              "category": "pen",
+              "title": "초록색 판촉용 볼펜"
+            }
+          ]
+        },
+        {
+          "query": "판촉용 머그컵",
+          "category": "mug",
+          "top5": [
+            {
+              "id": "mug-kfc",
+              "category": "mug",
+              "title": "판촉용 커피 머그컵"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "calendar-wp20",
+              "category": "calendar",
+              "title": "행사 기념 캘린더"
+            },
+            {
+              "id": "bottle-festival",
+              "category": "bottle",
+              "title": "행사 기념품 물병"
+            }
+          ]
+        },
+        {
+          "query": "텐블러 물병",
+          "category": "bottle",
+          "top5": [
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "bottle-festival",
+              "category": "bottle",
+              "title": "행사 기념품 물병"
+            },
+            {
+              "id": "towel-paper",
+              "category": "towel",
+              "title": "페이퍼 타월 생활용품"
+            },
+            {
+              "id": "towel-roll",
+              "category": "towel",
+              "title": "호텔식 타월 답례품"
+            },
+            {
+              "id": "mug-kfc",
+              "category": "mug",
+              "title": "판촉용 커피 머그컵"
+            }
+          ]
+        },
+        {
+          "query": "접이식 우산 판촉물",
+          "category": "umbrella",
+          "top5": [
+            {
+              "id": "umbrella-folding",
+              "category": "umbrella",
+              "title": "접이식 우산 판촉물"
+            },
+            {
+              "id": "umbrella-cocktail",
+              "category": "umbrella",
+              "title": "작은 우산 디자인 소품"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "에코백 캔버스 가방",
+          "category": "tote_bag",
+          "top5": [
+            {
+              "id": "tote-canvas",
+              "category": "tote_bag",
+              "title": "캔버스 토트백"
+            },
+            {
+              "id": "tote-logo",
+              "category": "tote_bag",
+              "title": "로고 인쇄 에코백"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "pen-green",
+              "category": "pen",
+              "title": "초록색 판촉용 볼펜"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            }
+          ]
+        },
+        {
+          "query": "USB 메모리",
+          "category": "usb",
+          "top5": [
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "sticky-notes",
+              "category": "sticky_notes",
+              "title": "포스트잇 메모지 판촉물"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            }
+          ]
+        },
+        {
+          "query": "수건 타월 답례품",
+          "category": "towel",
+          "top5": [
+            {
+              "id": "towel-roll",
+              "category": "towel",
+              "title": "호텔식 타월 답례품"
+            },
+            {
+              "id": "towel-paper",
+              "category": "towel",
+              "title": "페이퍼 타월 생활용품"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            }
+          ]
+        },
+        {
+          "query": "노트 다이어리",
+          "category": "notebook",
+          "top5": [
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "sticky-notes",
+              "category": "sticky_notes",
+              "title": "포스트잇 메모지 판촉물"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "목걸이 명찰 랜야드",
+          "category": "lanyard",
+          "top5": [
+            {
+              "id": "lanyard-wiki",
+              "category": "lanyard",
+              "title": "행사용 로고 랜야드"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "keychain-pink",
+              "category": "keychain",
+              "title": "키링 열쇠고리 소품"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "열쇠고리 키링",
+          "category": "keychain",
+          "top5": [
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "keychain-pink",
+              "category": "keychain",
+              "title": "키링 열쇠고리 소품"
+            },
+            {
+              "id": "lanyard-wiki",
+              "category": "lanyard",
+              "title": "행사용 로고 랜야드"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "탁상 달력",
+          "category": "calendar",
+          "top5": [
+            {
+              "id": "calendar-1952",
+              "category": "calendar",
+              "title": "탁상 달력 판촉물"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            }
+          ]
+        },
+        {
+          "query": "마우스패드",
+          "category": "mousepad",
+          "top5": [
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            }
+          ]
+        },
+        {
+          "query": "포스트잇 메모지",
+          "category": "sticky_notes",
+          "top5": [
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "sticky-notes",
+              "category": "sticky_notes",
+              "title": "포스트잇 메모지 판촉물"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            }
+          ]
+        }
+      ]
+    },
+    "fused_text_0.75_image_0.25": {
+      "mrr": 1.0,
+      "recall@1": 1.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "precision@5": 0.4154,
+      "examples": [
+        {
+          "query": "로고 인쇄 볼펜",
+          "category": "pen",
+          "top5": [
+            {
+              "id": "pen-bic-set",
+              "category": "pen",
+              "title": "로고 인쇄용 볼펜 세트"
+            },
+            {
+              "id": "pen-green",
+              "category": "pen",
+              "title": "초록색 판촉용 볼펜"
+            },
+            {
+              "id": "pen-red",
+              "category": "pen",
+              "title": "빨간색 판촉용 볼펜"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            }
+          ]
+        },
+        {
+          "query": "판촉용 머그컵",
+          "category": "mug",
+          "top5": [
+            {
+              "id": "mug-kfc",
+              "category": "mug",
+              "title": "판촉용 커피 머그컵"
+            },
+            {
+              "id": "mug-coffee",
+              "category": "mug",
+              "title": "커피숍 로고 머그컵"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "bottle-festival",
+              "category": "bottle",
+              "title": "행사 기념품 물병"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            }
+          ]
+        },
+        {
+          "query": "텐블러 물병",
+          "category": "bottle",
+          "top5": [
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "bottle-festival",
+              "category": "bottle",
+              "title": "행사 기념품 물병"
+            },
+            {
+              "id": "towel-paper",
+              "category": "towel",
+              "title": "페이퍼 타월 생활용품"
+            },
+            {
+              "id": "tote-canvas",
+              "category": "tote_bag",
+              "title": "캔버스 토트백"
+            },
+            {
+              "id": "mug-kfc",
+              "category": "mug",
+              "title": "판촉용 커피 머그컵"
+            }
+          ]
+        },
+        {
+          "query": "접이식 우산 판촉물",
+          "category": "umbrella",
+          "top5": [
+            {
+              "id": "umbrella-folding",
+              "category": "umbrella",
+              "title": "접이식 우산 판촉물"
+            },
+            {
+              "id": "umbrella-cocktail",
+              "category": "umbrella",
+              "title": "작은 우산 디자인 소품"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            }
+          ]
+        },
+        {
+          "query": "에코백 캔버스 가방",
+          "category": "tote_bag",
+          "top5": [
+            {
+              "id": "tote-canvas",
+              "category": "tote_bag",
+              "title": "캔버스 토트백"
+            },
+            {
+              "id": "tote-logo",
+              "category": "tote_bag",
+              "title": "로고 인쇄 에코백"
+            },
+            {
+              "id": "bottle-job",
+              "category": "bottle",
+              "title": "로고 인쇄 텐블러 물병"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "pen-green",
+              "category": "pen",
+              "title": "초록색 판촉용 볼펜"
+            }
+          ]
+        },
+        {
+          "query": "USB 메모리",
+          "category": "usb",
+          "top5": [
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "sticky-notes",
+              "category": "sticky_notes",
+              "title": "포스트잇 메모지 판촉물"
+            },
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            }
+          ]
+        },
+        {
+          "query": "수건 타월 답례품",
+          "category": "towel",
+          "top5": [
+            {
+              "id": "towel-roll",
+              "category": "towel",
+              "title": "호텔식 타월 답례품"
+            },
+            {
+              "id": "towel-paper",
+              "category": "towel",
+              "title": "페이퍼 타월 생활용품"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "bottle-festival",
+              "category": "bottle",
+              "title": "행사 기념품 물병"
+            }
+          ]
+        },
+        {
+          "query": "노트 다이어리",
+          "category": "notebook",
+          "top5": [
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "sticky-notes",
+              "category": "sticky_notes",
+              "title": "포스트잇 메모지 판촉물"
+            },
+            {
+              "id": "calendar-wp20",
+              "category": "calendar",
+              "title": "행사 기념 캘린더"
+            }
+          ]
+        },
+        {
+          "query": "목걸이 명찰 랜야드",
+          "category": "lanyard",
+          "top5": [
+            {
+              "id": "lanyard-wiki",
+              "category": "lanyard",
+              "title": "행사용 로고 랜야드"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "keychain-pink",
+              "category": "keychain",
+              "title": "키링 열쇠고리 소품"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "열쇠고리 키링",
+          "category": "keychain",
+          "top5": [
+            {
+              "id": "keychain-car",
+              "category": "keychain",
+              "title": "기업 홍보용 메탈 키홀더"
+            },
+            {
+              "id": "keychain-pink",
+              "category": "keychain",
+              "title": "키링 열쇠고리 소품"
+            },
+            {
+              "id": "lanyard-wiki",
+              "category": "lanyard",
+              "title": "행사용 로고 랜야드"
+            },
+            {
+              "id": "lanyard-linuxday",
+              "category": "lanyard",
+              "title": "컨퍼런스 랜야드"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            }
+          ]
+        },
+        {
+          "query": "탁상 달력",
+          "category": "calendar",
+          "top5": [
+            {
+              "id": "calendar-1952",
+              "category": "calendar",
+              "title": "탁상 달력 판촉물"
+            },
+            {
+              "id": "calendar-wp20",
+              "category": "calendar",
+              "title": "행사 기념 캘린더"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            }
+          ]
+        },
+        {
+          "query": "마우스패드",
+          "category": "mousepad",
+          "top5": [
+            {
+              "id": "mousepad-wikipedia",
+              "category": "mousepad",
+              "title": "기업 로고 마우스패드"
+            },
+            {
+              "id": "mousepad-samsung",
+              "category": "mousepad",
+              "title": "로고 인쇄 마우스패드"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            },
+            {
+              "id": "usb-card-reader",
+              "category": "usb",
+              "title": "기업 홍보용 USB 메모리"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            }
+          ]
+        },
+        {
+          "query": "포스트잇 메모지",
+          "category": "sticky_notes",
+          "top5": [
+            {
+              "id": "sticky-postit-board",
+              "category": "sticky_notes",
+              "title": "사무실 점착 메모지"
+            },
+            {
+              "id": "sticky-notes",
+              "category": "sticky_notes",
+              "title": "포스트잇 메모지 판촉물"
+            },
+            {
+              "id": "notebook-composition",
+              "category": "notebook",
+              "title": "판촉용 노트 다이어리"
+            },
+            {
+              "id": "notebook-campus",
+              "category": "notebook",
+              "title": "캠퍼스 노트 문구 판촉물"
+            },
+            {
+              "id": "usb-industrial",
+              "category": "usb",
+              "title": "로고 인쇄 USB 메모리"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "image_search": {
+    "image_vector_only": {
+      "exact@1": 1.0,
+      "self_mrr": 1.0,
+      "category_recall@5": 1.0,
+      "mean_self_score": 1.0014,
+      "min_self_score": 0.9962
+    },
+    "multimodal_text_image_vector": {
+      "exact@1": 1.0,
+      "self_mrr": 1.0,
+      "category_recall@5": 1.0,
+      "mean_self_score": 0.6067,
+      "min_self_score": 0.296
+    },
+    "text_vector_only": {
+      "exact@1": 0.3333,
+      "self_mrr": 0.5108,
+      "category_recall@5": 0.8148,
+      "mean_self_score": 0.2723,
+      "min_self_score": 0.0905
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "malls": [
+    {
+      "mall_id": "shop001",
+      "api_key": "public-shop001-dev-key",
+      "product_url_template": "https://shop001.haeorumgift.com/product_view.asp?p_idx={product_id}",
+      "allowed_origins": [
+        "https://shop001.haeorumgift.com",
+        "http://127.0.0.1:3000",
+        "http://localhost:3000"
+      ],
+      "enabled": true
+    },
+    {
+      "mall_id": "shop002",
+      "api_key": "public-shop002-dev-key",
+      "product_url_template": "https://shop002.haeorumgift.com/product_view.asp?p_idx={product_id}",
+      "allowed_origins": ["https://shop002.haeorumgift.com"],
+      "enabled": true,
+      "excluded_product_ids": ["P017"],
+      "excluded_categories": ["상패"],
+      "hide_prices": false,
+      "price_multiplier": 1.0,
+      "price_adjustment": 0,
+      "price_round_to": 10
+    }
+  ]
+}

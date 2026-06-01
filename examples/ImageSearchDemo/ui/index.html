@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Marqo Image Search Demo</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --text: #18212f;
+      --muted: #647083;
+      --line: #d7dde6;
+      --accent: #0f766e;
+      --accent-2: #2563eb;
+      --danger: #b42318;
+      --ok: #15803d;
+      --shadow: 0 12px 28px rgba(24, 33, 47, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button, input { font: inherit; letter-spacing: 0; }
+
+    button {
+      min-height: 38px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      padding: 0 14px;
+      font-weight: 720;
+      cursor: pointer;
+    }
+
+    button:hover { filter: brightness(0.94); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    button.secondary {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    button.blue { background: var(--accent-2); }
+
+    a.link-button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      padding: 0 14px;
+      font-size: 13px;
+      font-weight: 720;
+      text-decoration: none;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      min-height: 38px;
+      padding: 8px 10px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: #111827;
+      color: #fff;
+      padding: 16px 22px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 18px; line-height: 1.2; }
+    header p { color: #cbd5e1; font-size: 13px; margin-top: 3px; }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #e2e8f0;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+
+    .dot.ok { background: #22c55e; }
+    .dot.err { background: #ef4444; }
+
+    main {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 370px minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .section {
+      padding: 15px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .section + .section { border-top: 1px solid var(--line); }
+
+    .section h2 {
+      font-size: 13px;
+      text-transform: uppercase;
+      color: #334155;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .field { display: grid; gap: 5px; }
+    label { font-size: 12px; color: var(--muted); font-weight: 680; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 680;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 20px;
+      line-height: 1.1;
+    }
+
+    .work {
+      display: grid;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .search {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 105px 112px;
+      gap: 10px;
+      padding: 14px;
+    }
+
+    .image-search {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 126px;
+      gap: 10px;
+      padding: 0 14px 14px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      min-height: 30px;
+      padding: 0 10px;
+      background: #eef2ff;
+      color: #1e3a8a;
+      border: 1px solid #c7d2fe;
+      font-size: 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      display: grid;
+      min-width: 0;
+    }
+
+    .thumb {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      background: #e5e7eb;
+      display: block;
+    }
+
+    .card-body {
+      padding: 11px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .card h3 {
+      font-size: 14px;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .score {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .bar {
+      height: 7px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .bar > i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    }
+
+    pre {
+      margin: 0;
+      max-height: 300px;
+      overflow: auto;
+      background: #0f172a;
+      color: #dbeafe;
+      border-radius: 8px;
+      padding: 11px;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; padding: 12px; }
+      header { align-items: flex-start; flex-direction: column; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .search, .image-search { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Marqo Image Search Demo</h1>
+      <p>Qwen3-VL split text/image embeddings over Marqo/Vespa</p>
+    </div>
+    <div class="status"><span id="dot" class="dot"></span><span id="healthText">Checking</span></div>
+  </header>
+
+  <main>
+    <aside class="panel">
+      <section class="section">
+        <h2>Dataset</h2>
+        <div class="actions">
+          <button id="crawlBtn">Load 100 Products</button>
+          <button id="setupBtn" class="blue">Vectorize</button>
+        </div>
+        <div class="metrics">
+          <div class="metric"><span>Crawled</span><strong id="mDocs">0</strong></div>
+          <div class="metric"><span>Indexed</span><strong id="mIndexed">0</strong></div>
+          <div class="metric"><span>Vectors</span><strong id="mVectors">0</strong></div>
+          <div class="metric"><span>Last ms</span><strong id="mMs">-</strong></div>
+        </div>
+      </section>
+
+      <section class="section">
+          <h2>Text Queries</h2>
+          <div class="chips">
+          <button class="chip" data-query="노란색 신발">노란 신발</button>
+          <button class="chip" data-query="파란 운동화">파란 운동화</button>
+          <button class="chip" data-query="검은색 벨트">검은 벨트</button>
+          <button class="chip" data-query="남성 캐주얼 신발">남성 신발</button>
+          <button class="chip" data-query="겨울용 벨트">겨울 벨트</button>
+          <button class="chip" data-query="흰색 스니커즈">흰 스니커즈</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Selected Image</h2>
+        <div class="field">
+          <label for="imageUrl">Image URL</label>
+          <input id="imageUrl" placeholder="Click Use Image on any card">
+        </div>
+        <div class="actions">
+          <button id="imageSearchBtn" class="secondary">Search By Image</button>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Log</h2>
+        <pre id="log"></pre>
+      </section>
+    </aside>
+
+    <section class="work">
+      <div class="panel">
+        <div class="search">
+          <input id="textQuery" value="노란색 신발" placeholder="Search products with Korean or English text">
+          <input id="limit" type="number" min="1" max="50" value="12">
+          <button id="textSearchBtn">Search</button>
+        </div>
+        <div class="image-search">
+          <input id="directImageQuery" placeholder="Or paste an image URL for image-to-image search">
+          <button id="directImageBtn" class="secondary">Image Search</button>
+        </div>
+      </div>
+      <div id="results" class="grid"></div>
+    </section>
+  </main>
+
+  <script>
+    const state = { documents: [], indexed: false };
+    const logEl = document.getElementById("log");
+    const resultsEl = document.getElementById("results");
+    const buttons = Array.from(document.querySelectorAll("button"));
+
+    function log(message, data) {
+      const stamp = new Date().toLocaleTimeString();
+      logEl.textContent = `${stamp}  ${message}\n` + logEl.textContent;
+      if (data) {
+        logEl.textContent = JSON.stringify(data, null, 2) + "\n" + logEl.textContent;
+      }
+    }
+
+    function setBusy(busy) {
+      buttons.forEach((button) => button.disabled = busy);
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {}),
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || JSON.stringify(data));
+      }
+      return data;
+    }
+
+    function setHealth(ok, text) {
+      const dot = document.getElementById("dot");
+      dot.className = "dot " + (ok ? "ok" : "err");
+      document.getElementById("healthText").textContent = text;
+    }
+
+    async function health() {
+      try {
+        const data = await api("/api/health");
+        setHealth(true, `${data.marqo.version} ready`);
+        updateMetrics(data);
+      } catch (error) {
+        setHealth(false, "Not ready");
+        log("health failed: " + error.message);
+      }
+    }
+
+    function updateMetrics(data) {
+      const knownDocs = state.documents.length || data?.stats?.numberOfDocuments || 0;
+      document.getElementById("mDocs").textContent = knownDocs;
+      if (data?.stats) {
+        document.getElementById("mIndexed").textContent = data.stats.numberOfDocuments ?? 0;
+        document.getElementById("mVectors").textContent = data.stats.numberOfVectors ?? 0;
+      }
+      if (data?.elapsedMs || data?.ms) {
+        document.getElementById("mMs").textContent = Math.round(data.elapsedMs || data.ms);
+      }
+    }
+
+    function renderCards(items, mode = "crawl") {
+      resultsEl.innerHTML = "";
+      const maxScore = Math.max(...items.map((item) => Number(item._score || 0)), 1);
+      for (const item of items) {
+        const card = document.createElement("article");
+        card.className = "card";
+        const imageUrl = item.image_url;
+        const score = Number(item._score || 0);
+        const width = mode === "search" ? Math.max(4, Math.round((score / maxScore) * 100)) : 0;
+        card.innerHTML = `
+          <img class="thumb" src="${escapeAttr(imageUrl)}" loading="lazy" alt="">
+          <div class="card-body">
+            <h3>${escapeHtml(item.title || "Image")}</h3>
+            <div class="meta">${escapeHtml(productMeta(item))}</div>
+            <div class="meta">${escapeHtml(item.caption || item.category || "")}</div>
+            ${mode === "search" ? `<div class="score"><span>${score.toFixed(4)}</span><span class="bar"><i style="width:${width}%"></i></span></div>` : ""}
+            <div class="actions">
+              <button class="secondary use-image">Use Image</button>
+              <a class="link-button" href="${escapeAttr(item.source || imageUrl)}" target="_blank" rel="noreferrer">Source</a>
+            </div>
+          </div>
+        `;
+        card.querySelector(".use-image").addEventListener("click", () => {
+          document.getElementById("imageUrl").value = imageUrl;
+          document.getElementById("directImageQuery").value = imageUrl;
+          log("selected image query");
+        });
+        resultsEl.appendChild(card);
+      }
+    }
+
+    async function crawl() {
+      setBusy(true);
+      try {
+        log("loading 100 ecommerce product images");
+        const data = await api("/api/crawl?count=100");
+        state.documents = data.documents;
+        state.indexed = false;
+        updateMetrics();
+        renderCards(state.documents, "crawl");
+        log(`loaded ${state.documents.length} product images`);
+      } catch (error) {
+        log("crawl failed: " + error.message);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function setup() {
+      setBusy(true);
+      try {
+        if (!state.documents.length) {
+          log("no product images in browser state; server will load catalog during setup");
+        }
+        log("creating ecommerce image index and vectorizing images; first run downloads the model");
+        const data = await api("/api/setup", {
+          method: "POST",
+          body: JSON.stringify({ documents: state.documents, count: 100, reset: true }),
+        });
+        state.indexed = true;
+        updateMetrics(data);
+        log(`indexed ${data.documents} images`, data.batches);
+      } catch (error) {
+        log("setup failed: " + error.message);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function searchText(query) {
+      setBusy(true);
+      try {
+        log(`text search: ${query}`);
+        const data = await api("/api/search", {
+          method: "POST",
+          body: JSON.stringify({
+            q: query,
+            limit: Number(document.getElementById("limit").value || 12),
+            imageQuery: false,
+          }),
+        });
+        updateMetrics(data);
+        renderCards(data.result.hits || [], "search");
+        const effective = data.effectiveQuery && data.effectiveQuery !== query ? ` as "${data.effectiveQuery}"` : "";
+        const vectorMs = data.vectorMs ? `; embedding ${data.vectorMs} ms` : "";
+        const field = data.vectorField ? ` via ${data.vectorField}` : "";
+        log(`text search${effective}${field} returned ${(data.result.hits || []).length} hits in ${data.ms} ms${vectorMs}`);
+      } catch (error) {
+        log("text search failed: " + error.message);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function searchImage(url) {
+      setBusy(true);
+      try {
+        log("image-to-image search");
+        const data = await api("/api/search", {
+          method: "POST",
+          body: JSON.stringify({
+            q: url,
+            limit: Number(document.getElementById("limit").value || 12),
+            imageQuery: true,
+          }),
+        });
+        updateMetrics(data);
+        renderCards(data.result.hits || [], "search");
+        const vectorMs = data.vectorMs ? `; embedding ${data.vectorMs} ms` : "";
+        const field = data.vectorField ? ` via ${data.vectorField}` : "";
+        log(`image search${field} returned ${(data.result.hits || []).length} hits in ${data.ms} ms${vectorMs}`);
+      } catch (error) {
+        log("image search failed: " + error.message);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#039;",
+      }[char]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value || "");
+    }
+
+    function productMeta(item) {
+      const parts = [];
+      if (item.gender) parts.push(item.gender);
+      if (item.usage) parts.push(item.usage);
+      if (item.season) parts.push(item.season);
+      if (item.price !== undefined && item.price !== null) parts.push(`$${Math.round(Number(item.price))}`);
+      return parts.join(" / ");
+    }
+
+    document.getElementById("crawlBtn").addEventListener("click", crawl);
+    document.getElementById("setupBtn").addEventListener("click", setup);
+    document.getElementById("textSearchBtn").addEventListener("click", () => searchText(document.getElementById("textQuery").value));
+    document.getElementById("imageSearchBtn").addEventListener("click", () => searchImage(document.getElementById("imageUrl").value));
+    document.getElementById("directImageBtn").addEventListener("click", () => searchImage(document.getElementById("directImageQuery").value));
+    document.querySelectorAll(".chip").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.getElementById("textQuery").value = button.dataset.query;
+        searchText(button.dataset.query);
+      });
+    });
+
+    health();
+    setInterval(health, 12000);
+  </script>
+</body>
+</html>

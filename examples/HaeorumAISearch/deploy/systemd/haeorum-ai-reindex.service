@@ -1,0 +1,17 @@
+[Unit]
+Description=Haeorum Gift AI Search One-shot Reindex
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=haeorum
+Group=haeorum
+WorkingDirectory=/opt/haeorum-ai-search
+EnvironmentFile=/etc/haeorum-ai-search/haeorum-ai-search.env
+ExecStart=/opt/haeorum-ai-search/.venv/bin/python -m app.sync_worker --mode reindex --once
+LimitNOFILE=65535
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/log/haeorum-ai-search

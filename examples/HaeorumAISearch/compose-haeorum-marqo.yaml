@@ -1,0 +1,449 @@
+name: haeorum-ai-search-marqo
+
+x-haeorum-nofile: &haeorum-nofile
+  nofile:
+    soft: 65535
+    hard: 65535
+
+x-haeorum-logging: &haeorum-logging
+  driver: "json-file"
+  options:
+    max-size: "${HAEORUM_DOCKER_LOG_MAX_SIZE:-20m}"
+    max-file: "${HAEORUM_DOCKER_LOG_MAX_FILE:-5}"
+
+services:
+  vespa:
+    image: vespaengine/vespa:${VESPA_VERSION:-8.513.17}
+    hostname: vespa
+    ulimits: *haeorum-nofile
+    logging: *haeorum-logging
+    restart: unless-stopped
+
+  vespa-init:
+    image: python:3.13-slim
+    depends_on:
+      - vespa
+    command:
+      - sh
+      - -ec
+      - |
+        python - <<'PY'
+        import io
+        import json
+        import tarfile
+        import time
+        import urllib.error
+        import urllib.request
+
+        base = "http://vespa:19071"
+        app_url = (
+            f"{base}/application/v2/tenant/default/application/default/"
+            "environment/default/region/default/instance/default"
+        )
+
+        def request(method, url, body=None, headers=None, timeout=30):
+            req = urllib.request.Request(url, data=body, headers=headers or {}, method=method)
+            return urllib.request.urlopen(req, timeout=timeout)
+
+        def wait_for_convergence(timeout=240):
+            deadline = time.time() + timeout
+            while True:
+                try:
+                    response = request("GET", f"{app_url}/serviceconverge", timeout=10)
+                    status = json.loads(response.read())
+                    if status.get("converged"):
+                        print("Vespa application converged.", flush=True)
+                        return
+                    print("waiting for Vespa application convergence...", flush=True)
+                except urllib.error.HTTPError as exc:
+                    if exc.code not in (400, 404):
+                        print(exc.read().decode("utf-8", errors="replace"), flush=True)
+                        raise
+                    print("waiting for Vespa application to become active...", flush=True)
+
+                if time.time() > deadline:
+                    raise RuntimeError("Timed out waiting for Vespa application convergence.")
+                time.sleep(3)
+
+        while True:
+            try:
+                request("GET", f"{base}/state/v1/version", timeout=5).read()
+                break
+            except Exception:
+                print("waiting for Vespa config server...", flush=True)
+                time.sleep(3)
+
+        has_active_application = False
+        try:
+            request("GET", f"{app_url}/serviceconverge", timeout=10).read()
+            print("Vespa already has an active application.", flush=True)
+            has_active_application = True
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (400, 404):
+                print(exc.read().decode("utf-8", errors="replace"), flush=True)
+                raise
+
+        if not has_active_application:
+            files = {
+                "hosts.xml": """<?xml version="1.0" encoding="UTF-8"?>
+        <hosts>
+          <host name="vespa">
+            <alias>node1</alias>
+          </host>
+        </hosts>
+        """,
+                "services.xml": """<?xml version="1.0" encoding="UTF-8"?>
+        <services version="1.0" xmlns:deploy="vespa" xmlns:preprocess="properties">
+          <container id="default" version="1.0">
+            <document-api/>
+            <search/>
+            <nodes>
+              <node hostalias="node1"/>
+            </nodes>
+          </container>
+          <content id="content_default" version="1.0">
+            <redundancy>1</redundancy>
+            <documents>
+              <document type="dummy" mode="index"/>
+            </documents>
+            <nodes>
+              <node hostalias="node1" distribution-key="0"/>
+            </nodes>
+          </content>
+        </services>
+        """,
+                "schemas/dummy.sd": """schema dummy {
+          document dummy {
+            field id type string {
+              indexing: summary | attribute
+            }
+          }
+        }
+        """,
+            }
+            package = io.BytesIO()
+            with tarfile.open(fileobj=package, mode="w:gz") as tar:
+                for name, content in files.items():
+                    data = content.encode("utf-8")
+                    info = tarfile.TarInfo(name)
+                    info.size = len(data)
+                    tar.addfile(info, io.BytesIO(data))
+            package.seek(0)
+            response = request(
+                "POST",
+                f"{base}/application/v2/tenant/default/prepareandactivate",
+                body=package.read(),
+                headers={"Content-Type": "application/x-gzip"},
+                timeout=120,
+            )
+            print(response.read().decode("utf-8", errors="replace"), flush=True)
+
+        wait_for_convergence()
+        PY
+    logging: *haeorum-logging
+    restart: "no"
+
+  mioc:
+    build:
+      context: ../../components
+      dockerfile: inference_orchestrator/Dockerfile
+    environment:
+      MARQO_ENABLE_LOCAL_OPEN_CLIP_INFERENCE: "TRUE"
+      MARQO_LOG_LEVEL: "INFO"
+      MARQO_MODEL_CACHE_PATH: "/models"
+      MARQO_MODELS_TO_PRELOAD: "[]"
+      MARQO_TRITON_URL: "http://triton-disabled-for-haeorum:8001"
+      MARQO_MODEL_MANAGEMENT_CONTAINER_URL: "http://mmc-disabled-for-haeorum:8883"
+    volumes:
+      - clip-model-cache:/models
+    ulimits: *haeorum-nofile
+    logging: *haeorum-logging
+    restart: unless-stopped
+
+  marqo-api:
+    build:
+      context: ../../components
+      dockerfile: marqo/Dockerfile
+    environment:
+      MARQO_ENABLE_BATCH_APIS: "TRUE"
+      MARQO_ENABLE_OPS_API: "TRUE"
+      MARQO_API_INFERENCE_CACHE_SIZE: "128"
+      MARQO_API_WORKERS: "${MARQO_API_WORKERS:-2}"
+      MARQO_API_KEEPALIVE_TIMEOUT: "${MARQO_API_KEEPALIVE_TIMEOUT:-75}"
+      MARQO_API_GZIP_MINIMUM_SIZE: "${MARQO_API_GZIP_MINIMUM_SIZE:-1024}"
+      MARQO_LOG_FORMAT: "plain"
+      MARQO_LOG_LEVEL: "info"
+      MARQO_MAX_CONCURRENT_SEARCH: "${MARQO_MAX_CONCURRENT_SEARCH:-100}"
+      MARQO_MAX_VECTORISE_BATCH_SIZE: "8"
+      MARQO_INFERENCE_POOL_SIZE: "${MARQO_INFERENCE_POOL_SIZE:-128}"
+      MARQO_MODELS_TO_PRELOAD: "[]"
+      MARQO_INDEX_DEPLOYMENT_LOCK_TIMEOUT: "0"
+      MARQO_REMOTE_INFERENCE_URL: "http://mioc:8884"
+      VESPA_CONFIG_URL: "http://vespa:19071"
+      VESPA_CONTENT_CLUSTER_NAME: "content_default"
+      VESPA_DOCUMENT_URL: "http://vespa:8080"
+      VESPA_POOL_SIZE: "${VESPA_POOL_SIZE:-128}"
+      VESPA_QUERY_URL: "http://vespa:8080"
+      VESPA_SEARCH_TIMEOUT_MS: "${VESPA_SEARCH_TIMEOUT_MS:-5000}"
+    depends_on:
+      vespa-init:
+        condition: service_completed_successfully
+      mioc:
+        condition: service_started
+    entrypoint: ["sh", "-c"]
+    command:
+      - >
+        until curl -fsS http://vespa:19071/state/v1/version >/dev/null; do
+          echo "waiting for Vespa config server...";
+          sleep 3;
+        done;
+        exec ./run_marqo.sh
+    ports:
+      - "127.0.0.1:${MARQO_PORT:-8882}:8882"
+    ulimits: *haeorum-nofile
+    logging: *haeorum-logging
+    restart: unless-stopped
+
+  embedding-service:
+    build:
+      context: .
+      args:
+        INSTALL_MSSQL_ODBC: "false"
+        ACCEPT_MS_ODBC_EULA: "false"
+    command:
+      - python
+      - -m
+      - uvicorn
+      - app.gemini_embedding_proxy:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8098"
+    environment:
+      GEMINI_AUTH_MODE: "${GEMINI_AUTH_MODE:-api_key}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      GEMINI_PROXY_API_KEY: "${GEMINI_PROXY_API_KEY:-}"
+      GEMINI_QUOTA_PROJECT: "${GEMINI_QUOTA_PROJECT:-}"
+      GEMINI_EMBEDDING_MODEL: "${GEMINI_EMBEDDING_MODEL:-gemini-embedding-2}"
+      GEMINI_EMBEDDING_DIMENSIONS: "${GEMINI_EMBEDDING_DIMENSIONS:-1536}"
+      GEMINI_EMBEDDING_TIMEOUT_SECONDS: "${GEMINI_EMBEDDING_TIMEOUT_SECONDS:-90}"
+      GEMINI_IMAGE_DOWNLOAD_TIMEOUT_SECONDS: "${GEMINI_IMAGE_DOWNLOAD_TIMEOUT_SECONDS:-10}"
+      GEMINI_MAX_IMAGE_BYTES: "${GEMINI_MAX_IMAGE_BYTES:-5242880}"
+      GEMINI_PROVIDER_RETRY_COUNT: "${GEMINI_PROVIDER_RETRY_COUNT:-2}"
+      GEMINI_PROVIDER_RETRY_DELAY_SECONDS: "${GEMINI_PROVIDER_RETRY_DELAY_SECONDS:-0.5}"
+      GEMINI_PROVIDER_RETRY_MAX_DELAY_SECONDS: "${GEMINI_PROVIDER_RETRY_MAX_DELAY_SECONDS:-5}"
+      GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS:-}"
+    expose:
+      - "8098"
+    ulimits: *haeorum-nofile
+    logging: *haeorum-logging
+    restart: unless-stopped
+
+  ai-search:
+    build:
+      context: .
+      args:
+        INSTALL_MSSQL_ODBC: "${INSTALL_MSSQL_ODBC:-false}"
+        ACCEPT_MS_ODBC_EULA: "${ACCEPT_MS_ODBC_EULA:-false}"
+    environment:
+      HAEORUM_ENV: "${HAEORUM_ENV:-development}"
+      HAEORUM_SEARCH_ENGINE: "marqo"
+      MARQO_URL: "http://marqo-api:8882"
+      HAEORUM_EMBEDDING_BACKEND: "${HAEORUM_EMBEDDING_BACKEND:-gemini}"
+      HAEORUM_MARQO_MODEL: "${HAEORUM_MARQO_MODEL:-Marqo/marqo-ecommerce-embeddings-L}"
+      HAEORUM_MARQO_SEARCH_TIMEOUT_SECONDS: "${HAEORUM_MARQO_SEARCH_TIMEOUT_SECONDS:-15}"
+      HAEORUM_MARQO_SEARCH_RETRY_COUNT: "${HAEORUM_MARQO_SEARCH_RETRY_COUNT:-1}"
+      HAEORUM_MARQO_SEARCH_RETRY_DELAY_SECONDS: "${HAEORUM_MARQO_SEARCH_RETRY_DELAY_SECONDS:-0.1}"
+      HAEORUM_BACKEND_RETRY_AFTER_MAX_SECONDS: "${HAEORUM_BACKEND_RETRY_AFTER_MAX_SECONDS:-2}"
+      HAEORUM_BACKEND_HTTP_MAX_IDLE_SECONDS: "${HAEORUM_BACKEND_HTTP_MAX_IDLE_SECONDS:-55}"
+      HAEORUM_BACKEND_HTTP_MAX_ACTIVE_REQUESTS: "${HAEORUM_BACKEND_HTTP_MAX_ACTIVE_REQUESTS:-96}"
+      HAEORUM_BACKEND_HTTP_CONNECTION_ACQUIRE_TIMEOUT_SECONDS: "${HAEORUM_BACKEND_HTTP_CONNECTION_ACQUIRE_TIMEOUT_SECONDS:-1}"
+      HAEORUM_BACKEND_CIRCUIT_FAILURE_THRESHOLD: "${HAEORUM_BACKEND_CIRCUIT_FAILURE_THRESHOLD:-5}"
+      HAEORUM_BACKEND_CIRCUIT_COOLDOWN_SECONDS: "${HAEORUM_BACKEND_CIRCUIT_COOLDOWN_SECONDS:-5}"
+      HAEORUM_BACKEND_CIRCUIT_HALF_OPEN_MAX_CALLS: "${HAEORUM_BACKEND_CIRCUIT_HALF_OPEN_MAX_CALLS:-1}"
+      HAEORUM_GEMINI_EMBEDDING_URL: "http://embedding-service:8098"
+      HAEORUM_GEMINI_EMBEDDING_PROXY_API_KEY: "${GEMINI_PROXY_API_KEY:-}"
+      HAEORUM_GEMINI_EMBEDDING_DIMENSIONS: "${HAEORUM_GEMINI_EMBEDDING_DIMENSIONS:-1536}"
+      HAEORUM_GEMINI_MODEL: "${HAEORUM_GEMINI_MODEL:-gemini-embedding-2}"
+      HAEORUM_GEMINI_QUERY_TIMEOUT_SECONDS: "${HAEORUM_GEMINI_QUERY_TIMEOUT_SECONDS:-15}"
+      HAEORUM_GEMINI_MIXED_QUERY_PARALLELISM: "${HAEORUM_GEMINI_MIXED_QUERY_PARALLELISM:-8}"
+      HAEORUM_GEMINI_QUERY_RUNTIME_TEXT_CACHE_ENTRIES: "${HAEORUM_GEMINI_QUERY_RUNTIME_TEXT_CACHE_ENTRIES:-2048}"
+      HAEORUM_GEMINI_QUERY_RUNTIME_IMAGE_CACHE_ENTRIES: "${HAEORUM_GEMINI_QUERY_RUNTIME_IMAGE_CACHE_ENTRIES:-512}"
+      HAEORUM_INDEX_NAME: "${HAEORUM_INDEX_NAME:-haeorum-products}"
+      HAEORUM_ADMIN_API_KEY: "${HAEORUM_ADMIN_API_KEY:-dev-admin-key}"
+      HAEORUM_MALL_CONFIG_PATH: "/app/sample_malls.json"
+      HAEORUM_QUERY_SYNONYM_PATH: "/app/sample_query_synonyms.json"
+      HAEORUM_CORS_ORIGINS: "${HAEORUM_CORS_ORIGINS:-*}"
+      HAEORUM_PRODUCT_CSV: "/app/sample_products.csv"
+      HAEORUM_PRODUCT_URL_TEMPLATE: "https://{mall_id}.haeorumgift.com/product_view.asp?p_idx={product_id}"
+      HAEORUM_SEARCH_LOG_PATH: "/app/logs/search.jsonl"
+      HAEORUM_ERROR_LOG_PATH: "/app/logs/error.jsonl"
+      HAEORUM_SYNC_LOG_PATH: "/app/logs/sync.jsonl"
+      HAEORUM_LOG_KEEP_OPEN_SECONDS: "${HAEORUM_LOG_KEEP_OPEN_SECONDS:-1}"
+      HAEORUM_SYNC_LOCK_STALE_SECONDS: "${HAEORUM_SYNC_LOCK_STALE_SECONDS:-21600}"
+      HAEORUM_MAX_IMAGE_MB: "${HAEORUM_MAX_IMAGE_MB:-5}"
+      HAEORUM_MAX_IMAGE_DIMENSION: "${HAEORUM_MAX_IMAGE_DIMENSION:-1600}"
+      HAEORUM_MAX_OFFSET: "${HAEORUM_MAX_OFFSET:-200}"
+      HAEORUM_CATEGORY_SUGGESTION_LIMIT: "${HAEORUM_CATEGORY_SUGGESTION_LIMIT:-15}"
+      HAEORUM_SEARCH_RATE_LIMIT_PER_MINUTE: "${HAEORUM_SEARCH_RATE_LIMIT_PER_MINUTE:-900}"
+      HAEORUM_MALL_SEARCH_RATE_LIMIT_PER_MINUTE: "${HAEORUM_MALL_SEARCH_RATE_LIMIT_PER_MINUTE:-2000}"
+      HAEORUM_CLICK_RATE_LIMIT_PER_MINUTE: "${HAEORUM_CLICK_RATE_LIMIT_PER_MINUTE:-600}"
+      HAEORUM_MALL_CLICK_RATE_LIMIT_PER_MINUTE: "${HAEORUM_MALL_CLICK_RATE_LIMIT_PER_MINUTE:-3000}"
+      HAEORUM_IMAGE_RATE_LIMIT_PER_MINUTE: "${HAEORUM_IMAGE_RATE_LIMIT_PER_MINUTE:-300}"
+      HAEORUM_MALL_IMAGE_RATE_LIMIT_PER_MINUTE: "${HAEORUM_MALL_IMAGE_RATE_LIMIT_PER_MINUTE:-600}"
+      HAEORUM_RATE_LIMIT_MAX_BUCKETS: "${HAEORUM_RATE_LIMIT_MAX_BUCKETS:-10000}"
+      HAEORUM_SEARCH_MAX_CONCURRENCY: "${HAEORUM_SEARCH_MAX_CONCURRENCY:-64}"
+      HAEORUM_SEARCH_QUEUE_TIMEOUT_SECONDS: "${HAEORUM_SEARCH_QUEUE_TIMEOUT_SECONDS:-2}"
+      HAEORUM_IMAGE_SEARCH_MAX_CONCURRENCY: "${HAEORUM_IMAGE_SEARCH_MAX_CONCURRENCY:-8}"
+      HAEORUM_IMAGE_SEARCH_QUEUE_TIMEOUT_SECONDS: "${HAEORUM_IMAGE_SEARCH_QUEUE_TIMEOUT_SECONDS:-2}"
+      HAEORUM_API_THREADPOOL_TOKENS: "${HAEORUM_API_THREADPOOL_TOKENS:-96}"
+      HAEORUM_API_GZIP_MINIMUM_SIZE: "${HAEORUM_API_GZIP_MINIMUM_SIZE:-1024}"
+      HAEORUM_CACHE_MAX_ENTRIES: "${HAEORUM_CACHE_MAX_ENTRIES:-10000}"
+      HAEORUM_CACHE_MISS_LOCK_SECONDS: "${HAEORUM_CACHE_MISS_LOCK_SECONDS:-35}"
+      HAEORUM_CACHE_MISS_WAIT_SECONDS: "${HAEORUM_CACHE_MISS_WAIT_SECONDS:-5}"
+      HAEORUM_CACHE_MISS_POLL_SECONDS: "${HAEORUM_CACHE_MISS_POLL_SECONDS:-0.05}"
+      HAEORUM_MIN_IMAGE_DIMENSION: "${HAEORUM_MIN_IMAGE_DIMENSION:-16}"
+      HAEORUM_MIXED_TEXT_WEIGHT: "${HAEORUM_MIXED_TEXT_WEIGHT:-0.4}"
+      HAEORUM_MIXED_IMAGE_WEIGHT: "${HAEORUM_MIXED_IMAGE_WEIGHT:-0.6}"
+      HAEORUM_REDIS_URL: "${HAEORUM_REDIS_URL:-}"
+      HAEORUM_REDIS_KEY_PREFIX: "${HAEORUM_REDIS_KEY_PREFIX:-haeorum-ai-search}"
+      HAEORUM_REDIS_SOCKET_TIMEOUT_SECONDS: "${HAEORUM_REDIS_SOCKET_TIMEOUT_SECONDS:-0.5}"
+      HAEORUM_REDIS_SOCKET_CONNECT_TIMEOUT_SECONDS: "${HAEORUM_REDIS_SOCKET_CONNECT_TIMEOUT_SECONDS:-0.5}"
+      HAEORUM_REDIS_FAILURE_BACKOFF_SECONDS: "${HAEORUM_REDIS_FAILURE_BACKOFF_SECONDS:-2}"
+      HAEORUM_TRUSTED_PROXY_IPS: "${HAEORUM_TRUSTED_PROXY_IPS:-127.0.0.1,::1,172.16.0.0/12}"
+      HAEORUM_PRODUCT_IMAGE_PROBE_RETRY_COUNT: "${HAEORUM_PRODUCT_IMAGE_PROBE_RETRY_COUNT:-1}"
+      HAEORUM_PRODUCT_IMAGE_PROBE_RETRY_DELAY_SECONDS: "${HAEORUM_PRODUCT_IMAGE_PROBE_RETRY_DELAY_SECONDS:-0.25}"
+      HAEORUM_PRODUCT_IMAGE_DOWNLOAD_THREAD_COUNT: "${HAEORUM_PRODUCT_IMAGE_DOWNLOAD_THREAD_COUNT:-3}"
+      HAEORUM_SYNC_ALERT_WEBHOOK_URL: "${HAEORUM_SYNC_ALERT_WEBHOOK_URL:-}"
+      HAEORUM_SYNC_ALERT_TIMEOUT_SECONDS: "${HAEORUM_SYNC_ALERT_TIMEOUT_SECONDS:-5}"
+    ports:
+      - "127.0.0.1:${HAEORUM_AI_SEARCH_PORT:-8000}:8000"
+    ulimits: *haeorum-nofile
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import json,urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)); raise SystemExit(0 if data.get('ready') or data.get('ok') else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - marqo-api
+      - embedding-service
+    volumes:
+      - haeorum-logs:/app/logs
+    logging: *haeorum-logging
+    restart: unless-stopped
+
+  reindex-once:
+    build:
+      context: .
+      args:
+        INSTALL_MSSQL_ODBC: "${INSTALL_MSSQL_ODBC:-false}"
+        ACCEPT_MS_ODBC_EULA: "${ACCEPT_MS_ODBC_EULA:-false}"
+    profiles: ["reindex"]
+    command: ["python", "-m", "app.sync_worker", "--mode", "reindex", "--once"]
+    environment:
+      HAEORUM_ENV: "${HAEORUM_ENV:-development}"
+      HAEORUM_SEARCH_ENGINE: "marqo"
+      MARQO_URL: "http://marqo-api:8882"
+      HAEORUM_EMBEDDING_BACKEND: "${HAEORUM_EMBEDDING_BACKEND:-gemini}"
+      HAEORUM_MARQO_MODEL: "${HAEORUM_MARQO_MODEL:-Marqo/marqo-ecommerce-embeddings-L}"
+      HAEORUM_MARQO_SEARCH_TIMEOUT_SECONDS: "${HAEORUM_MARQO_SEARCH_TIMEOUT_SECONDS:-15}"
+      HAEORUM_MARQO_SEARCH_RETRY_COUNT: "${HAEORUM_MARQO_SEARCH_RETRY_COUNT:-1}"
+      HAEORUM_MARQO_SEARCH_RETRY_DELAY_SECONDS: "${HAEORUM_MARQO_SEARCH_RETRY_DELAY_SECONDS:-0.1}"
+      HAEORUM_BACKEND_RETRY_AFTER_MAX_SECONDS: "${HAEORUM_BACKEND_RETRY_AFTER_MAX_SECONDS:-2}"
+      HAEORUM_BACKEND_HTTP_MAX_IDLE_SECONDS: "${HAEORUM_BACKEND_HTTP_MAX_IDLE_SECONDS:-55}"
+      HAEORUM_BACKEND_HTTP_MAX_ACTIVE_REQUESTS: "${HAEORUM_BACKEND_HTTP_MAX_ACTIVE_REQUESTS:-96}"
+      HAEORUM_BACKEND_HTTP_CONNECTION_ACQUIRE_TIMEOUT_SECONDS: "${HAEORUM_BACKEND_HTTP_CONNECTION_ACQUIRE_TIMEOUT_SECONDS:-1}"
+      HAEORUM_BACKEND_CIRCUIT_FAILURE_THRESHOLD: "${HAEORUM_BACKEND_CIRCUIT_FAILURE_THRESHOLD:-5}"
+      HAEORUM_BACKEND_CIRCUIT_COOLDOWN_SECONDS: "${HAEORUM_BACKEND_CIRCUIT_COOLDOWN_SECONDS:-5}"
+      HAEORUM_BACKEND_CIRCUIT_HALF_OPEN_MAX_CALLS: "${HAEORUM_BACKEND_CIRCUIT_HALF_OPEN_MAX_CALLS:-1}"
+      HAEORUM_GEMINI_EMBEDDING_URL: "http://embedding-service:8098"
+      HAEORUM_GEMINI_EMBEDDING_PROXY_API_KEY: "${GEMINI_PROXY_API_KEY:-}"
+      HAEORUM_GEMINI_EMBEDDING_DIMENSIONS: "${HAEORUM_GEMINI_EMBEDDING_DIMENSIONS:-1536}"
+      HAEORUM_GEMINI_MODEL: "${HAEORUM_GEMINI_MODEL:-gemini-embedding-2}"
+      HAEORUM_GEMINI_QUERY_TIMEOUT_SECONDS: "${HAEORUM_GEMINI_QUERY_TIMEOUT_SECONDS:-15}"
+      HAEORUM_GEMINI_MIXED_QUERY_PARALLELISM: "${HAEORUM_GEMINI_MIXED_QUERY_PARALLELISM:-8}"
+      HAEORUM_GEMINI_QUERY_RUNTIME_TEXT_CACHE_ENTRIES: "${HAEORUM_GEMINI_QUERY_RUNTIME_TEXT_CACHE_ENTRIES:-2048}"
+      HAEORUM_GEMINI_QUERY_RUNTIME_IMAGE_CACHE_ENTRIES: "${HAEORUM_GEMINI_QUERY_RUNTIME_IMAGE_CACHE_ENTRIES:-512}"
+      HAEORUM_INDEX_NAME: "${HAEORUM_INDEX_NAME:-haeorum-products}"
+      HAEORUM_ADMIN_API_KEY: "${HAEORUM_ADMIN_API_KEY:-dev-admin-key}"
+      HAEORUM_MALL_CONFIG_PATH: "/app/sample_malls.json"
+      HAEORUM_QUERY_SYNONYM_PATH: "/app/sample_query_synonyms.json"
+      HAEORUM_CORS_ORIGINS: "${HAEORUM_CORS_ORIGINS:-*}"
+      HAEORUM_PRODUCT_CSV: "/app/sample_products.csv"
+      HAEORUM_SYNC_LOG_PATH: "/app/logs/sync.jsonl"
+      HAEORUM_SYNC_LOCK_STALE_SECONDS: "${HAEORUM_SYNC_LOCK_STALE_SECONDS:-21600}"
+      HAEORUM_MIN_IMAGE_DIMENSION: "${HAEORUM_MIN_IMAGE_DIMENSION:-16}"
+      HAEORUM_PRODUCT_IMAGE_DOWNLOAD_THREAD_COUNT: "${HAEORUM_PRODUCT_IMAGE_DOWNLOAD_THREAD_COUNT:-3}"
+      HAEORUM_SYNC_ALERT_WEBHOOK_URL: "${HAEORUM_SYNC_ALERT_WEBHOOK_URL:-}"
+      HAEORUM_SYNC_ALERT_TIMEOUT_SECONDS: "${HAEORUM_SYNC_ALERT_TIMEOUT_SECONDS:-5}"
+    depends_on:
+      - marqo-api
+      - embedding-service
+    volumes:
+      - haeorum-logs:/app/logs
+    ulimits: *haeorum-nofile
+    logging: *haeorum-logging
+    restart: "no"
+
+  sync-worker:
+    build:
+      context: .
+      args:
+        INSTALL_MSSQL_ODBC: "${INSTALL_MSSQL_ODBC:-false}"
+        ACCEPT_MS_ODBC_EULA: "${ACCEPT_MS_ODBC_EULA:-false}"
+    profiles: ["sync"]
+    command: ["python", "-m", "app.sync_worker", "--mode", "sync"]
+    environment:
+      HAEORUM_ENV: "${HAEORUM_ENV:-development}"
+      HAEORUM_SEARCH_ENGINE: "marqo"
+      MARQO_URL: "http://marqo-api:8882"
+      HAEORUM_EMBEDDING_BACKEND: "${HAEORUM_EMBEDDING_BACKEND:-gemini}"
+      HAEORUM_MARQO_MODEL: "${HAEORUM_MARQO_MODEL:-Marqo/marqo-ecommerce-embeddings-L}"
+      HAEORUM_MARQO_SEARCH_TIMEOUT_SECONDS: "${HAEORUM_MARQO_SEARCH_TIMEOUT_SECONDS:-15}"
+      HAEORUM_MARQO_SEARCH_RETRY_COUNT: "${HAEORUM_MARQO_SEARCH_RETRY_COUNT:-1}"
+      HAEORUM_MARQO_SEARCH_RETRY_DELAY_SECONDS: "${HAEORUM_MARQO_SEARCH_RETRY_DELAY_SECONDS:-0.1}"
+      HAEORUM_BACKEND_RETRY_AFTER_MAX_SECONDS: "${HAEORUM_BACKEND_RETRY_AFTER_MAX_SECONDS:-2}"
+      HAEORUM_BACKEND_HTTP_MAX_IDLE_SECONDS: "${HAEORUM_BACKEND_HTTP_MAX_IDLE_SECONDS:-55}"
+      HAEORUM_BACKEND_HTTP_MAX_ACTIVE_REQUESTS: "${HAEORUM_BACKEND_HTTP_MAX_ACTIVE_REQUESTS:-96}"
+      HAEORUM_BACKEND_HTTP_CONNECTION_ACQUIRE_TIMEOUT_SECONDS: "${HAEORUM_BACKEND_HTTP_CONNECTION_ACQUIRE_TIMEOUT_SECONDS:-1}"
+      HAEORUM_BACKEND_CIRCUIT_FAILURE_THRESHOLD: "${HAEORUM_BACKEND_CIRCUIT_FAILURE_THRESHOLD:-5}"
+      HAEORUM_BACKEND_CIRCUIT_COOLDOWN_SECONDS: "${HAEORUM_BACKEND_CIRCUIT_COOLDOWN_SECONDS:-5}"
+      HAEORUM_BACKEND_CIRCUIT_HALF_OPEN_MAX_CALLS: "${HAEORUM_BACKEND_CIRCUIT_HALF_OPEN_MAX_CALLS:-1}"
+      HAEORUM_GEMINI_EMBEDDING_URL: "http://embedding-service:8098"
+      HAEORUM_GEMINI_EMBEDDING_PROXY_API_KEY: "${GEMINI_PROXY_API_KEY:-}"
+      HAEORUM_GEMINI_EMBEDDING_DIMENSIONS: "${HAEORUM_GEMINI_EMBEDDING_DIMENSIONS:-1536}"
+      HAEORUM_GEMINI_MODEL: "${HAEORUM_GEMINI_MODEL:-gemini-embedding-2}"
+      HAEORUM_GEMINI_QUERY_TIMEOUT_SECONDS: "${HAEORUM_GEMINI_QUERY_TIMEOUT_SECONDS:-15}"
+      HAEORUM_GEMINI_MIXED_QUERY_PARALLELISM: "${HAEORUM_GEMINI_MIXED_QUERY_PARALLELISM:-8}"
+      HAEORUM_GEMINI_QUERY_RUNTIME_TEXT_CACHE_ENTRIES: "${HAEORUM_GEMINI_QUERY_RUNTIME_TEXT_CACHE_ENTRIES:-2048}"
+      HAEORUM_GEMINI_QUERY_RUNTIME_IMAGE_CACHE_ENTRIES: "${HAEORUM_GEMINI_QUERY_RUNTIME_IMAGE_CACHE_ENTRIES:-512}"
+      HAEORUM_INDEX_NAME: "${HAEORUM_INDEX_NAME:-haeorum-products}"
+      HAEORUM_ADMIN_API_KEY: "${HAEORUM_ADMIN_API_KEY:-dev-admin-key}"
+      HAEORUM_MALL_CONFIG_PATH: "/app/sample_malls.json"
+      HAEORUM_QUERY_SYNONYM_PATH: "/app/sample_query_synonyms.json"
+      HAEORUM_CORS_ORIGINS: "${HAEORUM_CORS_ORIGINS:-*}"
+      HAEORUM_PRODUCT_CSV: "/app/sample_products.csv"
+      HAEORUM_SYNC_INTERVAL_SECONDS: "${HAEORUM_SYNC_INTERVAL_SECONDS:-3600}"
+      HAEORUM_SYNC_LOG_PATH: "/app/logs/sync.jsonl"
+      HAEORUM_SYNC_LOCK_STALE_SECONDS: "${HAEORUM_SYNC_LOCK_STALE_SECONDS:-21600}"
+      HAEORUM_MIN_IMAGE_DIMENSION: "${HAEORUM_MIN_IMAGE_DIMENSION:-16}"
+      HAEORUM_PRODUCT_IMAGE_DOWNLOAD_THREAD_COUNT: "${HAEORUM_PRODUCT_IMAGE_DOWNLOAD_THREAD_COUNT:-3}"
+      HAEORUM_SYNC_ALERT_WEBHOOK_URL: "${HAEORUM_SYNC_ALERT_WEBHOOK_URL:-}"
+      HAEORUM_SYNC_ALERT_TIMEOUT_SECONDS: "${HAEORUM_SYNC_ALERT_TIMEOUT_SECONDS:-5}"
+    depends_on:
+      - marqo-api
+      - embedding-service
+    volumes:
+      - haeorum-logs:/app/logs
+    ulimits: *haeorum-nofile
+    logging: *haeorum-logging
+    restart: unless-stopped
+
+volumes:
+  clip-model-cache:
+  haeorum-logs:

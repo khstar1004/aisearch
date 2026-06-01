@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Haeorum AI Search Admin</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --line: #d8dee9;
+      --text: #18202f;
+      --muted: #667085;
+      --accent: #0f766e;
+      --danger: #b42318;
+      --warn: #b54708;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 24px 28px 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    h1 { margin: 0 0 8px; font-size: 24px; letter-spacing: 0; }
+    p { margin: 0; color: var(--muted); }
+    main { padding: 22px 28px 40px; max-width: 1280px; }
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(260px, 420px) auto auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    input {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font: inherit;
+      background: #fff;
+    }
+    button, a.button {
+      min-height: 40px;
+      border: 1px solid #9ca3af;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font: inherit;
+      background: #fff;
+      color: var(--text);
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .status {
+      min-height: 22px;
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .wide { grid-column: span 2; }
+    section {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 16px;
+      min-width: 0;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+    dl {
+      display: grid;
+      grid-template-columns: minmax(120px, 1fr) minmax(0, 1.2fr);
+      gap: 8px 12px;
+      margin: 0;
+      font-size: 14px;
+    }
+    dt { color: var(--muted); }
+    dd {
+      margin: 0;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      overflow-wrap: anywhere;
+    }
+    .ok { color: var(--accent); font-weight: 650; }
+    .bad { color: var(--danger); font-weight: 650; }
+    .warn { color: var(--warn); font-weight: 650; }
+    .links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .toolbar { grid-template-columns: 1fr; }
+      .wide { grid-column: span 2; }
+    }
+    @media (max-width: 620px) {
+      main, header { padding-left: 16px; padding-right: 16px; }
+      .grid { grid-template-columns: 1fr; }
+      .wide { grid-column: span 1; }
+      dl { grid-template-columns: 1fr; }
+      dd { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Haeorum AI Search Admin</h1>
+    <p>Gemini 호출량, 검색 지연, 캐시율, 오류와 rate limit 상태를 확인합니다.</p>
+  </header>
+  <main>
+    <div class="toolbar">
+      <input id="adminKey" type="password" autocomplete="off" placeholder="Admin key">
+      <button class="primary" id="refresh" type="button">새로고침</button>
+      <button id="saveKey" type="button">키 저장</button>
+    </div>
+    <p class="status" id="status">Admin key 입력 후 새로고침하세요.</p>
+
+    <div class="grid">
+      <section>
+        <h2>상태</h2>
+        <dl id="statusCard"></dl>
+      </section>
+      <section>
+        <h2>Gemini 인증</h2>
+        <dl id="authCard"></dl>
+      </section>
+      <section class="wide">
+        <h2>Gemini 사용량</h2>
+        <dl id="usageCard"></dl>
+      </section>
+      <section>
+        <h2>검색</h2>
+        <dl id="searchCard"></dl>
+      </section>
+      <section>
+        <h2>오류/제한</h2>
+        <dl id="errorCard"></dl>
+      </section>
+      <section>
+        <h2>큐/캐시</h2>
+        <dl id="queueCard"></dl>
+      </section>
+      <section>
+        <h2>동기화</h2>
+        <dl id="syncCard"></dl>
+      </section>
+      <section class="wide">
+        <h2>Google 콘솔</h2>
+        <div class="links">
+          <a class="button" href="https://aistudio.google.com/usage" target="_blank" rel="noreferrer">AI Studio Usage</a>
+          <a class="button" href="https://console.cloud.google.com/billing" target="_blank" rel="noreferrer">Cloud Billing</a>
+          <a class="button" href="https://console.cloud.google.com/monitoring/metrics-explorer" target="_blank" rel="noreferrer">Metrics Explorer</a>
+          <a class="button" href="/admin/metrics.prom" target="_blank" rel="noreferrer">Prometheus</a>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const keyInput = document.getElementById("adminKey");
+    const statusEl = document.getElementById("status");
+    keyInput.value = localStorage.getItem("haeorumAdminKey") || "";
+
+    document.getElementById("saveKey").addEventListener("click", () => {
+      localStorage.setItem("haeorumAdminKey", keyInput.value);
+      statusEl.textContent = "Admin key를 이 브라우저에 저장했습니다.";
+    });
+    document.getElementById("refresh").addEventListener("click", load);
+
+    function value(v, fallback = "-") {
+      if (v === null || v === undefined || v === "") return fallback;
+      if (typeof v === "number") return Number.isInteger(v) ? v.toLocaleString() : v.toLocaleString(undefined, { maximumFractionDigits: 3 });
+      if (typeof v === "boolean") return v ? "yes" : "no";
+      return String(v);
+    }
+
+    function ms(v) {
+      if (v === null || v === undefined || v === "") return "-";
+      return `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })} ms`;
+    }
+
+    function percent(v) {
+      if (v === null || v === undefined || v === "") return "-";
+      return `${Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })}%`;
+    }
+
+    function renderDl(id, rows) {
+      const dl = document.getElementById(id);
+      dl.replaceChildren();
+      for (const [label, raw, className] of rows) {
+        const dt = document.createElement("dt");
+        const dd = document.createElement("dd");
+        dt.textContent = label;
+        dd.textContent = value(raw);
+        if (className) dd.className = className;
+        dl.append(dt, dd);
+      }
+    }
+
+    async function load() {
+      const key = keyInput.value.trim();
+      if (!key) {
+        statusEl.textContent = "Admin key가 필요합니다.";
+        return;
+      }
+      statusEl.textContent = "불러오는 중...";
+      try {
+        const response = await fetch("/admin/metrics?limit=1000", {
+          headers: { "X-Admin-Key": key, "Accept": "application/json" },
+          cache: "no-store"
+        });
+        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+        const data = await response.json();
+        render(data);
+        statusEl.textContent = `마지막 갱신: ${new Date().toLocaleString()}`;
+      } catch (error) {
+        statusEl.textContent = `관리자 메트릭 조회 실패: ${error.message}`;
+      }
+    }
+
+    function render(data) {
+      const engine = data.engine || {};
+      const gemini = engine.gemini || {};
+      const geminiUsage = gemini.usage || {};
+      const geminiTransport = (engine.transport || {}).gemini || {};
+      const search = data.search || {};
+      const errors = data.errors || {};
+      const rateLimit = data.rate_limit || {};
+      const cache = data.cache || {};
+      const searchQueue = data.search_queue || {};
+      const imageQueue = data.image_queue || {};
+      const sync = data.sync || {};
+
+      renderDl("statusCard", [
+        ["Engine", engine.engine],
+        ["Ready", engine.ready, engine.ready ? "ok" : "bad"],
+        ["Index", engine.index],
+        ["Products", (engine.stats || {}).numberOfDocuments],
+        ["Vectors", (engine.stats || {}).numberOfVectors]
+      ]);
+
+      renderDl("authCard", [
+        ["Provider", gemini.provider || engine.embedding_backend],
+        ["Model", gemini.model || engine.gemini_model],
+        ["Dimensions", gemini.dimensions || engine.gemini_embedding_dimensions],
+        ["Auth mode", gemini.auth_mode],
+        ["Quota project", gemini.quota_project_configured],
+        ["API key", gemini.api_key_configured],
+        ["Proxy auth", gemini.proxy_auth_configured, gemini.proxy_auth_configured ? "ok" : "bad"]
+      ]);
+
+      renderDl("usageCard", [
+        ["Proxy requests", geminiUsage.requests_total ?? geminiTransport.requests_started],
+        ["Gemini provider calls", geminiUsage.provider_call_total ?? geminiTransport.responses_received],
+        ["Inputs", geminiUsage.input_total],
+        ["Text inputs", geminiUsage.text_input_total],
+        ["Image inputs", geminiUsage.image_input_total],
+        ["Text chars", geminiUsage.text_char_total],
+        ["Estimated image bytes", geminiUsage.estimated_image_byte_total],
+        ["Provider avg", ms(geminiUsage.provider_elapsed_ms_avg ?? geminiTransport.avg_elapsed_ms)],
+        ["Provider max", ms(geminiUsage.provider_elapsed_ms_max ?? geminiTransport.max_elapsed_ms)],
+        ["Active calls", geminiUsage.active_calls ?? geminiTransport.active_requests],
+        ["Failures", geminiUsage.failed_total ?? geminiTransport.error_responses],
+        ["Last error", geminiUsage.last_error || geminiTransport.last_error]
+      ]);
+
+      renderDl("searchCard", [
+        ["Recent searches", search.search_events],
+        ["Image searches", search.image_search_events],
+        ["Cache hit", percent(search.cache_hit_rate_percent)],
+        ["Avg latency", ms(search.average_elapsed_ms)],
+        ["p95", ms(search.p95_elapsed_ms)],
+        ["p99", ms(search.p99_elapsed_ms)]
+      ]);
+
+      renderDl("errorCard", [
+        ["API errors", errors.api_error_events],
+        ["Rate limited", errors.rate_limited_events, errors.rate_limited_events ? "warn" : "ok"],
+        ["429", (errors.status_code_counts || {})["429"]],
+        ["Gemini backend errors", geminiTransport.error_responses, geminiTransport.error_responses ? "bad" : "ok"],
+        ["Circuit open", ((geminiTransport.circuit_breaker || {}).state === "open") ? "yes" : "no", ((geminiTransport.circuit_breaker || {}).state === "open") ? "bad" : "ok"]
+      ]);
+
+      renderDl("queueCard", [
+        ["Search queue full", searchQueue.queue_full_events, searchQueue.queue_full_events ? "warn" : "ok"],
+        ["Search in flight", searchQueue.in_flight],
+        ["Image queue full", imageQueue.queue_full_events, imageQueue.queue_full_events ? "warn" : "ok"],
+        ["Image in flight", imageQueue.in_flight],
+        ["Cache entries", cache.entry_count],
+        ["Rate buckets", rateLimit.fallback_bucket_count]
+      ]);
+
+      renderDl("syncCard", [
+        ["Last mode", sync.last_mode],
+        ["Indexed", sync.indexed],
+        ["Failed", sync.failed, sync.failed ? "bad" : "ok"],
+        ["Last error", sync.last_error],
+        ["Started", sync.last_started_at],
+        ["Finished", sync.last_finished_at]
+      ]);
+    }
+  </script>
+</body>
+</html>

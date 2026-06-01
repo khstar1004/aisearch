@@ -1,0 +1,15 @@
+{
+  "malls": [
+    {
+      "mall_id": "haeorumgift",
+      "api_key": "replace-with-strong-public-api-key-at-least-24-chars",
+      "product_url_template": "https://www.haeorumgift.com/product_view.asp?p_idx={product_id}",
+      "allowed_origins": [
+        "https://www.haeorumgift.com",
+        "https://haeorumgift.com"
+      ],
+      "enabled": true
+    }
+  ]
+}
+

@@ -1,0 +1,71 @@
+# Gemini override compose입니다.
+# 단독 실행하지 말고 항상 `compose-haeorum-marqo.yaml` 뒤에 붙여 사용합니다:
+# docker compose -f compose-haeorum-marqo.yaml -f compose-haeorum-gemini.yaml up -d --build
+name: haeorum-ai-search-marqo
+
+services:
+  embedding-service:
+    container_name: haeorum-ai-search-marqo-gemini-embedding-1
+    hostname: gemini-embedding
+    build:
+      context: .
+      args:
+        INSTALL_MSSQL_ODBC: "false"
+        ACCEPT_MS_ODBC_EULA: "false"
+    command:
+      - python
+      - -m
+      - uvicorn
+      - app.gemini_embedding_proxy:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8098"
+    environment:
+      GEMINI_AUTH_MODE: "${GEMINI_AUTH_MODE:-api_key}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      GEMINI_PROXY_API_KEY: "${GEMINI_PROXY_API_KEY:-}"
+      GEMINI_QUOTA_PROJECT: "${GEMINI_QUOTA_PROJECT:-}"
+      GEMINI_EMBEDDING_MODEL: "${GEMINI_EMBEDDING_MODEL:-gemini-embedding-2}"
+      GEMINI_EMBEDDING_DIMENSIONS: "${GEMINI_EMBEDDING_DIMENSIONS:-1536}"
+      GEMINI_EMBEDDING_TIMEOUT_SECONDS: "${GEMINI_EMBEDDING_TIMEOUT_SECONDS:-90}"
+      GEMINI_IMAGE_DOWNLOAD_TIMEOUT_SECONDS: "${GEMINI_IMAGE_DOWNLOAD_TIMEOUT_SECONDS:-10}"
+      GEMINI_MAX_IMAGE_BYTES: "${GEMINI_MAX_IMAGE_BYTES:-5242880}"
+      GEMINI_MAX_RESPONSE_BYTES: "${GEMINI_MAX_RESPONSE_BYTES:-33554432}"
+      GEMINI_PROVIDER_RETRY_COUNT: "${GEMINI_PROVIDER_RETRY_COUNT:-2}"
+      GEMINI_PROVIDER_RETRY_DELAY_SECONDS: "${GEMINI_PROVIDER_RETRY_DELAY_SECONDS:-0.5}"
+      GEMINI_PROVIDER_RETRY_MAX_DELAY_SECONDS: "${GEMINI_PROVIDER_RETRY_MAX_DELAY_SECONDS:-5}"
+      GOOGLE_APPLICATION_CREDENTIALS: "${GOOGLE_APPLICATION_CREDENTIALS:-}"
+    ports:
+      - "127.0.0.1:${GEMINI_EMBEDDING_PORT:-8098}:8098"
+    expose:
+      - "8098"
+    networks:
+      default:
+        aliases:
+          - gemini-embedding
+    restart: unless-stopped
+
+  ai-search:
+    environment:
+      HAEORUM_EMBEDDING_BACKEND: "gemini"
+      HAEORUM_GEMINI_EMBEDDING_URL: "http://gemini-embedding:8098"
+      HAEORUM_GEMINI_EMBEDDING_PROXY_API_KEY: "${GEMINI_PROXY_API_KEY:-}"
+      HAEORUM_GEMINI_EMBEDDING_DIMENSIONS: "${HAEORUM_GEMINI_EMBEDDING_DIMENSIONS:-1536}"
+      HAEORUM_GEMINI_MODEL: "${HAEORUM_GEMINI_MODEL:-gemini-embedding-2}"
+
+  reindex-once:
+    environment:
+      HAEORUM_EMBEDDING_BACKEND: "gemini"
+      HAEORUM_GEMINI_EMBEDDING_URL: "http://gemini-embedding:8098"
+      HAEORUM_GEMINI_EMBEDDING_PROXY_API_KEY: "${GEMINI_PROXY_API_KEY:-}"
+      HAEORUM_GEMINI_EMBEDDING_DIMENSIONS: "${HAEORUM_GEMINI_EMBEDDING_DIMENSIONS:-1536}"
+      HAEORUM_GEMINI_MODEL: "${HAEORUM_GEMINI_MODEL:-gemini-embedding-2}"
+
+  sync-worker:
+    environment:
+      HAEORUM_EMBEDDING_BACKEND: "gemini"
+      HAEORUM_GEMINI_EMBEDDING_URL: "http://gemini-embedding:8098"
+      HAEORUM_GEMINI_EMBEDDING_PROXY_API_KEY: "${GEMINI_PROXY_API_KEY:-}"
+      HAEORUM_GEMINI_EMBEDDING_DIMENSIONS: "${HAEORUM_GEMINI_EMBEDDING_DIMENSIONS:-1536}"
+      HAEORUM_GEMINI_MODEL: "${HAEORUM_GEMINI_MODEL:-gemini-embedding-2}"

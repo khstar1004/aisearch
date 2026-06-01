@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Haeorum AI Search - Marqo Gemini Demo</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --ink: #111827;
+      --muted: #667085;
+      --line: #d7dce3;
+      --accent: #0f766e;
+      --accent-strong: #115e59;
+      --warn: #a16207;
+      --bad: #b42318;
+      --good: #067647;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, "Noto Sans KR", sans-serif;
+      letter-spacing: 0;
+    }
+    header {
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .wrap {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 0 auto;
+    }
+    .topbar {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--warn);
+    }
+    .dot.ok { background: var(--good); }
+    main {
+      padding: 24px 0 40px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    label {
+      display: block;
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    textarea,
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--ink);
+      background: #fff;
+      font: inherit;
+      font-size: 15px;
+      padding: 10px 12px;
+      outline: none;
+    }
+    textarea {
+      min-height: 96px;
+      resize: vertical;
+    }
+    textarea:focus,
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 110px;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      min-height: 38px;
+      padding: 0 12px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    button.primary:hover { background: var(--accent-strong); }
+    button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+    .examples button {
+      font-size: 13px;
+      min-height: 32px;
+    }
+    .filebox {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    input[type="file"] {
+      width: 100%;
+      font-size: 13px;
+    }
+    .preview {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      border: 1px dashed var(--line);
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 13px;
+      background: #fafafa;
+    }
+    .preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 12px;
+      min-height: 74px;
+    }
+    .metric b {
+      display: block;
+      font-size: 20px;
+      margin-top: 4px;
+    }
+    .metric span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .results {
+      display: grid;
+      gap: 10px;
+    }
+    .item {
+      display: grid;
+      grid-template-columns: 92px 1fr auto;
+      gap: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 10px;
+      min-height: 112px;
+    }
+    .thumb {
+      width: 92px;
+      height: 92px;
+      border-radius: 6px;
+      background: #eef1f4;
+      object-fit: cover;
+    }
+    .item h2 {
+      margin: 2px 0 8px;
+      font-size: 16px;
+      line-height: 1.35;
+    }
+    .item p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .score {
+      min-width: 72px;
+      text-align: right;
+      color: var(--accent-strong);
+      font-weight: 800;
+      font-size: 15px;
+      padding-top: 4px;
+    }
+    .notice {
+      margin: 0 0 12px;
+      color: var(--bad);
+      font-size: 14px;
+      min-height: 20px;
+    }
+    .empty {
+      min-height: 260px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .item { grid-template-columns: 76px 1fr; }
+      .thumb { width: 76px; height: 76px; }
+      .score { grid-column: 2; text-align: left; padding-top: 0; }
+      .topbar { align-items: flex-start; flex-direction: column; padding: 14px 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap topbar">
+      <h1>Haeorum AI Search</h1>
+      <div class="status"><span id="healthDot" class="dot"></span><span id="healthText">Marqo / Gemini 확인 중</span></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="layout">
+      <section class="panel">
+        <label for="query">검색어</label>
+        <textarea id="query">스탠리 텀블러</textarea>
+        <div class="row">
+          <input id="limit" type="text" value="8" aria-label="결과 수">
+          <button id="searchBtn" class="primary">검색</button>
+        </div>
+
+        <div class="actions examples">
+          <button data-query="검은 우산">검은 우산</button>
+          <button data-query="골프공 12구">골프공 12구</button>
+          <button data-query="크리스탈 감사패">크리스탈 감사패</button>
+          <button data-query="네프킨 젓가락집">네프킨 젓가락집</button>
+          <button data-query="자개 USB">자개 USB</button>
+          <button data-query="넥워머 방한">넥워머 방한</button>
+        </div>
+
+        <div class="filebox">
+          <label for="imageInput">이미지</label>
+          <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp">
+          <div id="preview" class="preview">이미지 없음</div>
+          <button id="clearImageBtn">이미지 제거</button>
+        </div>
+      </section>
+
+      <section>
+        <div class="metrics">
+          <div class="metric"><span>API 시간</span><b id="apiMs">-</b></div>
+          <div class="metric"><span>전체 시간</span><b id="wallMs">-</b></div>
+          <div class="metric"><span>검색 유형</span><b id="queryType">-</b></div>
+          <div class="metric"><span>결과</span><b id="count">-</b></div>
+        </div>
+        <p id="notice" class="notice"></p>
+        <div id="results" class="results">
+          <div class="empty">검색 결과 대기 중</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:8120";
+    const API_KEY = "public-shop001-dev-key";
+    const MALL_ID = "shop001";
+    let imageBase64 = "";
+
+    const $ = (id) => document.getElementById(id);
+
+    async function health() {
+      try {
+        const res = await fetch(`${API_BASE}/health`);
+        const data = await res.json();
+        const gemini = data.gemini || {};
+        const provider = gemini.provider || data.embedding_backend || "-";
+        const model = data.gemini_model || gemini.model || "-";
+        $("healthDot").classList.toggle("ok", Boolean(data.ready || data.ok));
+        $("healthText").textContent = `${data.engine} / ${data.embedding_backend} / ${provider} / ${model}`;
+      } catch (error) {
+        $("healthText").textContent = "API 연결 실패";
+      }
+    }
+
+    function setBusy(value) {
+      $("searchBtn").disabled = value;
+      $("searchBtn").textContent = value ? "검색 중" : "검색";
+    }
+
+    function resultRows(data) {
+      return [...(data.top || []), ...(data.items || [])];
+    }
+
+    function render(data, wallMs) {
+      const rows = resultRows(data);
+      $("apiMs").textContent = `${data.meta?.elapsed_ms ?? "-"} ms`;
+      $("wallMs").textContent = `${wallMs.toFixed(1)} ms`;
+      $("queryType").textContent = data.meta?.query_type || "-";
+      $("count").textContent = String(rows.length);
+      $("notice").textContent = data.meta?.notice || "";
+      if (!rows.length) {
+        $("results").innerHTML = `<div class="empty">결과 없음</div>`;
+        return;
+      }
+      $("results").innerHTML = rows.map((item) => `
+        <article class="item">
+          <img class="thumb" src="${item.image_url || ""}" alt="">
+          <div>
+            <h2>${escapeHtml(item.name || "")}</h2>
+            <p>${escapeHtml(item.category || "")} · ${escapeHtml(item.product_id || "")}</p>
+            <p>${formatPrice(item.price)}</p>
+          </div>
+          <div class="score">${Number(item.score_percent || 0).toFixed(1)}%</div>
+        </article>
+      `).join("");
+    }
+
+    async function search() {
+      const q = $("query").value.trim();
+      const limit = Math.max(1, Math.min(20, Number($("limit").value || 8)));
+      if (!q && !imageBase64) return;
+      const payload = { mall_id: MALL_ID, limit };
+      if (q) payload.q = q;
+      if (imageBase64) payload.image_base64 = imageBase64;
+      setBusy(true);
+      const started = performance.now();
+      try {
+        const res = await fetch(`${API_BASE}/api/ai-search`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "X-API-Key": API_KEY
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+        render(data, performance.now() - started);
+      } catch (error) {
+        $("notice").textContent = error.message;
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#039;"
+      }[char]));
+    }
+
+    function formatPrice(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number) || number <= 0) return "가격 정보 없음";
+      return `${number.toLocaleString("ko-KR")}원`;
+    }
+
+    $("searchBtn").addEventListener("click", search);
+    $("query").addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) search();
+    });
+    document.querySelectorAll("[data-query]").forEach((button) => {
+      button.addEventListener("click", () => {
+        $("query").value = button.dataset.query;
+        search();
+      });
+    });
+    $("imageInput").addEventListener("change", () => {
+      const file = $("imageInput").files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        imageBase64 = String(reader.result || "");
+        $("preview").innerHTML = `<img src="${imageBase64}" alt="">`;
+      };
+      reader.readAsDataURL(file);
+    });
+    $("clearImageBtn").addEventListener("click", () => {
+      imageBase64 = "";
+      $("imageInput").value = "";
+      $("preview").textContent = "이미지 없음";
+    });
+
+    health();
+  </script>
+</body>
+</html>

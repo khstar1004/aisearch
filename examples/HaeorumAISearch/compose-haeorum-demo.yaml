@@ -1,0 +1,81 @@
+name: haeorum-ai-search-demo
+
+services:
+  ai-search:
+    build:
+      context: .
+      args:
+        INSTALL_MSSQL_ODBC: "${INSTALL_MSSQL_ODBC:-false}"
+        ACCEPT_MS_ODBC_EULA: "${ACCEPT_MS_ODBC_EULA:-false}"
+    environment:
+      HAEORUM_ENV: "development"
+      HAEORUM_SEARCH_ENGINE: "local"
+      HAEORUM_ADMIN_API_KEY: "dev-admin-key"
+      HAEORUM_MALL_CONFIG_PATH: "/app/sample_malls.json"
+      HAEORUM_QUERY_SYNONYM_PATH: "/app/sample_query_synonyms.json"
+      HAEORUM_CORS_ORIGINS: "*"
+      HAEORUM_PRODUCT_URL_TEMPLATE: "https://{mall_id}.haeorumgift.com/product_view.asp?p_idx={product_id}"
+      HAEORUM_MAX_OFFSET: "200"
+      HAEORUM_CATEGORY_SUGGESTION_LIMIT: "15"
+      HAEORUM_SEARCH_RATE_LIMIT_PER_MINUTE: "300"
+      HAEORUM_MALL_SEARCH_RATE_LIMIT_PER_MINUTE: "1500"
+      HAEORUM_CLICK_RATE_LIMIT_PER_MINUTE: "600"
+      HAEORUM_MALL_CLICK_RATE_LIMIT_PER_MINUTE: "3000"
+      HAEORUM_IMAGE_RATE_LIMIT_PER_MINUTE: "20"
+      HAEORUM_MALL_IMAGE_RATE_LIMIT_PER_MINUTE: "120"
+      HAEORUM_RATE_LIMIT_MAX_BUCKETS: "10000"
+      HAEORUM_MARQO_SEARCH_TIMEOUT_SECONDS: "15"
+      HAEORUM_MARQO_SEARCH_RETRY_COUNT: "1"
+      HAEORUM_MARQO_SEARCH_RETRY_DELAY_SECONDS: "0.1"
+      HAEORUM_BACKEND_RETRY_AFTER_MAX_SECONDS: "2"
+      HAEORUM_BACKEND_HTTP_MAX_IDLE_SECONDS: "55"
+      HAEORUM_BACKEND_HTTP_MAX_ACTIVE_REQUESTS: "96"
+      HAEORUM_BACKEND_HTTP_CONNECTION_ACQUIRE_TIMEOUT_SECONDS: "1"
+      HAEORUM_BACKEND_CIRCUIT_FAILURE_THRESHOLD: "5"
+      HAEORUM_BACKEND_CIRCUIT_COOLDOWN_SECONDS: "5"
+      HAEORUM_BACKEND_CIRCUIT_HALF_OPEN_MAX_CALLS: "1"
+      HAEORUM_GEMINI_QUERY_TIMEOUT_SECONDS: "15"
+      HAEORUM_GEMINI_MIXED_QUERY_PARALLELISM: "8"
+      HAEORUM_GEMINI_QUERY_RUNTIME_TEXT_CACHE_ENTRIES: "2048"
+      HAEORUM_GEMINI_QUERY_RUNTIME_IMAGE_CACHE_ENTRIES: "512"
+      HAEORUM_SEARCH_MAX_CONCURRENCY: "64"
+      HAEORUM_SEARCH_QUEUE_TIMEOUT_SECONDS: "2"
+      HAEORUM_IMAGE_SEARCH_MAX_CONCURRENCY: "8"
+      HAEORUM_IMAGE_SEARCH_QUEUE_TIMEOUT_SECONDS: "2"
+      HAEORUM_API_GZIP_MINIMUM_SIZE: "1024"
+      HAEORUM_CACHE_MAX_ENTRIES: "10000"
+      HAEORUM_CACHE_MISS_LOCK_SECONDS: "35"
+      HAEORUM_CACHE_MISS_WAIT_SECONDS: "5"
+      HAEORUM_CACHE_MISS_POLL_SECONDS: "0.05"
+      HAEORUM_MIN_IMAGE_DIMENSION: "16"
+      HAEORUM_MIXED_TEXT_WEIGHT: "0.4"
+      HAEORUM_MIXED_IMAGE_WEIGHT: "0.6"
+      HAEORUM_REDIS_KEY_PREFIX: "haeorum-ai-search-demo"
+      HAEORUM_TRUSTED_PROXY_IPS: "127.0.0.1,::1"
+      HAEORUM_PRODUCT_IMAGE_PROBE_RETRY_COUNT: "1"
+      HAEORUM_PRODUCT_IMAGE_PROBE_RETRY_DELAY_SECONDS: "0.25"
+      HAEORUM_PRODUCT_IMAGE_DOWNLOAD_THREAD_COUNT: "3"
+      HAEORUM_SYNC_ALERT_TIMEOUT_SECONDS: "5"
+      HAEORUM_SEARCH_LOG_PATH: "/app/logs/search.jsonl"
+      HAEORUM_ERROR_LOG_PATH: "/app/logs/error.jsonl"
+      HAEORUM_SYNC_LOG_PATH: "/app/logs/sync.jsonl"
+      HAEORUM_LOG_KEEP_OPEN_SECONDS: "1"
+      HAEORUM_SYNC_LOCK_STALE_SECONDS: "21600"
+    ports:
+      - "127.0.0.1:${HAEORUM_AI_SEARCH_PORT:-8000}:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import json,urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)); raise SystemExit(0 if data.get('ready') or data.get('ok') else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    volumes:
+      - haeorum-logs:/app/logs
+    restart: unless-stopped
+
+volumes:
+  haeorum-logs:

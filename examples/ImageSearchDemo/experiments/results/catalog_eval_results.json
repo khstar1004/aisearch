@@ -1,0 +1,1772 @@
+{
+  "catalog": "examples\\ImageSearchDemo\\experiments\\data\\gift_url_products.csv",
+  "model": "Qwen/Qwen3-VL-Embedding-2B",
+  "document_count": 79,
+  "query_count": 13,
+  "categories": [
+    [
+      "가정/생활용품",
+      16
+    ],
+    [
+      "우산/우의",
+      11
+    ],
+    [
+      "컵제품",
+      10
+    ],
+    [
+      "레저/운동용품",
+      4
+    ],
+    [
+      "사무용잡화",
+      4
+    ],
+    [
+      "수건/손수건",
+      4
+    ],
+    [
+      "티슈",
+      4
+    ],
+    [
+      "필기구",
+      4
+    ],
+    [
+      "미용용품",
+      3
+    ],
+    [
+      "사무용품",
+      3
+    ],
+    [
+      "휴대폰용품",
+      3
+    ],
+    [
+      "골프용품",
+      2
+    ],
+    [
+      "주방용품",
+      2
+    ],
+    [
+      "골프선물세트",
+      1
+    ],
+    [
+      "문구용품",
+      1
+    ],
+    [
+      "상패/휘장",
+      1
+    ],
+    [
+      "시계/고급시계",
+      1
+    ],
+    [
+      "업소용품",
+      1
+    ],
+    [
+      "주방기구",
+      1
+    ],
+    [
+      "치약/세제",
+      1
+    ],
+    [
+      "트로피",
+      1
+    ],
+    [
+      "현수막/스티커",
+      1
+    ]
+  ],
+  "timingMs": {
+    "queryTextVectors": 206.2,
+    "docTextVectors": 268.5,
+    "docImageVectors": 5981.5,
+    "docMultimodalVectors": 5171.3,
+    "totalWall": 12384.7
+  },
+  "text_search": {
+    "text_vector_only": {
+      "mrr": 0.9231,
+      "recall@1": 0.8462,
+      "recall@5": 1.0,
+      "precision@5": 0.6769,
+      "examples": [
+        {
+          "query": "가정/생활용품 판촉물",
+          "category": "가정/생활용품",
+          "top5": [
+            {
+              "id": "gift-url-733f20d672f44f79",
+              "category": "가정/생활용품",
+              "title": "원형파도 부채 190x190mm"
+            },
+            {
+              "id": "gift-url-e9b1200b21f096d2",
+              "category": "가정/생활용품",
+              "title": "원형파도부채 190x190mm"
+            },
+            {
+              "id": "gift-url-bb664bedf8b0bee1",
+              "category": "가정/생활용품",
+              "title": "곰돌이 엠블럼 방향제"
+            },
+            {
+              "id": "gift-url-5da4c71eebffe5ed",
+              "category": "가정/생활용품",
+              "title": "소량 500개 전용상품 원형 반달팬시자루 5종"
+            },
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            }
+          ]
+        },
+        {
+          "query": "우산/우의 판촉물",
+          "category": "우산/우의",
+          "top5": [
+            {
+              "id": "gift-url-9dddd7b433fc283f",
+              "category": "우산/우의",
+              "title": "아가타 3단 팬던트 슬림암막 우양산 UV코팅"
+            },
+            {
+              "id": "gift-url-32e361d4cd6df388",
+              "category": "우산/우의",
+              "title": "걸작 UV차단 6살대 초경량 5단포켓 암막코팅 양우산"
+            },
+            {
+              "id": "gift-url-2cd8f12f8ac2d706",
+              "category": "우산/우의",
+              "title": "워터프론트 100g 카본 라이트 자외선 차단 6K 3단 ..."
+            },
+            {
+              "id": "gift-url-31ea10d945870b48",
+              "category": "우산/우의",
+              "title": "컴팩트 자동 암막 8K 3단 우양산 UPF50"
+            },
+            {
+              "id": "gift-url-c402f666b0f4ec2a",
+              "category": "우산/우의",
+              "title": "협립 3단완전자동 야옹이 암막우산"
+            }
+          ]
+        },
+        {
+          "query": "컵제품 판촉물",
+          "category": "컵제품",
+          "top5": [
+            {
+              "id": "gift-url-e2f693ac5644f675",
+              "category": "컵제품",
+              "title": "락앤락 그립텀블러 500ml"
+            },
+            {
+              "id": "gift-url-26e524ca103360dd",
+              "category": "컵제품",
+              "title": "직선 화이트 머그컵 390ml 실크인쇄"
+            },
+            {
+              "id": "gift-url-6121c4c9ab5b307d",
+              "category": "컵제품",
+              "title": "텀블리언 레이첼텀블러 550ml"
+            },
+            {
+              "id": "gift-url-f746879c4fe5cd86",
+              "category": "컵제품",
+              "title": "써모스 스트랩 원터치 텀블러 550ml"
+            },
+            {
+              "id": "gift-url-0b399b29b350396b",
+              "category": "컵제품",
+              "title": "제로마크 슬로링텀블러 350ml"
+            }
+          ]
+        },
+        {
+          "query": "사무용잡화 판촉물",
+          "category": "사무용잡화",
+          "top5": [
+            {
+              "id": "gift-url-e6e6049e7128eeb2",
+              "category": "사무용잡화",
+              "title": "PP표찰"
+            },
+            {
+              "id": "gift-url-1b62e50316f40043",
+              "category": "사무용품",
+              "title": "PU가죽 명함지갑_카드지갑"
+            },
+            {
+              "id": "gift-url-b902580e64987365",
+              "category": "사무용품",
+              "title": "제너럴명함지갑"
+            },
+            {
+              "id": "gift-url-093574154f727554",
+              "category": "사무용품",
+              "title": "반투명 L자홀더-0.18T 박인쇄"
+            },
+            {
+              "id": "gift-url-035b9907bd9adb67",
+              "category": "사무용잡화",
+              "title": "베네 필통 주문제작"
+            }
+          ]
+        },
+        {
+          "query": "수건/손수건 판촉물",
+          "category": "수건/손수건",
+          "top5": [
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            },
+            {
+              "id": "gift-url-33ae7af48c50db5e",
+              "category": "수건/손수건",
+              "title": "가제 마린 스카프"
+            },
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            },
+            {
+              "id": "gift-url-b9130c18d325a2f3",
+              "category": "수건/손수건",
+              "title": "송월 호텔 벨리나 40수 220g 2p 세트"
+            },
+            {
+              "id": "gift-url-92c534e10fb7ce87",
+              "category": "수건/손수건",
+              "title": "송월타올 컬러웨이 타올 180g"
+            }
+          ]
+        },
+        {
+          "query": "티슈 판촉물",
+          "category": "티슈",
+          "top5": [
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-5e9942cb926e8bcf",
+              "category": "티슈",
+              "title": "클린데이 메탈블루 물티슈 10매"
+            },
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            },
+            {
+              "id": "gift-url-77e5457604e88b33",
+              "category": "티슈",
+              "title": "녹색나라 도톰촉촉 물티슈 100매"
+            }
+          ]
+        },
+        {
+          "query": "필기구 판촉물",
+          "category": "필기구",
+          "top5": [
+            {
+              "id": "gift-url-d97c04639b9cad7d",
+              "category": "필기구",
+              "title": "샤이닝 볼펜"
+            },
+            {
+              "id": "gift-url-92e0f8ed32bbda38",
+              "category": "필기구",
+              "title": "화이트노바금속볼펜（프리미엄슬림케이스）"
+            },
+            {
+              "id": "gift-url-e48c76a5aef659e1",
+              "category": "필기구",
+              "title": "제브라클립온슬림3C"
+            },
+            {
+              "id": "gift-url-ab383fad912c441f",
+              "category": "필기구",
+              "title": "국산 오피스노크펜 0.7mm"
+            },
+            {
+              "id": "gift-url-e6e6049e7128eeb2",
+              "category": "사무용잡화",
+              "title": "PP표찰"
+            }
+          ]
+        },
+        {
+          "query": "레저/운동용품 판촉물",
+          "category": "레저/운동용품",
+          "top5": [
+            {
+              "id": "gift-url-97cb6e0febab84ce",
+              "category": "레저/운동용품",
+              "title": "쿨링 스포츠타월 케이스 세트 등산 헬스 땀수건"
+            },
+            {
+              "id": "gift-url-37459c46b08368c7",
+              "category": "레저/운동용품",
+              "title": "배색토트 보온보냉백"
+            },
+            {
+              "id": "gift-url-106ddf5f6b061f87",
+              "category": "레저/운동용품",
+              "title": "플씨드 고양이 패턴 포켓 보온보냉백"
+            },
+            {
+              "id": "gift-url-8c3141ffeff31d01",
+              "category": "레저/운동용품",
+              "title": "다즐 엘로 친환경 OEKO TEX 보온보냉백"
+            },
+            {
+              "id": "gift-url-ffb624bf25b6e8c3",
+              "category": "가정/생활용품",
+              "title": "eva 방수 수영가방"
+            }
+          ]
+        },
+        {
+          "query": "사무용품 판촉물",
+          "category": "사무용품",
+          "top5": [
+            {
+              "id": "gift-url-e6e6049e7128eeb2",
+              "category": "사무용잡화",
+              "title": "PP표찰"
+            },
+            {
+              "id": "gift-url-1b62e50316f40043",
+              "category": "사무용품",
+              "title": "PU가죽 명함지갑_카드지갑"
+            },
+            {
+              "id": "gift-url-093574154f727554",
+              "category": "사무용품",
+              "title": "반투명 L자홀더-0.18T 박인쇄"
+            },
+            {
+              "id": "gift-url-b902580e64987365",
+              "category": "사무용품",
+              "title": "제너럴명함지갑"
+            },
+            {
+              "id": "gift-url-446e0fc53ec47637",
+              "category": "업소용품",
+              "title": "종이 자석스티커 90x120mm"
+            }
+          ]
+        },
+        {
+          "query": "미용용품 판촉물",
+          "category": "미용용품",
+          "top5": [
+            {
+              "id": "gift-url-2f5970b01b2fd925",
+              "category": "미용용품",
+              "title": "신일 UV-C 퓨어핏 충전식 휴대용 칫솔살균기"
+            },
+            {
+              "id": "gift-url-63cb1797557b353d",
+              "category": "미용용품",
+              "title": "링칫솔 페리오치약(5g) 링케이스세트"
+            },
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            }
+          ]
+        },
+        {
+          "query": "휴대폰용품 판촉물",
+          "category": "휴대폰용품",
+          "top5": [
+            {
+              "id": "gift-url-8214ae5dd0e66736",
+              "category": "휴대폰용품",
+              "title": "쓸모 5000mAh 초미니 원통형 2way 보조배터리"
+            },
+            {
+              "id": "gift-url-76999345457ef92a",
+              "category": "휴대폰용품",
+              "title": "플루보 워치메이트 4IN1 고속무선충전기(갤럭시애플..."
+            },
+            {
+              "id": "gift-url-ef5be99148ee2bbe",
+              "category": "휴대폰용품",
+              "title": "탈부착 액정클리너"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-5e2551257d7c6f72",
+              "category": "가정/생활용품",
+              "title": "휴대용 포켓 장바구니"
+            }
+          ]
+        },
+        {
+          "query": "골프용품 판촉물",
+          "category": "골프용품",
+          "top5": [
+            {
+              "id": "gift-url-aa339272ee9852f1",
+              "category": "골프선물세트",
+              "title": "타이틀리스트 트루필 3구 골프공"
+            },
+            {
+              "id": "gift-url-a6855ee328875808",
+              "category": "골프용품",
+              "title": "세인트나인 Q소프트 화이트 골프공 12구"
+            },
+            {
+              "id": "gift-url-ba81e60e7c409656",
+              "category": "골프용품",
+              "title": "NB 75자동 베이직 수입차 골프우산"
+            },
+            {
+              "id": "gift-url-3f5975b5cfe1799c",
+              "category": "트로피",
+              "title": "스텔라 컵 트로피 중"
+            },
+            {
+              "id": "gift-url-093574154f727554",
+              "category": "사무용품",
+              "title": "반투명 L자홀더-0.18T 박인쇄"
+            }
+          ]
+        },
+        {
+          "query": "주방용품 판촉물",
+          "category": "주방용품",
+          "top5": [
+            {
+              "id": "gift-url-c31a08f1bc5d2b0d",
+              "category": "주방용품",
+              "title": "칼라퀸 독일행주 380x380mm"
+            },
+            {
+              "id": "gift-url-12f66b70712aeec8",
+              "category": "주방기구",
+              "title": "십이지지 부부 수저세트"
+            },
+            {
+              "id": "gift-url-76ca09eb8ea94fba",
+              "category": "주방용품",
+              "title": "일회용앞치마 A형"
+            },
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            },
+            {
+              "id": "gift-url-733f20d672f44f79",
+              "category": "가정/생활용품",
+              "title": "원형파도 부채 190x190mm"
+            }
+          ]
+        }
+      ]
+    },
+    "image_vector_cross_modal": {
+      "mrr": 0.3768,
+      "recall@1": 0.1538,
+      "recall@5": 0.6923,
+      "precision@5": 0.2308,
+      "examples": [
+        {
+          "query": "가정/생활용품 판촉물",
+          "category": "가정/생활용품",
+          "top5": [
+            {
+              "id": "gift-url-9832a56cb8ba8950",
+              "category": "치약/세제",
+              "title": "엘지 페리오 기획 8종"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-5da4c71eebffe5ed",
+              "category": "가정/생활용품",
+              "title": "소량 500개 전용상품 원형 반달팬시자루 5종"
+            },
+            {
+              "id": "gift-url-88f876d1f210c5f4",
+              "category": "컵제품",
+              "title": "포토머그컵 직선 유광올칼라 9색 13온스 390ml"
+            },
+            {
+              "id": "gift-url-7d3876133b707787",
+              "category": "가정/생활용품",
+              "title": "원형 반달팬시자루 부채 150~190mm"
+            }
+          ]
+        },
+        {
+          "query": "우산/우의 판촉물",
+          "category": "우산/우의",
+          "top5": [
+            {
+              "id": "gift-url-ba81e60e7c409656",
+              "category": "골프용품",
+              "title": "NB 75자동 베이직 수입차 골프우산"
+            },
+            {
+              "id": "gift-url-5da4c71eebffe5ed",
+              "category": "가정/생활용품",
+              "title": "소량 500개 전용상품 원형 반달팬시자루 5종"
+            },
+            {
+              "id": "gift-url-0d472965e662a80e",
+              "category": "우산/우의",
+              "title": "PGA 75 올화이바 장우산"
+            },
+            {
+              "id": "gift-url-7d3876133b707787",
+              "category": "가정/생활용품",
+              "title": "원형 반달팬시자루 부채 150~190mm"
+            },
+            {
+              "id": "gift-url-9dddd7b433fc283f",
+              "category": "우산/우의",
+              "title": "아가타 3단 팬던트 슬림암막 우양산 UV코팅"
+            }
+          ]
+        },
+        {
+          "query": "컵제품 판촉물",
+          "category": "컵제품",
+          "top5": [
+            {
+              "id": "gift-url-88f876d1f210c5f4",
+              "category": "컵제품",
+              "title": "포토머그컵 직선 유광올칼라 9색 13온스 390ml"
+            },
+            {
+              "id": "gift-url-e9b1200b21f096d2",
+              "category": "가정/생활용품",
+              "title": "원형파도부채 190x190mm"
+            },
+            {
+              "id": "gift-url-3f5975b5cfe1799c",
+              "category": "트로피",
+              "title": "스텔라 컵 트로피 중"
+            },
+            {
+              "id": "gift-url-b30c947b711389a4",
+              "category": "상패/휘장",
+              "title": "금속 주문제작 트로피 상패 -2"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            }
+          ]
+        },
+        {
+          "query": "사무용잡화 판촉물",
+          "category": "사무용잡화",
+          "top5": [
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-88f876d1f210c5f4",
+              "category": "컵제품",
+              "title": "포토머그컵 직선 유광올칼라 9색 13온스 390ml"
+            },
+            {
+              "id": "gift-url-9832a56cb8ba8950",
+              "category": "치약/세제",
+              "title": "엘지 페리오 기획 8종"
+            },
+            {
+              "id": "gift-url-b30c947b711389a4",
+              "category": "상패/휘장",
+              "title": "금속 주문제작 트로피 상패 -2"
+            },
+            {
+              "id": "gift-url-d811edb7f2af6f27",
+              "category": "시계/고급시계",
+              "title": "클립디지털 탁상시계"
+            }
+          ]
+        },
+        {
+          "query": "수건/손수건 판촉물",
+          "category": "수건/손수건",
+          "top5": [
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-97cb6e0febab84ce",
+              "category": "레저/운동용품",
+              "title": "쿨링 스포츠타월 케이스 세트 등산 헬스 땀수건"
+            },
+            {
+              "id": "gift-url-9832a56cb8ba8950",
+              "category": "치약/세제",
+              "title": "엘지 페리오 기획 8종"
+            },
+            {
+              "id": "gift-url-33ae7af48c50db5e",
+              "category": "수건/손수건",
+              "title": "가제 마린 스카프"
+            },
+            {
+              "id": "gift-url-b9130c18d325a2f3",
+              "category": "수건/손수건",
+              "title": "송월 호텔 벨리나 40수 220g 2p 세트"
+            }
+          ]
+        },
+        {
+          "query": "티슈 판촉물",
+          "category": "티슈",
+          "top5": [
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-9832a56cb8ba8950",
+              "category": "치약/세제",
+              "title": "엘지 페리오 기획 8종"
+            },
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            },
+            {
+              "id": "gift-url-97cb6e0febab84ce",
+              "category": "레저/운동용품",
+              "title": "쿨링 스포츠타월 케이스 세트 등산 헬스 땀수건"
+            },
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            }
+          ]
+        },
+        {
+          "query": "필기구 판촉물",
+          "category": "필기구",
+          "top5": [
+            {
+              "id": "gift-url-9832a56cb8ba8950",
+              "category": "치약/세제",
+              "title": "엘지 페리오 기획 8종"
+            },
+            {
+              "id": "gift-url-d97c04639b9cad7d",
+              "category": "필기구",
+              "title": "샤이닝 볼펜"
+            },
+            {
+              "id": "gift-url-35b7abaad8dc33ac",
+              "category": "문구용품",
+              "title": "15cm 사출자 스티커인쇄"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-e48c76a5aef659e1",
+              "category": "필기구",
+              "title": "제브라클립온슬림3C"
+            }
+          ]
+        },
+        {
+          "query": "레저/운동용품 판촉물",
+          "category": "레저/운동용품",
+          "top5": [
+            {
+              "id": "gift-url-aa339272ee9852f1",
+              "category": "골프선물세트",
+              "title": "타이틀리스트 트루필 3구 골프공"
+            },
+            {
+              "id": "gift-url-e6e6049e7128eeb2",
+              "category": "사무용잡화",
+              "title": "PP표찰"
+            },
+            {
+              "id": "gift-url-97cb6e0febab84ce",
+              "category": "레저/운동용품",
+              "title": "쿨링 스포츠타월 케이스 세트 등산 헬스 땀수건"
+            },
+            {
+              "id": "gift-url-5ee94797363fc43a",
+              "category": "가정/생활용품",
+              "title": "GEO 요가매트 요가매트 6mm매트 발매트"
+            },
+            {
+              "id": "gift-url-b30c947b711389a4",
+              "category": "상패/휘장",
+              "title": "금속 주문제작 트로피 상패 -2"
+            }
+          ]
+        },
+        {
+          "query": "사무용품 판촉물",
+          "category": "사무용품",
+          "top5": [
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-88f876d1f210c5f4",
+              "category": "컵제품",
+              "title": "포토머그컵 직선 유광올칼라 9색 13온스 390ml"
+            },
+            {
+              "id": "gift-url-b30c947b711389a4",
+              "category": "상패/휘장",
+              "title": "금속 주문제작 트로피 상패 -2"
+            },
+            {
+              "id": "gift-url-9832a56cb8ba8950",
+              "category": "치약/세제",
+              "title": "엘지 페리오 기획 8종"
+            },
+            {
+              "id": "gift-url-d811edb7f2af6f27",
+              "category": "시계/고급시계",
+              "title": "클립디지털 탁상시계"
+            }
+          ]
+        },
+        {
+          "query": "미용용품 판촉물",
+          "category": "미용용품",
+          "top5": [
+            {
+              "id": "gift-url-9832a56cb8ba8950",
+              "category": "치약/세제",
+              "title": "엘지 페리오 기획 8종"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-5da4c71eebffe5ed",
+              "category": "가정/생활용품",
+              "title": "소량 500개 전용상품 원형 반달팬시자루 5종"
+            },
+            {
+              "id": "gift-url-7d3876133b707787",
+              "category": "가정/생활용품",
+              "title": "원형 반달팬시자루 부채 150~190mm"
+            },
+            {
+              "id": "gift-url-b30c947b711389a4",
+              "category": "상패/휘장",
+              "title": "금속 주문제작 트로피 상패 -2"
+            }
+          ]
+        },
+        {
+          "query": "휴대폰용품 판촉물",
+          "category": "휴대폰용품",
+          "top5": [
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-ef5be99148ee2bbe",
+              "category": "휴대폰용품",
+              "title": "탈부착 액정클리너"
+            },
+            {
+              "id": "gift-url-9832a56cb8ba8950",
+              "category": "치약/세제",
+              "title": "엘지 페리오 기획 8종"
+            },
+            {
+              "id": "gift-url-97cb6e0febab84ce",
+              "category": "레저/운동용품",
+              "title": "쿨링 스포츠타월 케이스 세트 등산 헬스 땀수건"
+            },
+            {
+              "id": "gift-url-7d3876133b707787",
+              "category": "가정/생활용품",
+              "title": "원형 반달팬시자루 부채 150~190mm"
+            }
+          ]
+        },
+        {
+          "query": "골프용품 판촉물",
+          "category": "골프용품",
+          "top5": [
+            {
+              "id": "gift-url-aa339272ee9852f1",
+              "category": "골프선물세트",
+              "title": "타이틀리스트 트루필 3구 골프공"
+            },
+            {
+              "id": "gift-url-0d472965e662a80e",
+              "category": "우산/우의",
+              "title": "PGA 75 올화이바 장우산"
+            },
+            {
+              "id": "gift-url-a6855ee328875808",
+              "category": "골프용품",
+              "title": "세인트나인 Q소프트 화이트 골프공 12구"
+            },
+            {
+              "id": "gift-url-b30c947b711389a4",
+              "category": "상패/휘장",
+              "title": "금속 주문제작 트로피 상패 -2"
+            },
+            {
+              "id": "gift-url-ba81e60e7c409656",
+              "category": "골프용품",
+              "title": "NB 75자동 베이직 수입차 골프우산"
+            }
+          ]
+        },
+        {
+          "query": "주방용품 판촉물",
+          "category": "주방용품",
+          "top5": [
+            {
+              "id": "gift-url-9832a56cb8ba8950",
+              "category": "치약/세제",
+              "title": "엘지 페리오 기획 8종"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-88f876d1f210c5f4",
+              "category": "컵제품",
+              "title": "포토머그컵 직선 유광올칼라 9색 13온스 390ml"
+            },
+            {
+              "id": "gift-url-b30c947b711389a4",
+              "category": "상패/휘장",
+              "title": "금속 주문제작 트로피 상패 -2"
+            },
+            {
+              "id": "gift-url-446e0fc53ec47637",
+              "category": "업소용품",
+              "title": "종이 자석스티커 90x120mm"
+            }
+          ]
+        }
+      ]
+    },
+    "multimodal_text_image_vector": {
+      "mrr": 0.8654,
+      "recall@1": 0.7692,
+      "recall@5": 1.0,
+      "precision@5": 0.5538,
+      "examples": [
+        {
+          "query": "가정/생활용품 판촉물",
+          "category": "가정/생활용품",
+          "top5": [
+            {
+              "id": "gift-url-5da4c71eebffe5ed",
+              "category": "가정/생활용품",
+              "title": "소량 500개 전용상품 원형 반달팬시자루 5종"
+            },
+            {
+              "id": "gift-url-7d3876133b707787",
+              "category": "가정/생활용품",
+              "title": "원형 반달팬시자루 부채 150~190mm"
+            },
+            {
+              "id": "gift-url-bb664bedf8b0bee1",
+              "category": "가정/생활용품",
+              "title": "곰돌이 엠블럼 방향제"
+            },
+            {
+              "id": "gift-url-e9b1200b21f096d2",
+              "category": "가정/생활용품",
+              "title": "원형파도부채 190x190mm"
+            },
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            }
+          ]
+        },
+        {
+          "query": "우산/우의 판촉물",
+          "category": "우산/우의",
+          "top5": [
+            {
+              "id": "gift-url-9dddd7b433fc283f",
+              "category": "우산/우의",
+              "title": "아가타 3단 팬던트 슬림암막 우양산 UV코팅"
+            },
+            {
+              "id": "gift-url-5da4c71eebffe5ed",
+              "category": "가정/생활용품",
+              "title": "소량 500개 전용상품 원형 반달팬시자루 5종"
+            },
+            {
+              "id": "gift-url-0d472965e662a80e",
+              "category": "우산/우의",
+              "title": "PGA 75 올화이바 장우산"
+            },
+            {
+              "id": "gift-url-7d3876133b707787",
+              "category": "가정/생활용품",
+              "title": "원형 반달팬시자루 부채 150~190mm"
+            },
+            {
+              "id": "gift-url-91be0b4ce2f43aeb",
+              "category": "우산/우의",
+              "title": "배드로 16K 원터치 원목손잡이 3단 완전자동 양우산"
+            }
+          ]
+        },
+        {
+          "query": "컵제품 판촉물",
+          "category": "컵제품",
+          "top5": [
+            {
+              "id": "gift-url-88f876d1f210c5f4",
+              "category": "컵제품",
+              "title": "포토머그컵 직선 유광올칼라 9색 13온스 390ml"
+            },
+            {
+              "id": "gift-url-26e524ca103360dd",
+              "category": "컵제품",
+              "title": "직선 화이트 머그컵 390ml 실크인쇄"
+            },
+            {
+              "id": "gift-url-e9b1200b21f096d2",
+              "category": "가정/생활용품",
+              "title": "원형파도부채 190x190mm"
+            },
+            {
+              "id": "gift-url-656b16dfbe323e62",
+              "category": "컵제품",
+              "title": "8oz 소맥잔"
+            },
+            {
+              "id": "gift-url-3f5975b5cfe1799c",
+              "category": "트로피",
+              "title": "스텔라 컵 트로피 중"
+            }
+          ]
+        },
+        {
+          "query": "사무용잡화 판촉물",
+          "category": "사무용잡화",
+          "top5": [
+            {
+              "id": "gift-url-e6e6049e7128eeb2",
+              "category": "사무용잡화",
+              "title": "PP표찰"
+            },
+            {
+              "id": "gift-url-a48363a2e6fc9e4e",
+              "category": "사무용잡화",
+              "title": "바 타입 2.0 USB 메모리"
+            },
+            {
+              "id": "gift-url-035b9907bd9adb67",
+              "category": "사무용잡화",
+              "title": "베네 필통 주문제작"
+            },
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            },
+            {
+              "id": "gift-url-093574154f727554",
+              "category": "사무용품",
+              "title": "반투명 L자홀더-0.18T 박인쇄"
+            }
+          ]
+        },
+        {
+          "query": "수건/손수건 판촉물",
+          "category": "수건/손수건",
+          "top5": [
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            },
+            {
+              "id": "gift-url-33ae7af48c50db5e",
+              "category": "수건/손수건",
+              "title": "가제 마린 스카프"
+            },
+            {
+              "id": "gift-url-b9130c18d325a2f3",
+              "category": "수건/손수건",
+              "title": "송월 호텔 벨리나 40수 220g 2p 세트"
+            },
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            },
+            {
+              "id": "gift-url-92c534e10fb7ce87",
+              "category": "수건/손수건",
+              "title": "송월타올 컬러웨이 타올 180g"
+            }
+          ]
+        },
+        {
+          "query": "티슈 판촉물",
+          "category": "티슈",
+          "top5": [
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            },
+            {
+              "id": "gift-url-5e9942cb926e8bcf",
+              "category": "티슈",
+              "title": "클린데이 메탈블루 물티슈 10매"
+            },
+            {
+              "id": "gift-url-77e5457604e88b33",
+              "category": "티슈",
+              "title": "녹색나라 도톰촉촉 물티슈 100매"
+            }
+          ]
+        },
+        {
+          "query": "필기구 판촉물",
+          "category": "필기구",
+          "top5": [
+            {
+              "id": "gift-url-d97c04639b9cad7d",
+              "category": "필기구",
+              "title": "샤이닝 볼펜"
+            },
+            {
+              "id": "gift-url-92e0f8ed32bbda38",
+              "category": "필기구",
+              "title": "화이트노바금속볼펜（프리미엄슬림케이스）"
+            },
+            {
+              "id": "gift-url-035b9907bd9adb67",
+              "category": "사무용잡화",
+              "title": "베네 필통 주문제작"
+            },
+            {
+              "id": "gift-url-ab383fad912c441f",
+              "category": "필기구",
+              "title": "국산 오피스노크펜 0.7mm"
+            },
+            {
+              "id": "gift-url-e48c76a5aef659e1",
+              "category": "필기구",
+              "title": "제브라클립온슬림3C"
+            }
+          ]
+        },
+        {
+          "query": "레저/운동용품 판촉물",
+          "category": "레저/운동용품",
+          "top5": [
+            {
+              "id": "gift-url-97cb6e0febab84ce",
+              "category": "레저/운동용품",
+              "title": "쿨링 스포츠타월 케이스 세트 등산 헬스 땀수건"
+            },
+            {
+              "id": "gift-url-37459c46b08368c7",
+              "category": "레저/운동용품",
+              "title": "배색토트 보온보냉백"
+            },
+            {
+              "id": "gift-url-5da4c71eebffe5ed",
+              "category": "가정/생활용품",
+              "title": "소량 500개 전용상품 원형 반달팬시자루 5종"
+            },
+            {
+              "id": "gift-url-7d3876133b707787",
+              "category": "가정/생활용품",
+              "title": "원형 반달팬시자루 부채 150~190mm"
+            },
+            {
+              "id": "gift-url-8c3141ffeff31d01",
+              "category": "레저/운동용품",
+              "title": "다즐 엘로 친환경 OEKO TEX 보온보냉백"
+            }
+          ]
+        },
+        {
+          "query": "사무용품 판촉물",
+          "category": "사무용품",
+          "top5": [
+            {
+              "id": "gift-url-e6e6049e7128eeb2",
+              "category": "사무용잡화",
+              "title": "PP표찰"
+            },
+            {
+              "id": "gift-url-093574154f727554",
+              "category": "사무용품",
+              "title": "반투명 L자홀더-0.18T 박인쇄"
+            },
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            },
+            {
+              "id": "gift-url-a48363a2e6fc9e4e",
+              "category": "사무용잡화",
+              "title": "바 타입 2.0 USB 메모리"
+            },
+            {
+              "id": "gift-url-035b9907bd9adb67",
+              "category": "사무용잡화",
+              "title": "베네 필통 주문제작"
+            }
+          ]
+        },
+        {
+          "query": "미용용품 판촉물",
+          "category": "미용용품",
+          "top5": [
+            {
+              "id": "gift-url-7d3876133b707787",
+              "category": "가정/생활용품",
+              "title": "원형 반달팬시자루 부채 150~190mm"
+            },
+            {
+              "id": "gift-url-5da4c71eebffe5ed",
+              "category": "가정/생활용품",
+              "title": "소량 500개 전용상품 원형 반달팬시자루 5종"
+            },
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            },
+            {
+              "id": "gift-url-bd0af714628fe477",
+              "category": "미용용품",
+              "title": "조이덴트 이가드 칫솔치약세트 JCS-2"
+            },
+            {
+              "id": "gift-url-63cb1797557b353d",
+              "category": "미용용품",
+              "title": "링칫솔 페리오치약(5g) 링케이스세트"
+            }
+          ]
+        },
+        {
+          "query": "휴대폰용품 판촉물",
+          "category": "휴대폰용품",
+          "top5": [
+            {
+              "id": "gift-url-8214ae5dd0e66736",
+              "category": "휴대폰용품",
+              "title": "쓸모 5000mAh 초미니 원통형 2way 보조배터리"
+            },
+            {
+              "id": "gift-url-ef5be99148ee2bbe",
+              "category": "휴대폰용품",
+              "title": "탈부착 액정클리너"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-5da4c71eebffe5ed",
+              "category": "가정/생활용품",
+              "title": "소량 500개 전용상품 원형 반달팬시자루 5종"
+            },
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            }
+          ]
+        },
+        {
+          "query": "골프용품 판촉물",
+          "category": "골프용품",
+          "top5": [
+            {
+              "id": "gift-url-aa339272ee9852f1",
+              "category": "골프선물세트",
+              "title": "타이틀리스트 트루필 3구 골프공"
+            },
+            {
+              "id": "gift-url-ba81e60e7c409656",
+              "category": "골프용품",
+              "title": "NB 75자동 베이직 수입차 골프우산"
+            },
+            {
+              "id": "gift-url-0d472965e662a80e",
+              "category": "우산/우의",
+              "title": "PGA 75 올화이바 장우산"
+            },
+            {
+              "id": "gift-url-a6855ee328875808",
+              "category": "골프용품",
+              "title": "세인트나인 Q소프트 화이트 골프공 12구"
+            },
+            {
+              "id": "gift-url-b30c947b711389a4",
+              "category": "상패/휘장",
+              "title": "금속 주문제작 트로피 상패 -2"
+            }
+          ]
+        },
+        {
+          "query": "주방용품 판촉물",
+          "category": "주방용품",
+          "top5": [
+            {
+              "id": "gift-url-76ca09eb8ea94fba",
+              "category": "주방용품",
+              "title": "일회용앞치마 A형"
+            },
+            {
+              "id": "gift-url-5da4c71eebffe5ed",
+              "category": "가정/생활용품",
+              "title": "소량 500개 전용상품 원형 반달팬시자루 5종"
+            },
+            {
+              "id": "gift-url-7d3876133b707787",
+              "category": "가정/생활용품",
+              "title": "원형 반달팬시자루 부채 150~190mm"
+            },
+            {
+              "id": "gift-url-12f66b70712aeec8",
+              "category": "주방기구",
+              "title": "십이지지 부부 수저세트"
+            },
+            {
+              "id": "gift-url-e9b1200b21f096d2",
+              "category": "가정/생활용품",
+              "title": "원형파도부채 190x190mm"
+            }
+          ]
+        }
+      ]
+    },
+    "fused_text_0.75_image_0.25": {
+      "mrr": 0.8462,
+      "recall@1": 0.6923,
+      "recall@5": 1.0,
+      "precision@5": 0.6615,
+      "examples": [
+        {
+          "query": "가정/생활용품 판촉물",
+          "category": "가정/생활용품",
+          "top5": [
+            {
+              "id": "gift-url-5da4c71eebffe5ed",
+              "category": "가정/생활용품",
+              "title": "소량 500개 전용상품 원형 반달팬시자루 5종"
+            },
+            {
+              "id": "gift-url-bb664bedf8b0bee1",
+              "category": "가정/생활용품",
+              "title": "곰돌이 엠블럼 방향제"
+            },
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            },
+            {
+              "id": "gift-url-7d3876133b707787",
+              "category": "가정/생활용품",
+              "title": "원형 반달팬시자루 부채 150~190mm"
+            },
+            {
+              "id": "gift-url-e9b1200b21f096d2",
+              "category": "가정/생활용품",
+              "title": "원형파도부채 190x190mm"
+            }
+          ]
+        },
+        {
+          "query": "우산/우의 판촉물",
+          "category": "우산/우의",
+          "top5": [
+            {
+              "id": "gift-url-9dddd7b433fc283f",
+              "category": "우산/우의",
+              "title": "아가타 3단 팬던트 슬림암막 우양산 UV코팅"
+            },
+            {
+              "id": "gift-url-2cd8f12f8ac2d706",
+              "category": "우산/우의",
+              "title": "워터프론트 100g 카본 라이트 자외선 차단 6K 3단 ..."
+            },
+            {
+              "id": "gift-url-32e361d4cd6df388",
+              "category": "우산/우의",
+              "title": "걸작 UV차단 6살대 초경량 5단포켓 암막코팅 양우산"
+            },
+            {
+              "id": "gift-url-d318d48924d39164",
+              "category": "우산/우의",
+              "title": "키르히탁 55 14k 솔리드 연두색우산"
+            },
+            {
+              "id": "gift-url-c402f666b0f4ec2a",
+              "category": "우산/우의",
+              "title": "협립 3단완전자동 야옹이 암막우산"
+            }
+          ]
+        },
+        {
+          "query": "컵제품 판촉물",
+          "category": "컵제품",
+          "top5": [
+            {
+              "id": "gift-url-88f876d1f210c5f4",
+              "category": "컵제품",
+              "title": "포토머그컵 직선 유광올칼라 9색 13온스 390ml"
+            },
+            {
+              "id": "gift-url-26e524ca103360dd",
+              "category": "컵제품",
+              "title": "직선 화이트 머그컵 390ml 실크인쇄"
+            },
+            {
+              "id": "gift-url-e2f693ac5644f675",
+              "category": "컵제품",
+              "title": "락앤락 그립텀블러 500ml"
+            },
+            {
+              "id": "gift-url-6121c4c9ab5b307d",
+              "category": "컵제품",
+              "title": "텀블리언 레이첼텀블러 550ml"
+            },
+            {
+              "id": "gift-url-658f15051ac7d611",
+              "category": "컵제품",
+              "title": "뉴 시에나 텀블러 600ml"
+            }
+          ]
+        },
+        {
+          "query": "사무용잡화 판촉물",
+          "category": "사무용잡화",
+          "top5": [
+            {
+              "id": "gift-url-e6e6049e7128eeb2",
+              "category": "사무용잡화",
+              "title": "PP표찰"
+            },
+            {
+              "id": "gift-url-1b62e50316f40043",
+              "category": "사무용품",
+              "title": "PU가죽 명함지갑_카드지갑"
+            },
+            {
+              "id": "gift-url-b902580e64987365",
+              "category": "사무용품",
+              "title": "제너럴명함지갑"
+            },
+            {
+              "id": "gift-url-093574154f727554",
+              "category": "사무용품",
+              "title": "반투명 L자홀더-0.18T 박인쇄"
+            },
+            {
+              "id": "gift-url-035b9907bd9adb67",
+              "category": "사무용잡화",
+              "title": "베네 필통 주문제작"
+            }
+          ]
+        },
+        {
+          "query": "수건/손수건 판촉물",
+          "category": "수건/손수건",
+          "top5": [
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            },
+            {
+              "id": "gift-url-33ae7af48c50db5e",
+              "category": "수건/손수건",
+              "title": "가제 마린 스카프"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-b9130c18d325a2f3",
+              "category": "수건/손수건",
+              "title": "송월 호텔 벨리나 40수 220g 2p 세트"
+            },
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            }
+          ]
+        },
+        {
+          "query": "티슈 판촉물",
+          "category": "티슈",
+          "top5": [
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            },
+            {
+              "id": "gift-url-5e9942cb926e8bcf",
+              "category": "티슈",
+              "title": "클린데이 메탈블루 물티슈 10매"
+            },
+            {
+              "id": "gift-url-77e5457604e88b33",
+              "category": "티슈",
+              "title": "녹색나라 도톰촉촉 물티슈 100매"
+            }
+          ]
+        },
+        {
+          "query": "필기구 판촉물",
+          "category": "필기구",
+          "top5": [
+            {
+              "id": "gift-url-d97c04639b9cad7d",
+              "category": "필기구",
+              "title": "샤이닝 볼펜"
+            },
+            {
+              "id": "gift-url-92e0f8ed32bbda38",
+              "category": "필기구",
+              "title": "화이트노바금속볼펜（프리미엄슬림케이스）"
+            },
+            {
+              "id": "gift-url-e48c76a5aef659e1",
+              "category": "필기구",
+              "title": "제브라클립온슬림3C"
+            },
+            {
+              "id": "gift-url-ab383fad912c441f",
+              "category": "필기구",
+              "title": "국산 오피스노크펜 0.7mm"
+            },
+            {
+              "id": "gift-url-e6e6049e7128eeb2",
+              "category": "사무용잡화",
+              "title": "PP표찰"
+            }
+          ]
+        },
+        {
+          "query": "레저/운동용품 판촉물",
+          "category": "레저/운동용품",
+          "top5": [
+            {
+              "id": "gift-url-97cb6e0febab84ce",
+              "category": "레저/운동용품",
+              "title": "쿨링 스포츠타월 케이스 세트 등산 헬스 땀수건"
+            },
+            {
+              "id": "gift-url-37459c46b08368c7",
+              "category": "레저/운동용품",
+              "title": "배색토트 보온보냉백"
+            },
+            {
+              "id": "gift-url-106ddf5f6b061f87",
+              "category": "레저/운동용품",
+              "title": "플씨드 고양이 패턴 포켓 보온보냉백"
+            },
+            {
+              "id": "gift-url-8c3141ffeff31d01",
+              "category": "레저/운동용품",
+              "title": "다즐 엘로 친환경 OEKO TEX 보온보냉백"
+            },
+            {
+              "id": "gift-url-aa339272ee9852f1",
+              "category": "골프선물세트",
+              "title": "타이틀리스트 트루필 3구 골프공"
+            }
+          ]
+        },
+        {
+          "query": "사무용품 판촉물",
+          "category": "사무용품",
+          "top5": [
+            {
+              "id": "gift-url-e6e6049e7128eeb2",
+              "category": "사무용잡화",
+              "title": "PP표찰"
+            },
+            {
+              "id": "gift-url-093574154f727554",
+              "category": "사무용품",
+              "title": "반투명 L자홀더-0.18T 박인쇄"
+            },
+            {
+              "id": "gift-url-1b62e50316f40043",
+              "category": "사무용품",
+              "title": "PU가죽 명함지갑_카드지갑"
+            },
+            {
+              "id": "gift-url-b902580e64987365",
+              "category": "사무용품",
+              "title": "제너럴명함지갑"
+            },
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            }
+          ]
+        },
+        {
+          "query": "미용용품 판촉물",
+          "category": "미용용품",
+          "top5": [
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-63cb1797557b353d",
+              "category": "미용용품",
+              "title": "링칫솔 페리오치약(5g) 링케이스세트"
+            },
+            {
+              "id": "gift-url-2f5970b01b2fd925",
+              "category": "미용용품",
+              "title": "신일 UV-C 퓨어핏 충전식 휴대용 칫솔살균기"
+            },
+            {
+              "id": "gift-url-9d9f5879db590fb8",
+              "category": "티슈",
+              "title": "홍보용각티슈 정사각티슈 100매"
+            },
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            }
+          ]
+        },
+        {
+          "query": "휴대폰용품 판촉물",
+          "category": "휴대폰용품",
+          "top5": [
+            {
+              "id": "gift-url-ef5be99148ee2bbe",
+              "category": "휴대폰용품",
+              "title": "탈부착 액정클리너"
+            },
+            {
+              "id": "gift-url-9605a1d63e28f1ca",
+              "category": "티슈",
+              "title": "디자인 제작 휴대용 캔티슈"
+            },
+            {
+              "id": "gift-url-8214ae5dd0e66736",
+              "category": "휴대폰용품",
+              "title": "쓸모 5000mAh 초미니 원통형 2way 보조배터리"
+            },
+            {
+              "id": "gift-url-76999345457ef92a",
+              "category": "휴대폰용품",
+              "title": "플루보 워치메이트 4IN1 고속무선충전기(갤럭시애플..."
+            },
+            {
+              "id": "gift-url-5e2551257d7c6f72",
+              "category": "가정/생활용품",
+              "title": "휴대용 포켓 장바구니"
+            }
+          ]
+        },
+        {
+          "query": "골프용품 판촉물",
+          "category": "골프용품",
+          "top5": [
+            {
+              "id": "gift-url-aa339272ee9852f1",
+              "category": "골프선물세트",
+              "title": "타이틀리스트 트루필 3구 골프공"
+            },
+            {
+              "id": "gift-url-a6855ee328875808",
+              "category": "골프용품",
+              "title": "세인트나인 Q소프트 화이트 골프공 12구"
+            },
+            {
+              "id": "gift-url-ba81e60e7c409656",
+              "category": "골프용품",
+              "title": "NB 75자동 베이직 수입차 골프우산"
+            },
+            {
+              "id": "gift-url-0d472965e662a80e",
+              "category": "우산/우의",
+              "title": "PGA 75 올화이바 장우산"
+            },
+            {
+              "id": "gift-url-3f5975b5cfe1799c",
+              "category": "트로피",
+              "title": "스텔라 컵 트로피 중"
+            }
+          ]
+        },
+        {
+          "query": "주방용품 판촉물",
+          "category": "주방용품",
+          "top5": [
+            {
+              "id": "gift-url-12f66b70712aeec8",
+              "category": "주방기구",
+              "title": "십이지지 부부 수저세트"
+            },
+            {
+              "id": "gift-url-c31a08f1bc5d2b0d",
+              "category": "주방용품",
+              "title": "칼라퀸 독일행주 380x380mm"
+            },
+            {
+              "id": "gift-url-76ca09eb8ea94fba",
+              "category": "주방용품",
+              "title": "일회용앞치마 A형"
+            },
+            {
+              "id": "gift-url-2e05606748422c5a",
+              "category": "수건/손수건",
+              "title": "프리미엄 이중구조 텀블러 타올 선물세트"
+            },
+            {
+              "id": "gift-url-5da4c71eebffe5ed",
+              "category": "가정/생활용품",
+              "title": "소량 500개 전용상품 원형 반달팬시자루 5종"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "image_search": {
+    "image_vector_only": {
+      "exact@1": 1.0,
+      "self_mrr": 1.0,
+      "category_recall@5": 1.0,
+      "mean_self_score": 1.0006,
+      "min_self_score": 0.9961
+    },
+    "multimodal_text_image_vector": {
+      "exact@1": 1.0,
+      "self_mrr": 1.0,
+      "category_recall@5": 1.0,
+      "mean_self_score": 0.7027,
+      "min_self_score": 0.4983
+    },
+    "text_vector_only": {
+      "exact@1": 0.6203,
+      "self_mrr": 0.7314,
+      "category_recall@5": 0.9747,
+      "mean_self_score": 0.3193,
+      "min_self_score": 0.1708
+    }
+  }
+}

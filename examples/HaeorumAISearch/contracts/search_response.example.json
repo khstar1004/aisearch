@@ -1,0 +1,54 @@
+{
+  "top": [
+    {
+      "product_id": "P001",
+      "name": "검정 3단 자동 우산",
+      "category": "우산",
+      "price": 8500,
+      "image_url": "https://image-server.example.com/p001.jpg",
+      "product_url": "https://shop001.haeorumgift.com/product_view.asp?p_idx=P001",
+      "score": 0.91,
+      "score_percent": 91.0,
+      "mall_id": "shop001",
+      "source_scores": {
+        "marqo": 0.91
+      }
+    }
+  ],
+  "items": [
+    {
+      "product_id": "P002",
+      "name": "고급 장우산",
+      "category": "우산",
+      "price": 12000,
+      "image_url": "https://image-server.example.com/p002.jpg",
+      "product_url": "https://shop001.haeorumgift.com/product_view.asp?p_idx=P002",
+      "score": 0.84,
+      "score_percent": 84.0,
+      "mall_id": "shop001",
+      "source_scores": {
+        "marqo": 0.84
+      }
+    }
+  ],
+  "suggested_categories": [
+    "우산",
+    "생활용품",
+    "판촉물"
+  ],
+  "meta": {
+    "query_type": "text_image",
+    "elapsed_ms": 320.0,
+    "engine": "marqo",
+    "embedding_backend": "gemini",
+    "limit": 20,
+    "offset": 0,
+    "has_more": false,
+    "next_offset": null,
+    "mall_id": "shop001",
+    "text_weight": 0.4,
+    "image_weight": 0.6,
+    "low_confidence": false,
+    "notice": null
+  }
+}

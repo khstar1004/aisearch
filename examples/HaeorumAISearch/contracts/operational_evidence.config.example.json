@@ -1,0 +1,145 @@
+{
+  "base_url": "https://ai-search.haeorumgift.com",
+  "mall_id": "shop001",
+  "api_key_env": "HAEORUM_PUBLIC_API_KEY",
+  "admin_key_env": "HAEORUM_ADMIN_API_KEY",
+  "origin": "https://shop001.haeorumgift.com",
+  "click_rate_limit_probe_count": 601,
+  "expected_malls": 1700,
+  "required_sites": 3,
+  "missing_commands": {
+    "project_root": "/opt/haeorum-ai-search",
+    "evidence_dir": "/var/log/haeorum-ai-search"
+  },
+  "products_csv": "/data/haeorum-ai-search/products-full.csv",
+  "poc_products_csv": "/data/haeorum-ai-search/poc-products.csv",
+  "mall_config_source": "/data/haeorum-ai-search/malls-source.csv",
+  "mall_config": "/etc/haeorum-ai-search/malls.json",
+  "representative_sites_config": "/etc/haeorum-ai-search/representative-sites.config.json",
+  "representative_sites": {
+    "require_saved_widget_probe_sources": true
+  },
+  "mssql_connection_string_env": "HAEORUM_MSSQL_READONLY_CONNECTION_STRING",
+  "mssql_query": "SELECT product_id, product_name, price, price_min, price_max, category_name, print_methods, materials, colors, min_order_qty, delivery_days, product_group_id, main_image_url, product_url, status, updated_at, is_deleted, display_yn, mall_id FROM dbo.v_ai_search_products",
+  "input_preparation": {
+    "enabled": true,
+    "mssql_export": {
+      "limit": 0,
+      "fetch_size": 1000,
+      "product_id_column": "product_id",
+      "updated_at_column": "updated_at"
+    },
+    "poc_dataset": {
+      "target_size": 300,
+      "min_products": 300,
+      "min_per_category": 10
+    }
+  },
+  "marqo": {
+    "url": "http://127.0.0.1:8882",
+    "index": "haeorum-products",
+    "container": "marqo-api",
+    "storage_container": "vespa",
+    "storage_path": "/opt/vespa/var",
+    "model": "Marqo/marqo-ecommerce-embeddings-L",
+    "embedding_backend": "gemini",
+    "gemini_embedding_url": "http://127.0.0.1:8098",
+    "gemini_model": "gemini-embedding-2",
+    "gemini_embedding_dimensions": 1536,
+    "max_cpu_percent": 90,
+    "max_memory_percent": 85,
+    "max_storage_percent": 85,
+    "min_storage_available_gb": 10
+  },
+  "server_preflight": {
+    "role": "api",
+    "expected_odbc_driver": "ODBC Driver 18 for SQL Server"
+  },
+  "env_check": {
+    "env_file": "/etc/haeorum-ai-search/haeorum-ai-search.env",
+    "role": "api",
+    "api_server_count": 2
+  },
+  "image_url_check": {
+    "limit": 100,
+    "concurrency": 5,
+    "min_dimension": 16
+  },
+  "quality": {
+    "cases_file": "/etc/haeorum-ai-search/quality-cases.json",
+    "min_products": 300,
+    "max_text_ms": 3000,
+    "max_image_ms": 5000,
+    "max_mixed_ms": 5000
+  },
+  "load": {
+    "image_file": "/data/haeorum-ai-search/quality-images/load-reference.jpg",
+    "image_files": [
+      "/data/haeorum-ai-search/quality-images/load-reference-2.jpg",
+      "/data/haeorum-ai-search/quality-images/load-reference-3.jpg"
+    ],
+    "api_server_count": 2,
+    "admin_metrics_base_urls": [
+      "http://haeorum-ai-api-1:8000",
+      "http://haeorum-ai-api-2:8000"
+    ],
+    "allow_private_admin_metrics_targets": true,
+    "text": {
+      "requests": 100,
+      "concurrency": 100,
+      "p95_ms": 3000,
+      "p99_ms": 4800,
+      "request_timeout_seconds": 10,
+      "min_requests_per_second": 8.3,
+      "max_server_wait_avg_ms": 600,
+      "max_process_rss_growth_mb": 512
+    },
+    "image": {
+      "requests": 30,
+      "concurrency": 30,
+      "p95_ms": 5000,
+      "p99_ms": 8000,
+      "request_timeout_seconds": 16,
+      "min_requests_per_second": 1.5,
+      "max_server_wait_avg_ms": 1000,
+      "max_process_rss_growth_mb": 512
+    },
+    "mixed": {
+      "requests": 30,
+      "concurrency": 30,
+      "p95_ms": 5000,
+      "p99_ms": 8000,
+      "request_timeout_seconds": 16,
+      "min_requests_per_second": 1.5,
+      "max_server_wait_avg_ms": 1000,
+      "max_process_rss_growth_mb": 512
+    },
+    "mixed_traffic": {
+      "active_users": 850,
+      "requests": 850,
+      "concurrency": 100,
+      "mall_sample_size": 50,
+      "p95_ms": 5000,
+      "p99_ms": 8000,
+      "request_timeout_seconds": 16,
+      "min_requests_per_second": 5.0,
+      "max_server_wait_avg_ms": 1000,
+      "max_process_rss_growth_mb": 512
+    }
+  },
+  "api_scale": {
+    "single_report": "/var/log/haeorum-ai-search/load-mixed-traffic-1-api.json",
+    "multi_report": "/var/log/haeorum-ai-search/load-mixed-traffic-2-api.json",
+    "max_multi_p99_regression_percent": 25.0
+  },
+  "security": {
+    "mssql_ip_restricted": true,
+    "sync_alerting_configured": false,
+    "nginx_config": "/etc/nginx/sites-enabled/haeorum-ai-search.conf",
+    "systemd_service": "/etc/systemd/system/haeorum-ai-search.service",
+    "sync_systemd_service": "/etc/systemd/system/haeorum-ai-sync.service",
+    "reindex_systemd_service": "/etc/systemd/system/haeorum-ai-reindex.service",
+    "reindex_systemd_timer": "/etc/systemd/system/haeorum-ai-reindex.timer",
+    "logrotate_config": "/etc/logrotate.d/haeorum-ai-search"
+  }
+}

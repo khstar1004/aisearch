@@ -1,0 +1,26 @@
+<!-- 운영에서는 ai-search 도메인과 가맹점별 mallId/apiKey로 교체합니다. -->
+<script src="https://ai-search.haeorumgift.com/widget.js"></script>
+<script>
+  window.addEventListener("DOMContentLoaded", function () {
+    HaeorumAISearch.init({
+      target: "",
+      attachToSearchInput: "#keyword",
+      attachAfterSelector: "#searchForm button[type='submit']",
+      autoAttach: true,
+      fallbackFloating: false,
+      mountWaitMs: 3000,
+      mallId: "shop001",
+      siteId: "shop001",
+      apiKey: "replace-with-shop001-public-key",
+      apiBaseUrl: "https://ai-search.haeorumgift.com",
+      limit: 20,
+      maxImageMb: 5,
+      minImageDimension: 16,
+      triggerTitle: "AI검색",
+      triggerAriaLabel: "AI 상품 검색 열기",
+      accentColor: "#0f766e",
+      accentSoftColor: "#ecfdf5",
+      zIndex: 2147483000
+    });
+  });
+</script>

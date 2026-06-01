@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Marqo Local Demo</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fa;
+      --surface: #ffffff;
+      --text: #17202a;
+      --muted: #697386;
+      --line: #d9dee7;
+      --accent: #0f766e;
+      --accent-dark: #115e59;
+      --warning: #b45309;
+      --shadow: 0 8px 24px rgba(23, 32, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+      letter-spacing: 0;
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #fff;
+      padding: 0 14px;
+      cursor: pointer;
+      font-weight: 650;
+    }
+
+    button:hover {
+      background: var(--accent-dark);
+    }
+
+    button.secondary {
+      background: #fff;
+      color: var(--text);
+      border-color: var(--line);
+    }
+
+    button.secondary:hover {
+      background: #edf2f7;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      padding: 9px 10px;
+      outline: none;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 74px;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16);
+    }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 28px;
+      background: #15202b;
+      color: #fff;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, transparent 0 48%, rgba(255, 255, 255, 0.35) 48% 52%, transparent 52%),
+        #12a594;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      flex: 0 0 auto;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 18px;
+      line-height: 1.2;
+      font-weight: 760;
+    }
+
+    header p {
+      color: #bcc7d3;
+      font-size: 13px;
+      margin-top: 3px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #d7fbf4;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      gap: 18px;
+      padding: 18px;
+      width: min(1380px, 100%);
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .side {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .section {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .section + .section {
+      border-top: 1px solid var(--line);
+    }
+
+    .section h2 {
+      font-size: 14px;
+      text-transform: uppercase;
+      color: #334155;
+      font-weight: 780;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 680;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .searchbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 120px;
+      gap: 10px;
+      padding: 14px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 14px 14px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      color: #334155;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .chip:hover {
+      background: #e2e8f0;
+      color: #17202a;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      padding: 13px 14px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 680;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 118px auto;
+      min-width: 0;
+    }
+
+    .thumb {
+      position: relative;
+      overflow: hidden;
+      background: #dbe4ee;
+    }
+
+    .thumb::before,
+    .thumb::after {
+      content: "";
+      position: absolute;
+      inset: 16px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.45);
+      transform: rotate(-8deg);
+    }
+
+    .thumb::after {
+      inset: 34px 24px 26px;
+      transform: rotate(7deg);
+      background: rgba(23, 32, 42, 0.14);
+    }
+
+    .card-body {
+      padding: 12px;
+      display: grid;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .card h3 {
+      font-size: 15px;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .score {
+      display: grid;
+      gap: 5px;
+    }
+
+    .score-top {
+      display: flex;
+      justify-content: space-between;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .bar {
+      height: 7px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      width: 0;
+      background: var(--accent);
+    }
+
+    .log {
+      max-height: 170px;
+      overflow: auto;
+      background: #0f172a;
+      color: #d1e7ff;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      border-radius: 6px;
+      padding: 10px;
+      white-space: pre-wrap;
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--muted);
+      padding: 28px;
+      text-align: center;
+    }
+
+    @media (max-width: 920px) {
+      header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      main {
+        padding: 12px;
+      }
+
+      .searchbar,
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <div class="mark" aria-hidden="true"></div>
+        <div>
+          <h1>Marqo Local Demo</h1>
+          <p>In-memory search workflow</p>
+        </div>
+      </div>
+      <div class="status"><span class="dot"></span><span id="statusText">ready</span></div>
+    </header>
+
+    <main>
+      <aside class="side">
+        <div class="panel">
+          <section class="section">
+            <h2>Index</h2>
+            <div class="field">
+              <label for="indexName">Name</label>
+              <input id="indexName" value="products" autocomplete="off">
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="modelType">Model</label>
+                <select id="modelType">
+                  <option value="random">random</option>
+                  <option value="text">text</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="dimension">Dims</label>
+                <input id="dimension" type="number" min="8" max="128" step="8" value="32">
+              </div>
+            </div>
+            <div class="toolbar">
+              <button id="createIndex">Create index</button>
+              <button class="secondary" id="resetDemo">Reset</button>
+            </div>
+          </section>
+
+          <section class="section">
+            <h2>Document</h2>
+            <div class="field">
+              <label for="docTitle">Title</label>
+              <input id="docTitle" value="Trail running jacket" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="docCategory">Category</label>
+              <input id="docCategory" value="outerwear" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="docText">Text</label>
+              <textarea id="docText">Lightweight waterproof shell for wet mountain runs</textarea>
+            </div>
+            <button id="addDocument">Add document</button>
+          </section>
+
+          <section class="section">
+            <h2>API Trace</h2>
+            <div class="log" id="trace"></div>
+          </section>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <div class="panel">
+          <div class="searchbar">
+            <input id="query" value="waterproof running gear" autocomplete="off" aria-label="Search query">
+            <button id="runSearch">Search</button>
+          </div>
+          <div class="chips" id="suggestions"></div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric"><span>Indexes</span><strong id="metricIndexes">0</strong></div>
+          <div class="metric"><span>Documents</span><strong id="metricDocs">0</strong></div>
+          <div class="metric"><span>Top score</span><strong id="metricTop">0.00</strong></div>
+          <div class="metric"><span>Latency</span><strong id="metricLatency">0ms</strong></div>
+        </div>
+
+        <div class="results" id="results"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const palette = [
+      "#0f766e", "#2563eb", "#dc2626", "#7c3aed", "#475569",
+      "#ca8a04", "#0891b2", "#4d7c0f", "#be123c", "#4338ca"
+    ];
+
+    const starterDocs = [
+      ["Red linen summer dress", "fashion", "Breathable red linen dress for warm weather and casual garden parties"],
+      ["Waterproof trail shoe", "footwear", "Grip sole running shoe for rocky wet trails and marathon training"],
+      ["Leather moto jacket", "outerwear", "Black leather biker jacket with cropped fit and durable zip pockets"],
+      ["Blue denim jeans", "fashion", "Relaxed straight leg jeans in washed blue cotton denim"],
+      ["Wireless noise earbuds", "electronics", "Compact bluetooth earbuds with active noise cancellation for commuting"],
+      ["Espresso coffee machine", "home", "Countertop coffee maker with grinder milk wand and stainless finish"],
+      ["Mineral sunscreen", "beauty", "Daily SPF face sunscreen for sensitive skin with light matte finish"],
+      ["Ceramic table vase", "home", "Handmade white ceramic vase for flowers shelves and minimal decor"]
+    ];
+
+    const semanticHints = new Map([
+      ["rain", ["waterproof", "wet", "shell"]],
+      ["wet", ["waterproof", "rain"]],
+      ["jog", ["running", "run", "trail"]],
+      ["runner", ["running", "shoe", "trail"]],
+      ["coat", ["jacket", "outerwear", "shell"]],
+      ["phone", ["wireless", "bluetooth", "earbuds"]],
+      ["music", ["noise", "earbuds", "bluetooth"]],
+      ["coffee", ["espresso", "grinder", "machine"]],
+      ["sun", ["sunscreen", "spf", "skin"]],
+      ["decor", ["vase", "ceramic", "home"]]
+    ]);
+
+    const state = {
+      indexes: {},
+      activeIndex: null,
+      lastResults: [],
+      trace: []
+    };
+
+    const els = {
+      indexName: document.getElementById("indexName"),
+      modelType: document.getElementById("modelType"),
+      dimension: document.getElementById("dimension"),
+      createIndex: document.getElementById("createIndex"),
+      resetDemo: document.getElementById("resetDemo"),
+      docTitle: document.getElementById("docTitle"),
+      docCategory: document.getElementById("docCategory"),
+      docText: document.getElementById("docText"),
+      addDocument: document.getElementById("addDocument"),
+      query: document.getElementById("query"),
+      runSearch: document.getElementById("runSearch"),
+      suggestions: document.getElementById("suggestions"),
+      results: document.getElementById("results"),
+      trace: document.getElementById("trace"),
+      statusText: document.getElementById("statusText"),
+      metricIndexes: document.getElementById("metricIndexes"),
+      metricDocs: document.getElementById("metricDocs"),
+      metricTop: document.getElementById("metricTop"),
+      metricLatency: document.getElementById("metricLatency")
+    };
+
+    function tokenize(text) {
+      const raw = String(text).toLowerCase().match(/[a-z0-9]+/g) || [];
+      const expanded = [];
+      for (const token of raw) {
+        expanded.push(token);
+        if (semanticHints.has(token)) {
+          expanded.push(...semanticHints.get(token));
+        }
+      }
+      return expanded;
+    }
+
+    function hashToken(token) {
+      let h = 2166136261;
+      for (let i = 0; i < token.length; i += 1) {
+        h ^= token.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    }
+
+    function embed(text, dims) {
+      const vector = new Array(dims).fill(0);
+      const tokens = tokenize(text);
+      for (const token of tokens) {
+        const h = hashToken(token);
+        const slot = h % dims;
+        const sign = (h & 1) ? 1 : -1;
+        vector[slot] += sign * (1 + Math.min(token.length, 12) / 12);
+      }
+      const norm = Math.hypot(...vector) || 1;
+      return vector.map((x) => x / norm);
+    }
+
+    function cosine(a, b) {
+      let score = 0;
+      for (let i = 0; i < a.length; i += 1) score += a[i] * b[i];
+      return Math.max(0, Math.min(1, (score + 1) / 2));
+    }
+
+    function active() {
+      return state.indexes[state.activeIndex] || null;
+    }
+
+    function log(method, path, payload) {
+      const line = `${method} ${path}\n${JSON.stringify(payload, null, 2)}`;
+      state.trace.unshift(line);
+      state.trace = state.trace.slice(0, 6);
+      els.trace.textContent = state.trace.join("\n\n");
+    }
+
+    function createIndex(name, modelType, dims) {
+      state.indexes[name] = {
+        name,
+        modelType,
+        dims,
+        docs: [],
+        queries: []
+      };
+      state.activeIndex = name;
+      log("POST", `/indexes/${name}`, { model: modelType, dimensions: dims });
+      setStatus(`index ${name}`);
+      render();
+    }
+
+    function addDocument(title, category, text) {
+      const index = active();
+      if (!index) return;
+      const id = `${category}-${hashToken(`${title} ${Date.now()}`).toString(16).slice(0, 6)}`;
+      const body = `${title} ${category} ${text}`;
+      index.docs.push({
+        id,
+        title,
+        category,
+        text,
+        vector: embed(body, index.dims),
+        color: palette[index.docs.length % palette.length]
+      });
+      log("POST", `/indexes/${index.name}/documents`, [{ _id: id, title, category, text }]);
+      setStatus(`${index.docs.length} docs`);
+      render();
+      search();
+    }
+
+    function seed() {
+      createIndex("products", "random", 32);
+      for (const doc of starterDocs) addDocument(doc[0], doc[1], doc[2]);
+      state.trace = [];
+      log("GET", "/health", { status: "ok" });
+      search();
+    }
+
+    function search() {
+      const index = active();
+      if (!index) return;
+      const t0 = performance.now();
+      const q = els.query.value.trim();
+      const qVector = embed(q, index.dims);
+      index.queries.unshift(q);
+      index.queries = Array.from(new Set(index.queries)).slice(0, 10);
+      state.lastResults = index.docs
+        .map((doc) => ({
+          ...doc,
+          score: cosine(qVector, doc.vector)
+        }))
+        .sort((a, b) => b.score - a.score);
+      const latency = Math.round(performance.now() - t0);
+      log("POST", `/indexes/${index.name}/search`, { q, limit: 8 });
+      render(latency);
+    }
+
+    function setStatus(text) {
+      els.statusText.textContent = text;
+    }
+
+    function render(latency = 0) {
+      const index = active();
+      const indexCount = Object.keys(state.indexes).length;
+      els.metricIndexes.textContent = indexCount;
+      els.metricDocs.textContent = index ? index.docs.length : 0;
+      els.metricTop.textContent = state.lastResults[0] ? state.lastResults[0].score.toFixed(2) : "0.00";
+      els.metricLatency.textContent = `${latency}ms`;
+
+      const suggestions = index && index.queries.length
+        ? index.queries
+        : ["running gear", "coffee maker", "black jacket", "daily sunscreen"];
+      els.suggestions.innerHTML = "";
+      for (const suggestion of suggestions.slice(0, 6)) {
+        const chip = document.createElement("button");
+        chip.className = "chip";
+        chip.textContent = suggestion;
+        chip.addEventListener("click", () => {
+          els.query.value = suggestion;
+          search();
+        });
+        els.suggestions.appendChild(chip);
+      }
+
+      els.results.innerHTML = "";
+      const rows = state.lastResults.length ? state.lastResults : index ? index.docs : [];
+      if (!rows.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "No documents";
+        els.results.appendChild(empty);
+        return;
+      }
+
+      for (const doc of rows.slice(0, 12)) {
+        const card = document.createElement("article");
+        card.className = "card";
+        const thumb = document.createElement("div");
+        thumb.className = "thumb";
+        thumb.style.background = doc.color || palette[0];
+        const body = document.createElement("div");
+        body.className = "card-body";
+        body.innerHTML = `
+          <h3>${escapeHtml(doc.title)}</h3>
+          <div class="meta">${escapeHtml(doc.category)} / ${escapeHtml(doc.id)}</div>
+          <div class="meta">${escapeHtml(doc.text)}</div>
+          <div class="score">
+            <div class="score-top"><span>score</span><span>${(doc.score || 0).toFixed(3)}</span></div>
+            <div class="bar"><div class="fill" style="width:${Math.round((doc.score || 0) * 100)}%"></div></div>
+          </div>
+        `;
+        card.appendChild(thumb);
+        card.appendChild(body);
+        els.results.appendChild(card);
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    els.createIndex.addEventListener("click", () => {
+      const name = els.indexName.value.trim() || "products";
+      createIndex(name, els.modelType.value, Number(els.dimension.value || 32));
+    });
+
+    els.resetDemo.addEventListener("click", () => {
+      state.indexes = {};
+      state.activeIndex = null;
+      state.lastResults = [];
+      state.trace = [];
+      seed();
+    });
+
+    els.addDocument.addEventListener("click", () => {
+      addDocument(
+        els.docTitle.value.trim() || "Untitled document",
+        els.docCategory.value.trim() || "general",
+        els.docText.value.trim() || ""
+      );
+    });
+
+    els.runSearch.addEventListener("click", search);
+    els.query.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") search();
+    });
+
+    seed();
+  </script>
+</body>
+</html>

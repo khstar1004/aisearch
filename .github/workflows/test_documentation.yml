@@ -1,0 +1,46 @@
+name: test_documentation
+
+on:
+  push:
+    branches:
+      - mainline
+      - releases/*
+
+permissions:
+  contents: read
+
+jobs:
+  Test-Documentation:
+    name: Run Documentation Tests
+    runs-on: ubuntu-latest
+    defaults:
+        run:
+            working-directory: components/marqo
+
+    steps:
+      - name: Checkout marqo repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Checkout marqo-base for requirements
+        uses: actions/checkout@v3
+        with:
+          repository: marqo-ai/marqo-base
+          path: marqo-base
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync --dev
+
+      - name: Run Documentation Tests
+        run: |
+          uv run pytest tests/integ_tests/test_documentation.py

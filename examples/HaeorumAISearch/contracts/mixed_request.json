@@ -1,0 +1,8 @@
+{
+  "mall_id": "shop001",
+  "q": "검은색",
+  "image_base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9h",
+  "limit": 20,
+  "text_weight": 0.4,
+  "image_weight": 0.6
+}

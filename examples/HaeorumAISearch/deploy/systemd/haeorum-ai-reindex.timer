@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Haeorum Gift AI Search full reindex nightly
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+Unit=haeorum-ai-reindex.service
+
+[Install]
+WantedBy=timers.target

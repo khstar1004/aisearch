@@ -1,0 +1,235 @@
+name: marqo-image-search-demo
+
+services:
+  vespa:
+    image: vespaengine/vespa:${VESPA_VERSION:-8.513.17}
+    hostname: vespa
+    restart: unless-stopped
+
+  vespa-init:
+    image: python:3.13-slim
+    depends_on:
+      - vespa
+    command:
+      - sh
+      - -ec
+      - |
+        python - <<'PY'
+        import io
+        import json
+        import tarfile
+        import time
+        import urllib.error
+        import urllib.request
+
+        base = "http://vespa:19071"
+        app_url = (
+            f"{base}/application/v2/tenant/default/application/default/"
+            "environment/default/region/default/instance/default"
+        )
+
+        def request(method, url, body=None, headers=None, timeout=30):
+            req = urllib.request.Request(url, data=body, headers=headers or {}, method=method)
+            return urllib.request.urlopen(req, timeout=timeout)
+
+        def wait_for_convergence(timeout=240):
+            deadline = time.time() + timeout
+            while True:
+                try:
+                    response = request("GET", f"{app_url}/serviceconverge", timeout=10)
+                    status = json.loads(response.read())
+                    if status.get("converged"):
+                        print(
+                            "Vespa application converged at generation "
+                            f"{status.get('currentGeneration')}.",
+                            flush=True,
+                        )
+                        return
+                    print(
+                        "waiting for Vespa application convergence "
+                        f"({status.get('currentGeneration')}/{status.get('wantedGeneration')})...",
+                        flush=True,
+                    )
+                except urllib.error.HTTPError as exc:
+                    if exc.code not in (400, 404):
+                        print(exc.read().decode("utf-8", errors="replace"), flush=True)
+                        raise
+                    print("waiting for Vespa application to become active...", flush=True)
+
+                if time.time() > deadline:
+                    raise RuntimeError("Timed out waiting for Vespa application convergence.")
+                time.sleep(3)
+
+        while True:
+            try:
+                request("GET", f"{base}/state/v1/version", timeout=5).read()
+                break
+            except Exception:
+                print("waiting for Vespa config server...", flush=True)
+                time.sleep(3)
+
+        has_active_application = False
+        try:
+            request("GET", f"{app_url}/serviceconverge", timeout=10).read()
+            print("Vespa already has an active application.", flush=True)
+            has_active_application = True
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (400, 404):
+                print(exc.read().decode("utf-8", errors="replace"), flush=True)
+                raise
+
+        if not has_active_application:
+            files = {
+                "hosts.xml": """<?xml version="1.0" encoding="UTF-8"?>
+        <hosts>
+          <host name="vespa">
+            <alias>node1</alias>
+          </host>
+        </hosts>
+        """,
+                "services.xml": """<?xml version="1.0" encoding="UTF-8"?>
+        <services version="1.0" xmlns:deploy="vespa" xmlns:preprocess="properties">
+          <container id="default" version="1.0">
+            <document-api/>
+            <search/>
+            <nodes>
+              <node hostalias="node1"/>
+            </nodes>
+          </container>
+          <content id="content_default" version="1.0">
+            <redundancy>1</redundancy>
+            <documents>
+              <document type="dummy" mode="index"/>
+            </documents>
+            <nodes>
+              <node hostalias="node1" distribution-key="0"/>
+            </nodes>
+          </content>
+        </services>
+        """,
+                "schemas/dummy.sd": """schema dummy {
+          document dummy {
+            field id type string {
+              indexing: summary | attribute
+            }
+          }
+        }
+        """,
+            }
+
+            package = io.BytesIO()
+            with tarfile.open(fileobj=package, mode="w:gz") as tar:
+                for name, content in files.items():
+                    data = content.encode("utf-8")
+                    info = tarfile.TarInfo(name)
+                    info.size = len(data)
+                    tar.addfile(info, io.BytesIO(data))
+            package.seek(0)
+
+            try:
+                response = request(
+                    "POST",
+                    f"{base}/application/v2/tenant/default/prepareandactivate",
+                    body=package.read(),
+                    headers={"Content-Type": "application/x-gzip"},
+                    timeout=120,
+                )
+                print(response.read().decode("utf-8", errors="replace"), flush=True)
+            except urllib.error.HTTPError as exc:
+                print(exc.read().decode("utf-8", errors="replace"), flush=True)
+                raise
+            print("Initial Vespa application deployed.", flush=True)
+
+        wait_for_convergence()
+        PY
+    restart: "no"
+
+  mioc:
+    build:
+      context: ../../components
+      dockerfile: inference_orchestrator/Dockerfile
+    environment:
+      MARQO_ENABLE_LOCAL_OPEN_CLIP_INFERENCE: "TRUE"
+      MARQO_LOG_LEVEL: "INFO"
+      MARQO_MODEL_CACHE_PATH: "/models"
+      MARQO_MODELS_TO_PRELOAD: "[]"
+      MARQO_TRITON_URL: "http://triton-disabled-for-local-clip:8001"
+      MARQO_MODEL_MANAGEMENT_CONTAINER_URL: "http://mmc-disabled-for-local-clip:8883"
+    volumes:
+      - clip-model-cache:/models
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../../components
+      dockerfile: marqo/Dockerfile
+    environment:
+      MARQO_ENABLE_BATCH_APIS: "TRUE"
+      MARQO_ENABLE_OPS_API: "TRUE"
+      MARQO_API_INFERENCE_CACHE_SIZE: "128"
+      MARQO_LOG_FORMAT: "plain"
+      MARQO_LOG_LEVEL: "info"
+      MARQO_MAX_VECTORISE_BATCH_SIZE: "8"
+      MARQO_MODELS_TO_PRELOAD: "[]"
+      MARQO_INDEX_DEPLOYMENT_LOCK_TIMEOUT: "0"
+      MARQO_REMOTE_INFERENCE_URL: "http://mioc:8884"
+      VESPA_CONFIG_URL: "http://vespa:19071"
+      VESPA_CONTENT_CLUSTER_NAME: "content_default"
+      VESPA_DOCUMENT_URL: "http://vespa:8080"
+      VESPA_QUERY_URL: "http://vespa:8080"
+    depends_on:
+      vespa-init:
+        condition: service_completed_successfully
+      mioc:
+        condition: service_started
+    entrypoint: ["sh", "-c"]
+    command:
+      - >
+        until curl -fsS http://vespa:19071/state/v1/version >/dev/null; do
+          echo "waiting for Vespa config server...";
+          sleep 3;
+        done;
+        exec ./run_marqo.sh
+    restart: unless-stopped
+
+  qwen:
+    build:
+      context: ./qwen
+    gpus: all
+    environment:
+      HF_HOME: "/models/huggingface"
+      SENTENCE_TRANSFORMERS_HOME: "/models/sentence-transformers"
+      QWEN_MODEL_NAME: "${QWEN_MODEL_NAME:-Qwen/Qwen3-VL-Embedding-2B}"
+      QWEN_DEVICE: "${QWEN_DEVICE:-cpu}"
+      QWEN_EMBEDDING_DIMENSIONS: "${QWEN_EMBEDDING_DIMENSIONS:-2048}"
+    volumes:
+      - qwen-model-cache:/models
+    ports:
+      - "${QWEN_DEMO_PORT:-8111}:8098"
+    restart: unless-stopped
+
+  ui:
+    image: python:3.13-slim
+    working_dir: /app
+    volumes:
+      - ./ui:/app:ro
+      - ./experiments/data:/catalog:ro
+    environment:
+      MARQO_URL: "http://api:8882"
+      IMAGE_INDEX_NAME: "qwen-promo-image-demo"
+      IMAGE_DEMO_MODEL_NAME: "Qwen/Qwen3-VL-Embedding-2B"
+      IMAGE_EMBEDDING_BACKEND: "qwen"
+      QWEN_EMBEDDING_URL: "http://qwen:8098"
+      QWEN_EMBEDDING_DIMENSIONS: "2048"
+      IMAGE_CATALOG_URL: "/catalog/gift_url_products.csv"
+    command: ["python", "ui_server.py", "--host", "0.0.0.0", "--port", "8099"]
+    ports:
+      - "${MARQO_IMAGE_DEMO_UI_PORT:-8110}:8099"
+    depends_on:
+      - api
+      - qwen
+    restart: unless-stopped
+
+volumes:
+  clip-model-cache:
+  qwen-model-cache:

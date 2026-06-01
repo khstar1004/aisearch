@@ -1,0 +1,59 @@
+{
+  "cases": [
+    {
+      "name": "text_black_umbrella",
+      "query": {
+        "q": "검은 우산"
+      },
+      "expected_category": "우산",
+      "expected_min_results": 3
+    },
+    {
+      "name": "text_stainless_tumbler",
+      "query": {
+        "q": "스텐 텀블러"
+      },
+      "expected_category": "텀블러",
+      "expected_min_results": 3
+    },
+    {
+      "name": "text_typo_tumbler",
+      "query": {
+        "q": "텐블러"
+      },
+      "tags": [
+        "typo_or_synonym"
+      ],
+      "expected_category": "텀블러",
+      "expected_min_results": 3
+    },
+    {
+      "name": "image_reference_umbrella",
+      "query": {
+        "image": true
+      },
+      "image_path": "/data/haeorum-ai-search/quality-images/umbrella-reference.jpg",
+      "expected_category": "우산",
+      "expected_min_results": 3
+    },
+    {
+      "name": "mixed_black_tumbler",
+      "query": {
+        "q": "검은색",
+        "image": true
+      },
+      "image_path": "/data/haeorum-ai-search/quality-images/tumbler-reference.jpg",
+      "expected_category": "텀블러",
+      "expected_min_results": 3
+    },
+    {
+      "name": "low_confidence_off_topic_image",
+      "query": {
+        "image": true
+      },
+      "image_path": "/data/haeorum-ai-search/quality-images/off-topic-reference.jpg",
+      "expected_low_confidence": true,
+      "expected_min_results": 0
+    }
+  ]
+}

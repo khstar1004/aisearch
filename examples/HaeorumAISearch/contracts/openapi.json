@@ -1,0 +1,2099 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Haeorum Gift AI Search API",
+        "version": "0.1.0",
+        "description": "해오름기프트 AI 상품 검색 위젯과 운영 동기화 API 계약입니다."
+    },
+    "servers": [
+        {
+            "url": "https://ai-search.haeorumgift.com",
+            "description": "운영 예시"
+        },
+        {
+            "url": "http://localhost:8000",
+            "description": "로컬 개발"
+        }
+    ],
+    "paths": {
+        "/health": {
+            "get": {
+                "summary": "서비스 상태 확인",
+                "responses": {
+                    "200": {
+                        "description": "검색엔진과 인덱스 상태",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HealthResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/ai-search": {
+            "post": {
+                "summary": "AI 상품 검색",
+                "description": "텍스트, 이미지, 텍스트+이미지 혼합 검색을 하나의 엔드포인트에서 처리합니다. 가맹점 설정에 api_key가 있으면 X-API-Key 헤더가 필요합니다. URL query string과 JSON/multipart body의 api_key/apiKey/apikey/api-key/x-api-key 및 admin_key/x-admin-key 계열 별칭은 access log와 검증 오류 노출을 막기 위해 지원하지 않습니다.",
+                "security": [
+                    {
+                        "PublicApiKey": []
+                    },
+                    {}
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SearchRequest"
+                            },
+                            "examples": {
+                                "text": {
+                                    "summary": "텍스트 검색",
+                                    "value": {
+                                        "mall_id": "shop001",
+                                        "q": "검은 우산",
+                                        "limit": 20
+                                    }
+                                },
+                                "image": {
+                                    "summary": "JSON 이미지 검색",
+                                    "value": {
+                                        "mall_id": "shop001",
+                                        "image_base64": "data:image/png;base64,...",
+                                        "limit": 20
+                                    }
+                                },
+                                "mixed": {
+                                    "summary": "텍스트+이미지 혼합 검색",
+                                    "value": {
+                                        "mall_id": "shop001",
+                                        "q": "검은색",
+                                        "image_base64": "data:image/png;base64,...",
+                                        "limit": 20
+                                    }
+                                }
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                    "mall_id": {
+                                        "type": "string",
+                                        "maxLength": 64,
+                                        "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$",
+                                        "example": "shop001"
+                                    },
+                                    "site_id": {
+                                        "type": "string",
+                                        "maxLength": 64,
+                                        "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$",
+                                        "description": "mall_id와 같은 가맹점 식별값 별칭. mall_id와 함께 보내면 값이 같아야 합니다.",
+                                        "example": "shop001"
+                                    },
+                                    "q": {
+                                        "type": "string",
+                                        "maxLength": 200,
+                                        "description": "UTF-8 검색어. 깨진 문자(`?? ??`, replacement 문자)가 감지되면 400/422로 거절합니다.",
+                                        "example": "검은 우산"
+                                    },
+                                    "image": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "description": "JPG, PNG, WEBP 이미지 파일. 기본 최소 가로/세로는 16px이며 HAEORUM_MIN_IMAGE_DIMENSION으로 조정합니다."
+                                    },
+                                    "limit": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "default": 20,
+                                        "description": "top 3을 제외한 related items 최대 개수"
+                                    },
+                                    "offset": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "default": 0,
+                                        "description": "top 3을 제외한 related items 기준 시작 위치"
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "maxLength": 100,
+                                        "nullable": true
+                                    },
+                                    "print_method": {
+                                        "type": "string",
+                                        "maxLength": 100,
+                                        "nullable": true,
+                                        "description": "인쇄/각인 방식 필터"
+                                    },
+                                    "material": {
+                                        "type": "string",
+                                        "maxLength": 100,
+                                        "nullable": true,
+                                        "description": "소재 필터"
+                                    },
+                                    "color": {
+                                        "type": "string",
+                                        "maxLength": 100,
+                                        "nullable": true,
+                                        "description": "색상 필터"
+                                    },
+                                    "min_price": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "nullable": true
+                                    },
+                                    "max_price": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "nullable": true
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "nullable": true,
+                                        "description": "사용자 희망 주문 수량. 상품 최소 주문 수량이 이 값 이하인 상품만 반환합니다."
+                                    },
+                                    "order_qty": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "nullable": true,
+                                        "description": "quantity와 같은 주문 수량 별칭"
+                                    },
+                                    "max_delivery_days": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "nullable": true,
+                                        "description": "최대 허용 납기 일수"
+                                    },
+                                    "text_weight": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "nullable": true
+                                    },
+                                    "image_weight": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "nullable": true
+                                    }
+                                },
+                                "anyOf": [
+                                    {
+                                        "required": [
+                                            "q"
+                                        ]
+                                    },
+                                    {
+                                        "required": [
+                                            "image"
+                                        ]
+                                    }
+                                ]
+                            },
+                            "examples": {
+                                "image": {
+                                    "summary": "multipart 이미지 검색",
+                                    "value": {
+                                        "mall_id": "shop001",
+                                        "image": "(binary JPG/PNG/WEBP file)",
+                                        "limit": 20
+                                    }
+                                },
+                                "mixed": {
+                                    "summary": "multipart 텍스트+이미지 혼합 검색",
+                                    "value": {
+                                        "mall_id": "shop001",
+                                        "q": "검은색",
+                                        "image": "(binary JPG/PNG/WEBP file)",
+                                        "limit": 20,
+                                        "text_weight": 0.4,
+                                        "image_weight": 0.6
+                                    }
+                                },
+                                "site_id_alias": {
+                                    "summary": "site_id 별칭 사용",
+                                    "value": {
+                                        "site_id": "shop001",
+                                        "q": "3단 자동",
+                                        "image": "(binary JPG/PNG/WEBP file)",
+                                        "limit": 20
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "검색 결과",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SearchResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "413": {
+                        "$ref": "#/components/responses/PayloadTooLarge"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/RateLimited"
+                    },
+                    "502": {
+                        "$ref": "#/components/responses/BadGateway"
+                    },
+                    "503": {
+                        "$ref": "#/components/responses/ServiceUnavailable"
+                    }
+                }
+            }
+        },
+        "/api/click-log": {
+            "post": {
+                "summary": "검색 결과 클릭 로그",
+                "description": "검색 결과 클릭 이벤트를 기록합니다. 가맹점 설정에 api_key가 있으면 X-API-Key 헤더가 필요합니다. URL query string과 JSON body의 api_key/apiKey/apikey/api-key/x-api-key 및 admin_key/x-admin-key 계열 별칭은 access log와 검증 오류 노출을 막기 위해 지원하지 않습니다.",
+                "security": [
+                    {
+                        "PublicApiKey": []
+                    },
+                    {}
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ClickLogRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "로그 기록 성공",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OkResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/RateLimited"
+                    }
+                }
+            }
+        },
+        "/admin/sync": {
+            "post": {
+                "summary": "변경 상품 동기화",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "since",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "MSSQL source가 지원하는 변경 기준 시각"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/responses/SyncResultResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/admin/reindex": {
+            "post": {
+                "summary": "전체 재색인",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/responses/SyncResultResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/admin/reindex/{product_id}": {
+            "post": {
+                "summary": "단일 상품 재색인",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "product_id",
+                        "in": "path",
+                        "required": true,
+                        "description": "/를 포함한 상품번호도 경로 나머지로 전달할 수 있습니다. 공백, ?, # 등 URL 예약 문자는 URL encode합니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/responses/SyncResultResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/admin/reindex-product": {
+            "post": {
+                "summary": "단일 상품 재색인(JSON body)",
+                "description": "URL path 예약 문자 처리 차이를 피하려면 이 JSON body 기반 엔드포인트를 사용합니다. product_id에 /, ?, #, 공백이 들어가도 원문 값을 전달할 수 있습니다.",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminProductRequest"
+                            },
+                            "examples": {
+                                "reserved_chars": {
+                                    "value": {
+                                        "product_id": "P/001?color=black#main"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/responses/SyncResultResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/admin/product/{product_id}": {
+            "delete": {
+                "summary": "단일 상품 색인 삭제",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "product_id",
+                        "in": "path",
+                        "required": true,
+                        "description": "/를 포함한 상품번호도 경로 나머지로 전달할 수 있습니다. 공백, ?, # 등 URL 예약 문자는 URL encode합니다.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/responses/SyncResultResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/admin/delete-product": {
+            "post": {
+                "summary": "단일 상품 색인 삭제(JSON body)",
+                "description": "URL path 예약 문자 처리 차이를 피하려면 이 JSON body 기반 엔드포인트를 사용합니다. product_id에 /, ?, #, 공백이 들어가도 원문 값을 전달할 수 있습니다.",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminProductRequest"
+                            },
+                            "examples": {
+                                "reserved_chars": {
+                                    "value": {
+                                        "product_id": "P/001?color=black#main"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/responses/SyncResultResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/admin/sync-status": {
+            "get": {
+                "summary": "최근 동기화 상태 조회",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "최근 동기화 상태",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SyncStatus"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/admin/search-log": {
+            "get": {
+                "summary": "최근 검색/클릭 로그 조회",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "검색/클릭 로그 목록",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/admin/sync-log": {
+            "get": {
+                "summary": "최근 동기화/색인 로그 조회",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "동기화/색인 로그 목록",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/admin/search-insights": {
+            "get": {
+                "summary": "검색 품질 인사이트 조회",
+                "description": "검색/클릭 로그에서 무결과, 낮은 유사도, 클릭 없는 반복 쿼리, 많이 클릭된 상품, 혼합 검색 가중치별 성과와 추천 액션을 집계합니다.",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "minimum": 1
+                        },
+                        "description": "각 인사이트 목록의 최대 항목 수"
+                    },
+                {
+                    "name": "min_searches",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                    },
+                    "description": "쿼리별 인사이트에 포함할 최소 검색 횟수"
+                },
+                {
+                    "name": "slow_text_ms",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "number",
+                        "default": 3000,
+                        "exclusiveMinimum": 0
+                    },
+                    "description": "느린 텍스트 검색으로 집계할 elapsed_ms 기준"
+                },
+                {
+                    "name": "slow_image_ms",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "number",
+                        "default": 5000,
+                        "exclusiveMinimum": 0
+                    },
+                    "description": "느린 이미지 검색으로 집계할 elapsed_ms 기준"
+                },
+                {
+                    "name": "slow_mixed_ms",
+                    "in": "query",
+                    "required": false,
+                    "schema": {
+                        "type": "number",
+                        "default": 5000,
+                        "exclusiveMinimum": 0
+                    },
+                    "description": "느린 텍스트+이미지 검색으로 집계할 elapsed_ms 기준"
+                }
+            ],
+                "responses": {
+                    "200": {
+                        "description": "검색 품질 인사이트",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SearchInsightsReport"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/admin/error-log": {
+            "get": {
+                "summary": "최근 API 오류 로그 조회",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "API 오류 로그 목록",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/admin/metrics": {
+            "get": {
+                "summary": "운영 메트릭 요약 조회",
+                "description": "검색/클릭/API 오류 로그, 동기화 상태, 검색엔진 상태, 로그 파일 크기, 디스크 사용량을 요약합니다.",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1000,
+                            "minimum": 1
+                        },
+                        "description": "검색/오류 로그에서 요약할 최근 이벤트 수"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "운영 메트릭 요약",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminMetrics"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/admin/metrics.prom": {
+            "get": {
+                "summary": "Prometheus 운영 메트릭 조회",
+                "description": "운영 메트릭 요약을 Prometheus text exposition format으로 반환합니다.",
+                "security": [
+                    {
+                        "AdminApiKey": []
+                    },
+                    {
+                        "AdminBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1000,
+                            "minimum": 1
+                        },
+                        "description": "검색/오류 로그에서 요약할 최근 이벤트 수"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Prometheus text format 운영 메트릭",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthorized"
+                    }
+                }
+            }
+        },
+        "/widget.js": {
+            "get": {
+                "summary": "쇼핑몰 삽입용 위젯 스크립트",
+                "responses": {
+                    "200": {
+                        "description": "JavaScript 위젯 파일",
+                        "content": {
+                            "text/javascript": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "PublicApiKey": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-API-Key",
+                "description": "가맹점별 공개 API key입니다. URL query string, JSON body, multipart body 필드로는 전달하지 않습니다."
+            },
+            "AdminApiKey": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-Admin-Key",
+                "description": "관리자 API 전용 key입니다. 공개 API request body 또는 query string 필드로는 전달하지 않습니다."
+            },
+            "AdminBearer": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        },
+        "responses": {
+            "BadRequest": {
+                "description": "요청 값 오류",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "Unauthorized": {
+                "description": "인증 실패",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "Forbidden": {
+                "description": "허용되지 않은 가맹점 또는 Origin",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "PayloadTooLarge": {
+                "description": "이미지 용량 초과",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "RateLimited": {
+                "description": "검색, 클릭 로그 또는 이미지 검색 rate limit 초과",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "BadGateway": {
+                "description": "검색 backend가 잘못된 응답을 반환함",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "ServiceUnavailable": {
+                "description": "검색 backend 일시 장애 또는 과부하",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "SyncResultResponse": {
+                "description": "동기화/색인 처리 결과",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/SyncResult"
+                        }
+                    }
+                }
+            }
+        },
+        "schemas": {
+            "SearchRequest": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "mall_id": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$",
+                        "nullable": true,
+                        "example": "shop001"
+                    },
+                    "site_id": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$",
+                        "nullable": true,
+                        "description": "mall_id와 같은 가맹점 식별값 별칭. mall_id와 함께 보내면 값이 같아야 합니다.",
+                        "example": "shop001"
+                    },
+                    "q": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "description": "UTF-8 검색어. 깨진 문자(`?? ??`, replacement 문자)가 감지되면 400/422로 거절합니다.",
+                        "nullable": true,
+                        "example": "검은 우산"
+                    },
+                    "image_base64": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "data:image/png;base64,... 형식의 이미지. 기본 최소 가로/세로는 16px이며 HAEORUM_MIN_IMAGE_DIMENSION으로 조정합니다."
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 20,
+                        "description": "top 3을 제외한 related items 최대 개수"
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "default": 0,
+                        "description": "top 3을 제외한 related items 기준 시작 위치"
+                    },
+                    "category": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true
+                    },
+                    "print_method": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true,
+                        "description": "인쇄/각인 방식 필터"
+                    },
+                    "material": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true,
+                        "description": "소재 필터"
+                    },
+                    "color": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "nullable": true,
+                        "description": "색상 필터"
+                    },
+                    "min_price": {
+                        "type": "number",
+                        "minimum": 0,
+                        "nullable": true
+                    },
+                    "max_price": {
+                        "type": "number",
+                        "minimum": 0,
+                        "nullable": true
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "nullable": true,
+                        "description": "사용자 희망 주문 수량. 상품 최소 주문 수량이 이 값 이하인 상품만 반환합니다."
+                    },
+                    "order_qty": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "nullable": true,
+                        "description": "quantity와 같은 주문 수량 별칭"
+                    },
+                    "max_delivery_days": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "nullable": true,
+                        "description": "최대 허용 납기 일수"
+                    },
+                    "text_weight": {
+                        "type": "number",
+                        "minimum": 0,
+                        "nullable": true
+                    },
+                    "image_weight": {
+                        "type": "number",
+                        "minimum": 0,
+                        "nullable": true
+                    }
+                },
+                "anyOf": [
+                    {
+                        "required": [
+                            "q"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "image_base64"
+                        ]
+                    }
+                ]
+            },
+            "SearchResponse": {
+                "type": "object",
+                "required": [
+                    "top",
+                    "items",
+                    "suggested_categories",
+                    "meta"
+                ],
+                "properties": {
+                    "top": {
+                        "type": "array",
+                        "maxItems": 3,
+                        "items": {
+                            "$ref": "#/components/schemas/SearchResultItem"
+                        }
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SearchResultItem"
+                        }
+                    },
+                    "suggested_categories": {
+                        "type": "array",
+                        "maxItems": 15,
+                        "uniqueItems": true,
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "meta": {
+                        "$ref": "#/components/schemas/SearchMeta"
+                    }
+                }
+            },
+            "SearchResultItem": {
+                "type": "object",
+                "required": [
+                    "product_id",
+                    "name",
+                    "category",
+                    "price",
+                    "image_url",
+                    "product_url",
+                    "score",
+                    "score_percent",
+                    "mall_id",
+                    "source_scores"
+                ],
+    "properties": {
+        "product_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "price": {
+          "type": "number",
+          "minimum": 0,
+          "nullable": true
+        },
+        "image_url": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 1000,
+          "nullable": true
+        },
+        "product_url": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 1000
+        },
+                    "score": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                    },
+                    "score_percent": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                    },
+        "mall_id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$",
+          "nullable": true
+        },
+                    "source_scores": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "number"
+                        }
+                    }
+                }
+            },
+            "SearchMeta": {
+                "type": "object",
+                "required": [
+                    "query_type",
+                    "elapsed_ms",
+                    "engine",
+                    "limit",
+                    "offset",
+                    "has_more",
+                    "next_offset",
+                    "mall_id",
+                    "text_weight",
+                    "image_weight",
+                    "low_confidence",
+                    "notice"
+                ],
+                "properties": {
+                    "query_type": {
+                        "type": "string",
+                        "enum": [
+                            "text",
+                            "image",
+                            "text_image"
+                        ]
+                    },
+                    "elapsed_ms": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "engine": {
+                        "type": "string"
+                    },
+                    "embedding_backend": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "has_more": {
+                        "type": "boolean"
+                    },
+                    "next_offset": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "nullable": true
+                    },
+                    "mall_id": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$",
+                        "nullable": true
+                    },
+                    "text_weight": {
+                        "type": "number",
+                        "minimum": 0,
+                        "nullable": true
+                    },
+                    "image_weight": {
+                        "type": "number",
+                        "minimum": 0,
+                        "nullable": true
+                    },
+                    "low_confidence": {
+                        "type": "boolean"
+                    },
+                    "notice": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "SearchInsightsReport": {
+                "type": "object",
+                "required": [
+                    "ok",
+                    "generated_at",
+                    "search_events",
+                    "click_events",
+                    "click_through_rate_percent",
+                    "query_type_counts",
+                    "latency_ms",
+                    "query_type_latency_ms",
+                    "cache_latency_ms",
+                    "slow_search_events",
+                    "mixed_weight_performance",
+                    "top_queries",
+                    "low_confidence_queries",
+                    "zero_result_queries",
+                    "no_click_queries",
+                    "slow_queries",
+                    "slow_search_samples",
+                    "top_clicked_products",
+                    "synonym_seed_candidates",
+                    "quality_case_candidates",
+                    "mixed_weight_recommendation",
+                    "recommendations"
+                ],
+                "properties": {
+                    "ok": {
+                        "type": "boolean"
+                    },
+                    "generated_at": {
+                        "type": "string"
+                    },
+                    "search_events": {
+                        "type": "integer"
+                    },
+                    "click_events": {
+                        "type": "integer"
+                    },
+                    "click_through_rate_percent": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "query_type_counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "latency_ms": {
+                        "$ref": "#/components/schemas/LatencyInsight"
+                    },
+                    "query_type_latency_ms": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "$ref": "#/components/schemas/LatencyInsight"
+                        }
+                    },
+                    "cache_latency_ms": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "$ref": "#/components/schemas/LatencyInsight"
+                        }
+                    },
+                    "slow_search_events": {
+                        "type": "integer"
+                    },
+                    "slow_search_event_rate_percent": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "slow_latency_threshold_ms": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "number"
+                        }
+                    },
+                    "mixed_weight_performance": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MixedWeightInsight"
+                        }
+                    },
+                    "top_queries": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/QueryInsight"
+                        }
+                    },
+                    "low_confidence_queries": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/QueryInsight"
+                        }
+                    },
+                    "zero_result_queries": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/QueryInsight"
+                        }
+                    },
+                    "no_click_queries": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/QueryInsight"
+                        }
+                    },
+                    "slow_queries": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/QueryInsight"
+                        }
+                    },
+                    "slow_search_samples": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SlowSearchSample"
+                        }
+                    },
+                    "top_clicked_products": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ClickedProductInsight"
+                        }
+                    },
+                    "synonym_seed_candidates": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SynonymSeedCandidate"
+                        }
+                    },
+                    "quality_case_candidates": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/QualityCaseCandidate"
+                        }
+                    },
+                    "mixed_weight_recommendation": {
+                        "nullable": true,
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MixedWeightRecommendation"
+                            }
+                        ]
+                    },
+                    "recommendations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SearchRecommendation"
+                        }
+                    }
+                },
+                "additionalProperties": true
+            },
+            "LatencyInsight": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "min_ms",
+                    "avg_ms",
+                    "p50_ms",
+                    "p95_ms",
+                    "p99_ms",
+                    "max_ms"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "min_ms": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "avg_ms": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "p50_ms": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "p95_ms": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "p99_ms": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "max_ms": {
+                        "type": "number",
+                        "nullable": true
+                    }
+                }
+            },
+            "SlowSearchSample": {
+                "type": "object",
+                "required": [
+                    "query_type",
+                    "elapsed_ms",
+                    "low_confidence"
+                ],
+                "properties": {
+                    "timestamp": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "query": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "raw_query": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "query_type": {
+                        "type": "string"
+                    },
+                    "mall_id": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "elapsed_ms": {
+                        "type": "number"
+                    },
+                    "cached": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "result_count": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "top_score_percent": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "low_confidence": {
+                        "type": "boolean"
+                    }
+                },
+                "additionalProperties": true
+            },
+            "QueryInsight": {
+                "type": "object",
+                "required": [
+                    "query",
+                    "searches",
+                    "clicks",
+                    "click_through_rate_percent",
+                    "zero_result_count",
+                    "low_confidence_count",
+                    "avg_top_score_percent",
+                    "query_type_counts",
+                    "mall_counts",
+                    "top_product_ids",
+                    "top_categories"
+                ],
+                "properties": {
+                    "query": {
+                        "type": "string"
+                    },
+                    "searches": {
+                        "type": "integer"
+                    },
+                    "clicks": {
+                        "type": "integer"
+                    },
+                    "click_through_rate_percent": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "zero_result_count": {
+                        "type": "integer"
+                    },
+                    "low_confidence_count": {
+                        "type": "integer"
+                    },
+                    "avg_top_score_percent": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "query_type_counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "mall_counts": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "integer"
+                        }
+                    },
+                    "top_product_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "top_categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "additionalProperties": true
+            },
+            "MixedWeightInsight": {
+                "type": "object",
+                "required": [
+                    "weights",
+                    "text_weight",
+                    "image_weight",
+                    "searches",
+                    "avg_top_score_percent",
+                    "low_confidence_count",
+                    "zero_result_count"
+                ],
+                "properties": {
+                    "weights": {
+                        "type": "string"
+                    },
+                    "text_weight": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "image_weight": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "searches": {
+                        "type": "integer"
+                    },
+                    "avg_top_score_percent": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "low_confidence_count": {
+                        "type": "integer"
+                    },
+                    "zero_result_count": {
+                        "type": "integer"
+                    }
+                },
+                "additionalProperties": true
+            },
+            "ClickedProductInsight": {
+                "type": "object",
+                "required": [
+                    "product_id",
+                    "clicks",
+                    "avg_position",
+                    "avg_score_percent",
+                    "top_queries"
+                ],
+                "properties": {
+                    "product_id": {
+                        "type": "string"
+                    },
+                    "clicks": {
+                        "type": "integer"
+                    },
+                    "avg_position": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "avg_score_percent": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "top_queries": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "SynonymSeedCandidate": {
+                "type": "object",
+                "required": [
+                    "term",
+                    "related_terms",
+                    "priority",
+                    "sources",
+                    "searches",
+                    "suggested_synonyms_entry"
+                ],
+                "properties": {
+                    "term": {
+                        "type": "string"
+                    },
+                    "related_terms": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "priority": {
+                        "type": "string"
+                    },
+                    "sources": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "searches": {
+                        "type": "integer"
+                    },
+                    "zero_result_count": {
+                        "type": "integer"
+                    },
+                    "low_confidence_count": {
+                        "type": "integer"
+                    },
+                    "clicks": {
+                        "type": "integer"
+                    },
+                    "suggested_synonyms_entry": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "additionalProperties": true
+            },
+            "QualityCaseCandidate": {
+                "type": "object",
+                "required": [
+                    "name",
+                    "source",
+                    "query",
+                    "tags",
+                    "expected_min_results",
+                    "evidence"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "query": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "expected_min_results": {
+                        "type": "integer"
+                    },
+                    "expected_category": {
+                        "type": "string"
+                    },
+                    "evidence": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "review_note": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": true
+            },
+            "MixedWeightRecommendation": {
+                "type": "object",
+                "required": [
+                    "weights",
+                    "searches",
+                    "action"
+                ],
+                "properties": {
+                    "weights": {
+                        "type": "string"
+                    },
+                    "text_weight": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "image_weight": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "searches": {
+                        "type": "integer"
+                    },
+                    "avg_top_score_percent": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "low_confidence_rate_percent": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "zero_result_rate_percent": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "action": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": true
+            },
+            "SearchRecommendation": {
+                "type": "object",
+                "required": [
+                    "type",
+                    "priority",
+                    "query",
+                    "evidence",
+                    "action"
+                ],
+                "properties": {
+                    "type": {
+                        "type": "string"
+                    },
+                    "priority": {
+                        "type": "string"
+                    },
+                    "query": {
+                        "type": "string"
+                    },
+                    "evidence": {
+                        "type": "string"
+                    },
+                    "action": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ClickLogRequest": {
+                "type": "object",
+                "required": [
+                    "product_id"
+                ],
+                "anyOf": [
+                    {
+                        "required": [
+                            "mall_id"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "site_id"
+                        ]
+                    }
+                ],
+                "properties": {
+                    "mall_id": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$",
+                        "example": "shop001"
+                    },
+                    "site_id": {
+                        "type": "string",
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$",
+                        "description": "mall_id와 같은 가맹점 식별값 별칭. mall_id와 함께 보내면 값이 같아야 합니다.",
+                        "example": "shop001"
+                    },
+                    "product_id": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "example": "P001"
+                    },
+                    "product_url": {
+                        "type": "string",
+                        "maxLength": 1000,
+                        "description": "클릭된 상품 상세 URL. 운영 로그에 저장되므로 절대 HTTP(S) URL만 허용하고 URL 사용자 정보와 mall 템플릿 외부 도메인은 허용하지 않습니다.",
+                        "example": "https://shop001.haeorumgift.com/product_view.asp?p_idx=P001",
+                        "nullable": true
+                    },
+                    "position": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "nullable": true
+                    },
+                    "query": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "nullable": true
+                    },
+                    "query_type": {
+                        "type": "string",
+                        "enum": [
+                            "text",
+                            "image",
+                            "text_image"
+                        ],
+                        "nullable": true
+                    },
+                    "score_percent": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100,
+                        "nullable": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "AdminProductRequest": {
+                "type": "object",
+                "required": [
+                    "product_id"
+                ],
+                "properties": {
+                    "product_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100,
+                        "description": "재색인 또는 삭제할 상품번호. /, ?, #, 공백 같은 URL 예약 문자가 들어간 값은 JSON body 엔드포인트로 전달하는 것을 권장합니다.",
+                        "example": "P/001?color=black#main"
+                    }
+                },
+                "additionalProperties": false
+            },
+            "SyncStatus": {
+                "type": "object",
+                "required": [
+                    "last_started_at",
+                    "last_finished_at",
+                    "last_mode",
+                    "last_error",
+                    "indexed",
+                    "deleted",
+                    "failed",
+                    "engine",
+                    "index"
+                ],
+                "properties": {
+                    "last_started_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "last_finished_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "last_mode": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "last_error": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "indexed": {
+                        "type": "integer"
+                    },
+                    "deleted": {
+                        "type": "integer"
+                    },
+                    "failed": {
+                        "type": "integer"
+                    },
+                    "engine": {
+                        "type": "string"
+                    },
+                    "index": {
+                        "type": "string"
+                    }
+                }
+            },
+            "SyncResult": {
+                "type": "object",
+                "required": [
+                    "mode",
+                    "indexed",
+                    "deleted",
+                    "failed",
+                    "elapsed_ms",
+                    "status"
+                ],
+                "properties": {
+                    "mode": {
+                        "type": "string"
+                    },
+                    "indexed": {
+                        "type": "integer"
+                    },
+                    "deleted": {
+                        "type": "integer"
+                    },
+                    "failed": {
+                        "type": "integer"
+                    },
+                    "elapsed_ms": {
+                        "type": "number"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/SyncStatus"
+                    }
+                }
+            },
+            "HealthResponse": {
+                "type": "object",
+                "required": [
+                    "ok",
+                    "index",
+                    "backend"
+                ],
+                "properties": {
+                    "ok": {
+                        "type": "boolean"
+                    },
+                    "index": {
+                        "type": "string"
+                    },
+                    "backend": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": true
+            },
+            "AdminMetrics": {
+                "type": "object",
+                "required": [
+                    "generated_at",
+                    "engine",
+                    "sync",
+                    "search",
+                    "errors",
+                    "logs",
+                    "disk",
+                    "process",
+                    "system",
+                    "alerts"
+                ],
+                "properties": {
+                    "generated_at": {
+                        "type": "string"
+                    },
+                    "engine": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "sync": {
+                        "type": "object",
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SyncStatus"
+                            }
+                        ],
+                        "properties": {
+                            "events": {
+                                "type": "object",
+                                "additionalProperties": true
+                            }
+                        },
+                        "additionalProperties": true
+                    },
+                    "search": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "errors": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "logs": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "disk": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "process": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "system": {
+                        "type": "object",
+                        "additionalProperties": true
+                    },
+                    "alerts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "level",
+                                "code",
+                                "message",
+                                "value"
+                            ],
+                            "properties": {
+                                "level": {
+                                    "type": "string",
+                                    "enum": [
+                                        "warning",
+                                        "critical"
+                                    ]
+                                },
+                                "code": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                },
+                                "value": {}
+                            },
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "OkResponse": {
+                "type": "object",
+                "required": [
+                    "ok"
+                ],
+                "properties": {
+                    "ok": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "ErrorResponse": {
+                "type": "object",
+                "required": [
+                    "detail"
+                ],
+                "properties": {
+                    "detail": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": true
+            }
+        }
+    }
+}

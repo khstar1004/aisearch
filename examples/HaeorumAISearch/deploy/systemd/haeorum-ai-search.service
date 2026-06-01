@@ -1,0 +1,22 @@
+[Unit]
+Description=Haeorum Gift AI Search API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=haeorum
+Group=haeorum
+WorkingDirectory=/opt/haeorum-ai-search
+EnvironmentFile=/etc/haeorum-ai-search/haeorum-ai-search.env
+ExecStart=/opt/haeorum-ai-search/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/log/haeorum-ai-search
+
+[Install]
+WantedBy=multi-user.target

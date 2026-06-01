@@ -1,0 +1,82 @@
+{
+  "sites": [
+    {
+      "name": "shop001-main",
+      "mall_id": "shop001",
+      "url": "https://shop001.haeorumgift.com/",
+      "origin": "https://shop001.haeorumgift.com",
+      "api_base_url": "https://ai-search.haeorumgift.com",
+      "api_key": "replace-with-shop001-public-key",
+      "expected_product_url_prefix": "https://shop001.haeorumgift.com",
+      "widget_target": "#haeorum-ai-search",
+      "attach_to_search_input": "#keyword",
+      "attach_after_selector": "#searchForm button[type='submit']",
+      "required_markers": [
+        "HaeorumAISearch.init",
+        "haeorum-ai-search"
+      ],
+      "widget_probe_sources": [
+        {
+          "variant": "pc",
+          "source": "/data/haeorum-ai-search/representative-pages/shop001-pc.html"
+        },
+        {
+          "variant": "mobile",
+          "source": "/data/haeorum-ai-search/representative-pages/shop001-mobile.html"
+        }
+      ]
+    },
+    {
+      "name": "shop002-mobile-template",
+      "mall_id": "shop002",
+      "url": "https://shop002.haeorumgift.com/",
+      "origin": "https://shop002.haeorumgift.com",
+      "api_base_url": "https://ai-search.haeorumgift.com",
+      "api_key": "replace-with-shop002-public-key",
+      "expected_product_url_prefix": "https://shop002.haeorumgift.com",
+      "widget_target": "#haeorum-ai-search",
+      "attach_to_search_input": "#keyword",
+      "attach_after_selector": "#searchForm button[type='submit']",
+      "required_markers": [
+        "HaeorumAISearch.init",
+        "haeorum-ai-search"
+      ],
+      "widget_probe_sources": [
+        {
+          "variant": "pc",
+          "source": "/data/haeorum-ai-search/representative-pages/shop002-pc.html"
+        },
+        {
+          "variant": "mobile",
+          "source": "/data/haeorum-ai-search/representative-pages/shop002-mobile.html"
+        }
+      ]
+    },
+    {
+      "name": "partner003-site-id-template",
+      "site_id": "partner003",
+      "url": "https://partner003.haeorumgift.com/",
+      "origin": "https://partner003.haeorumgift.com",
+      "api_base_url": "https://ai-search.haeorumgift.com",
+      "api_key": "replace-with-partner003-public-key",
+      "expected_product_url_prefix": "https://partner003.haeorumgift.com",
+      "widget_target": "",
+      "attach_to_search_input": "#keyword",
+      "attach_after_selector": "#searchForm button[type='submit']",
+      "required_markers": [
+        "HaeorumAISearch.init",
+        "haeorum-ai-search"
+      ],
+      "widget_probe_sources": [
+        {
+          "variant": "pc",
+          "source": "/data/haeorum-ai-search/representative-pages/partner003-pc.html"
+        },
+        {
+          "variant": "mobile",
+          "source": "/data/haeorum-ai-search/representative-pages/partner003-mobile.html"
+        }
+      ]
+    }
+  ]
+}

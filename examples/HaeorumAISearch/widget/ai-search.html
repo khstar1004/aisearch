@@ -1,0 +1,1311 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>해오름기프트 AI 이미지 검색</title>
+  <style>
+    * { box-sizing: border-box; letter-spacing: 0; }
+    :root {
+      --hai-red: #ee1b24;
+      --hai-red-dark: #c9151e;
+      --hai-blue: #143f84;
+      --hai-yellow: #ffca08;
+      --hai-ink: #111827;
+      --hai-muted: #6b7280;
+      --hai-line: #e5e7eb;
+      --hai-soft: #fff6f4;
+      --hai-bg: #f7f8fb;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, "Noto Sans KR", "Malgun Gothic", sans-serif;
+      color: var(--hai-ink);
+      background: var(--hai-bg);
+      overflow-x: hidden;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    [hidden] { display: none !important; }
+    .topbar {
+      position: relative;
+      background: rgba(255, 255, 255, .98);
+      border-bottom: 1px solid var(--hai-line);
+      box-shadow: 0 6px 20px rgba(17, 24, 39, .04);
+    }
+    .topbar::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--hai-red), var(--hai-yellow) 45%, var(--hai-blue));
+    }
+    .topbar-inner {
+      width: min(1160px, calc(100% - 40px));
+      min-height: 82px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(170px, 240px) minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 24px;
+      padding-top: 4px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      min-width: 0;
+    }
+    .brand img {
+      width: 205px;
+      max-width: 100%;
+      max-height: 64px;
+      object-fit: contain;
+      object-position: left center;
+    }
+    .brand-fallback {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 24px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .brand-mark {
+      position: relative;
+      width: 48px;
+      height: 42px;
+      flex: 0 0 auto;
+    }
+    .brand-mark span {
+      position: absolute;
+      display: block;
+      border-radius: 12px;
+      opacity: .95;
+    }
+    .brand-mark span:nth-child(1) { width: 32px; height: 32px; left: 0; top: 8px; background: var(--hai-yellow); }
+    .brand-mark span:nth-child(2) { width: 32px; height: 32px; left: 17px; top: 2px; background: var(--hai-red); }
+    .brand-mark span:nth-child(3) { width: 29px; height: 29px; left: 22px; top: 15px; background: #245aa9; }
+    .page-label {
+      justify-self: center;
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 42px;
+      border: 1px solid #ffe0df;
+      background: #fffafa;
+      padding: 0 14px;
+      border-radius: 8px;
+      line-height: 1.35;
+      box-shadow: 0 8px 22px rgba(238, 27, 36, .06);
+    }
+    .page-label::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      flex: 0 0 8px;
+      margin-right: 24px;
+      border-radius: 50%;
+      background: var(--hai-red);
+      box-shadow: 13px 0 0 var(--hai-yellow), 26px 0 0 var(--hai-blue);
+    }
+    .page-label strong {
+      display: block;
+      color: var(--hai-red);
+      font-size: 15px;
+      font-weight: 900;
+    }
+    .page-label span {
+      display: block;
+      margin-top: 3px;
+      color: var(--hai-muted);
+      font-size: 13px;
+    }
+    .home-link {
+      justify-self: end;
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--hai-line);
+      background: #fff;
+      color: #4b5563;
+      padding: 0 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .home-link:hover { border-color: #ffc7c9; color: var(--hai-red); background: var(--hai-soft); }
+    .hero {
+      min-height: 390px;
+      border-bottom: 1px solid #e9e9e9;
+      background:
+        linear-gradient(180deg, rgba(255, 250, 250, .96), rgba(255, 255, 255, .72)),
+        linear-gradient(90deg, rgba(238, 27, 36, .045), rgba(20, 63, 132, .04)),
+        #fff;
+    }
+    .hero-inner {
+      width: min(1160px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 44px 0 42px;
+      display: grid;
+      justify-items: center;
+      gap: 24px;
+      text-align: center;
+    }
+    .hero-copy { width: 100%; min-width: 0; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 0 12px;
+      border: 1px solid #ffcfd2;
+      background: #fff;
+      color: var(--hai-red);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 900;
+      box-shadow: 0 8px 18px rgba(238, 27, 36, .07);
+    }
+    h1 {
+      margin: 12px 0 0;
+      font-size: clamp(32px, 4vw, 48px);
+      line-height: 1.14;
+      word-break: keep-all;
+    }
+    .hero-copy p {
+      margin: 12px 0 0;
+      color: #5f6675;
+      font-size: 16px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+    .search-card {
+      width: min(760px, 100%);
+      display: grid;
+      gap: 14px;
+      min-width: 0;
+    }
+    .search-line {
+      min-height: 54px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 112px;
+      border: 2px solid var(--hai-red);
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 10px 24px rgba(238, 27, 36, .08);
+    }
+    .search-line input {
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      padding: 0 17px;
+      color: #111;
+      font-size: 16px;
+      background: #fff;
+    }
+    .search-line button {
+      border: 0;
+      background: var(--hai-red);
+      color: #fff;
+      font-size: 17px;
+      font-weight: 900;
+    }
+    .search-line button:disabled { opacity: .7; cursor: wait; }
+    .upload-zone {
+      position: relative;
+      min-height: 140px;
+      display: grid;
+      place-items: center;
+      border: 2px dashed #d1d5db;
+      background: rgba(255, 255, 255, .76);
+      color: #6b7280;
+      border-radius: 8px;
+      transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    }
+    .upload-zone:hover,
+    .upload-zone.is-dragging {
+      border-color: var(--hai-red);
+      background: #fff;
+      transform: translateY(-1px);
+    }
+    .upload-zone input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .upload-content {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      padding: 22px;
+      min-width: 0;
+    }
+    .upload-icon {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #fff0ef;
+      color: var(--hai-red);
+      box-shadow: inset 0 0 0 1px #ffe2e1;
+    }
+    .upload-icon svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+    .upload-zone strong {
+      color: #1f2937;
+      font-size: 16px;
+      font-weight: 900;
+    }
+    .upload-zone span:last-child {
+      color: #747b88;
+      font-size: 14px;
+    }
+    .preview-row {
+      min-height: 76px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid var(--hai-line);
+      background: #fff;
+      border-radius: 8px;
+      text-align: left;
+    }
+    .preview-row img {
+      width: 56px;
+      height: 56px;
+      object-fit: cover;
+      border: 1px solid #ddd;
+      background: #f3f4f6;
+    }
+    .preview-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #374151;
+      font-size: 13px;
+    }
+    .clear-image {
+      width: 34px;
+      height: 34px;
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #111;
+      font-weight: 900;
+    }
+    .quick-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+    .quick-row button,
+    .category-list button {
+      min-height: 34px;
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #333;
+      padding: 0 13px;
+      border-radius: 8px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .quick-row button:hover,
+    .category-list button:hover {
+      border-color: var(--hai-red);
+      color: var(--hai-red);
+    }
+    .page {
+      width: min(1160px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 22px 0 54px;
+    }
+    .status {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: #555;
+      font-size: 13px;
+    }
+    .status.is-error {
+      justify-content: flex-start;
+      border: 1px solid #ffd4d6;
+      background: #fff4f4;
+      color: var(--hai-red-dark);
+      padding: 0 13px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 3px solid #ffd4d6;
+      border-top-color: var(--hai-red);
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .summary {
+      margin-top: 12px;
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid var(--hai-line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #333;
+      font-size: 14px;
+    }
+    .summary strong { color: var(--hai-red); }
+    .summary small { color: var(--hai-muted); }
+    .section {
+      margin-top: 18px;
+      border: 1px solid var(--hai-line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .section h2 {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.2;
+    }
+    .section h2 span { color: var(--hai-red); }
+    .category-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .top-grid, .product-grid, .skeleton-grid {
+      display: grid;
+      gap: 14px;
+    }
+    .top-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .product-grid, .skeleton-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .product-card {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-width: 0;
+      border: 1px solid #e4e4e7;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+    }
+    .product-card:hover {
+      transform: translateY(-2px);
+      border-color: #ffb4b8;
+      box-shadow: 0 10px 22px rgba(0,0,0,.08);
+    }
+    .product-image {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      background: #f4f4f5;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+    .product-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .score {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      background: rgba(17, 24, 39, .88);
+      color: #fff;
+      padding: 0 9px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .image-empty {
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .product-body {
+      padding: 13px 13px 15px;
+      display: grid;
+      gap: 7px;
+      min-height: 150px;
+    }
+    .product-id {
+      color: #9aa2af;
+      font-size: 12px;
+    }
+    .product-name {
+      margin: 0;
+      min-height: 42px;
+      color: #111;
+      font-size: 14px;
+      line-height: 1.45;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+    }
+    .product-category {
+      min-height: 18px;
+      color: var(--hai-muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .price {
+      align-self: end;
+      color: #000;
+      font-size: 17px;
+      font-weight: 900;
+    }
+    .more-wrap {
+      margin-top: 18px;
+      text-align: center;
+    }
+    .more-button {
+      min-width: 160px;
+      min-height: 42px;
+      border: 1px solid var(--hai-red);
+      background: #fff;
+      color: var(--hai-red);
+      border-radius: 8px;
+      font-weight: 900;
+    }
+    .empty {
+      margin-top: 18px;
+      min-height: 170px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--hai-line);
+      background: #fff;
+      border-radius: 8px;
+      text-align: center;
+      color: #555;
+      padding: 24px;
+    }
+    .empty strong {
+      display: block;
+      color: #111;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    .skeleton-grid { margin-top: 18px; }
+    .skeleton-card {
+      height: 282px;
+      border: 1px solid #e8e8e8;
+      background: linear-gradient(90deg, #f1f1f1, #fafafa, #f1f1f1);
+      background-size: 200% 100%;
+      animation: shimmer 1.1s linear infinite;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+    .footer {
+      min-height: 62px;
+      display: grid;
+      place-items: center;
+      border-top: 1px solid var(--hai-line);
+      background: #fff;
+      color: #7b8190;
+      font-size: 13px;
+    }
+    .footer strong { color: var(--hai-red); }
+    @media (max-width: 960px) {
+      .topbar-inner {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+      .page-label {
+        grid-column: 1 / -1;
+        justify-self: stretch;
+        justify-content: center;
+        margin-bottom: 12px;
+      }
+      .top-grid, .product-grid, .skeleton-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 620px) {
+      :root {
+        --mobile-card-width: min(316px, calc(100vw - 74px));
+        --mobile-card-gutter: 37px;
+      }
+      .topbar-inner, .hero-inner {
+        width: 100%;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .topbar-inner {
+        min-height: 84px;
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 10px;
+      }
+      .brand {
+        justify-self: start;
+        justify-content: center;
+        width: var(--mobile-card-width);
+        margin-left: var(--mobile-card-gutter);
+        overflow: visible;
+      }
+      .brand img {
+        display: block;
+        width: 164px;
+        max-width: 100%;
+        height: auto;
+        object-position: center center;
+      }
+      .brand-fallback { font-size: 20px; }
+      .home-link { display: none; }
+      .page-label {
+        width: var(--mobile-card-width);
+        justify-self: start;
+        margin-left: var(--mobile-card-gutter);
+        min-height: 36px;
+        padding: 0 10px;
+        margin-bottom: 10px;
+      }
+      .page-label::before {
+        width: 7px;
+        height: 7px;
+        flex-basis: 7px;
+        margin-right: 18px;
+        box-shadow: 10px 0 0 var(--hai-yellow), 20px 0 0 var(--hai-blue);
+      }
+      .page-label strong { font-size: 13px; }
+      .page-label span { font-size: 12px; }
+      .hero { min-height: auto; }
+      .hero-inner {
+        width: 100%;
+        justify-items: center;
+        padding-top: 26px;
+        padding-bottom: 30px;
+        gap: 18px;
+      }
+      .hero-copy {
+        justify-self: start;
+        width: var(--mobile-card-width);
+        margin-left: var(--mobile-card-gutter);
+        margin-right: auto;
+        max-width: none;
+      }
+      .eyebrow { min-height: 28px; padding: 0 10px; font-size: 12px; }
+      h1 { margin-top: 10px; font-size: clamp(27px, 7.2vw, 34px); line-height: 1.16; }
+      .hero-copy p { margin-top: 10px; font-size: 14px; }
+      .search-card {
+        justify-self: start;
+        width: var(--mobile-card-width);
+        margin-left: var(--mobile-card-gutter);
+        margin-right: auto;
+        max-width: none;
+        gap: 12px;
+      }
+      .search-line { grid-template-columns: minmax(0, 1fr) 92px; }
+      .search-line input { min-height: 48px; padding: 0 14px; font-size: 15px; }
+      .search-line button { min-height: 48px; font-size: 15px; }
+      .upload-zone { min-height: 128px; }
+      .upload-content { padding: 18px 12px; gap: 7px; }
+      .upload-icon { width: 48px; height: 48px; }
+      .upload-zone strong { font-size: 15px; overflow-wrap: anywhere; }
+      .upload-zone span:last-child { font-size: 13px; }
+      .quick-row { display: grid; grid-template-columns: 1fr; gap: 8px; width: 100%; max-width: 100%; overflow: hidden; }
+      .quick-row button {
+        width: 100%;
+        min-width: 0;
+        padding: 0 8px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .page {
+        width: var(--mobile-card-width);
+        margin-left: var(--mobile-card-gutter);
+        margin-right: auto;
+        padding-top: 20px;
+      }
+      .summary { align-items: flex-start; flex-direction: column; }
+      .top-grid, .product-grid, .skeleton-grid { grid-template-columns: 1fr; }
+      .product-card { grid-template-columns: 124px minmax(0, 1fr); grid-template-rows: 1fr; }
+      .product-image { aspect-ratio: auto; min-height: 154px; height: 100%; }
+      .product-body { min-height: 154px; }
+    }
+    @media (max-width: 420px) {
+      .hero-copy, .search-card, .page { width: var(--mobile-card-width); }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/" aria-label="해오름기프트 홈">
+        <img src="./haeorum-logo.jpg" alt="해오름기프트" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+        <span class="brand-fallback" hidden>
+          <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span>해오름 판촉물</span>
+        </span>
+      </a>
+      <div class="page-label">
+        <strong>이미지 검색</strong>
+        <span>사진으로 상품 찾기</span>
+      </div>
+      <a class="home-link" href="/">홈으로</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <span class="eyebrow">해오름기프트 AI 검색</span>
+        <h1>찾고 싶은 상품,<br>AI로 검색하세요</h1>
+        <p>사진이나 검색어로 비슷한 상품을 찾습니다</p>
+      </div>
+      <form class="search-card" id="searchForm">
+        <div class="search-line">
+          <input id="queryInput" type="text" autocomplete="off" placeholder="노란 부채, 송월타올, 접이식 우산">
+          <button type="submit" id="searchButton">AI 검색</button>
+        </div>
+        <label class="upload-zone" id="dropZone">
+          <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp">
+          <span class="upload-content">
+            <span class="upload-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"></path>
+                <circle cx="12" cy="13" r="3"></circle>
+              </svg>
+            </span>
+            <strong>이미지를 드래그하거나 클릭해서 선택</strong>
+            <span>Ctrl+V 붙여넣기 · JPG, PNG, WEBP</span>
+          </span>
+        </label>
+        <div class="preview-row" id="previewRow" hidden>
+          <img id="previewImage" alt="">
+          <div class="preview-name" id="previewName"></div>
+          <button class="clear-image" id="clearImage" type="button" aria-label="이미지 삭제">X</button>
+        </div>
+        <div class="quick-row" aria-label="빠른 검색어">
+          <button type="button" data-query="노란 부채">노란 부채</button>
+          <button type="button" data-query="접이식 우산">접이식 우산</button>
+          <button type="button" data-query="송월타올">송월타올</button>
+          <button type="button" data-query="무선 마우스">무선 마우스</button>
+          <button type="button" data-query="텀블러">텀블러</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <main class="page">
+    <div class="status" id="status" hidden></div>
+
+    <div class="summary" id="summary" hidden>
+      <div id="summaryText"></div>
+      <small id="summaryMeta"></small>
+    </div>
+
+    <section class="section" id="categorySection" hidden>
+      <div class="section-head">
+        <h2>추천 카테고리</h2>
+      </div>
+      <div class="category-list" id="categoryList"></div>
+    </section>
+
+    <section class="section" id="topSection" hidden>
+      <div class="section-head">
+        <h2>상위 유사 상품 <span>3개</span></h2>
+      </div>
+      <div class="top-grid" id="topGrid"></div>
+    </section>
+
+    <section class="section" id="itemSection" hidden>
+      <div class="section-head">
+        <h2>관련 상품</h2>
+      </div>
+      <div class="product-grid" id="itemGrid"></div>
+      <div class="more-wrap" id="moreWrap" hidden>
+        <button class="more-button" id="moreButton" type="button">더 보기</button>
+      </div>
+    </section>
+
+    <div class="skeleton-grid" id="loadingGrid" hidden>
+      <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
+    </div>
+
+    <div class="empty" id="emptyState">
+      <div><strong>상품 사진을 올려주세요</strong>검색어만 입력해도 AI 검색이 가능합니다.</div>
+    </div>
+  </main>
+
+  <footer class="footer"><span><strong>해오름기프트</strong> · AI 상품 이미지 검색</span></footer>
+
+  <script>
+    (function () {
+      const SESSION_PREFIX = "haeorumAiSearch:";
+      let config = Object.assign({
+        apiBaseUrl: "http://127.0.0.1:8120",
+        mallId: "shop001",
+        apiKey: "public-shop001-dev-key",
+        limit: 24,
+        maxImageMb: 5
+      }, window.HAEORUM_AI_SEARCH_CONFIG || {});
+
+      const state = {
+        imageFile: null,
+        imageDataUrl: "",
+        imageName: "",
+        category: "",
+        nextOffset: null,
+        queryType: "",
+        inFlight: false,
+        lastQuery: ""
+      };
+
+      const els = {
+        form: document.getElementById("searchForm"),
+        query: document.getElementById("queryInput"),
+        imageInput: document.getElementById("imageInput"),
+        dropZone: document.getElementById("dropZone"),
+        previewRow: document.getElementById("previewRow"),
+        previewImage: document.getElementById("previewImage"),
+        previewName: document.getElementById("previewName"),
+        clearImage: document.getElementById("clearImage"),
+        status: document.getElementById("status"),
+        summary: document.getElementById("summary"),
+        summaryText: document.getElementById("summaryText"),
+        summaryMeta: document.getElementById("summaryMeta"),
+        categorySection: document.getElementById("categorySection"),
+        categoryList: document.getElementById("categoryList"),
+        topSection: document.getElementById("topSection"),
+        topGrid: document.getElementById("topGrid"),
+        itemSection: document.getElementById("itemSection"),
+        itemGrid: document.getElementById("itemGrid"),
+        moreWrap: document.getElementById("moreWrap"),
+        moreButton: document.getElementById("moreButton"),
+        loadingGrid: document.getElementById("loadingGrid"),
+        empty: document.getElementById("emptyState"),
+        searchButton: document.getElementById("searchButton")
+      };
+
+      init();
+
+      function init() {
+        const params = new URLSearchParams(window.location.search);
+        const session = readSession(params.get("hai_sid") || params.get("sid"));
+        applySession(session);
+        const urlQuery = trimText(params.get("q"));
+        const urlCategory = trimText(params.get("category"));
+        if (urlQuery) {
+          els.query.value = urlQuery;
+        }
+        if (urlCategory) {
+          state.category = urlCategory;
+        }
+        bindEvents();
+        if (els.query.value.trim() || state.imageFile) {
+          window.setTimeout(function () { search(false); }, 80);
+        }
+      }
+
+      function bindEvents() {
+        els.form.addEventListener("submit", function (event) {
+          event.preventDefault();
+          search(false);
+        });
+        els.imageInput.addEventListener("change", function () {
+          const file = els.imageInput.files && els.imageInput.files[0];
+          if (file) {
+            setImageFile(file);
+          }
+        });
+        ["dragenter", "dragover"].forEach(function (name) {
+          els.dropZone.addEventListener(name, function (event) {
+            event.preventDefault();
+            els.dropZone.classList.add("is-dragging");
+          });
+        });
+        ["dragleave", "drop"].forEach(function (name) {
+          els.dropZone.addEventListener(name, function (event) {
+            event.preventDefault();
+            els.dropZone.classList.remove("is-dragging");
+          });
+        });
+        els.dropZone.addEventListener("drop", function (event) {
+          const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+          if (file) {
+            setImageFile(file);
+          }
+        });
+        document.addEventListener("paste", function (event) {
+          const items = event.clipboardData && event.clipboardData.items;
+          if (!items) {
+            return;
+          }
+          for (let index = 0; index < items.length; index += 1) {
+            if (items[index].type && items[index].type.indexOf("image/") === 0) {
+              const file = items[index].getAsFile();
+              if (file) {
+                setImageFile(file);
+                showStatus("이미지를 붙여넣었습니다.", false);
+              }
+              break;
+            }
+          }
+        });
+        els.clearImage.addEventListener("click", clearImage);
+        els.moreButton.addEventListener("click", function () { search(true); });
+        document.querySelectorAll("[data-query]").forEach(function (button) {
+          button.addEventListener("click", function () {
+            els.query.value = button.getAttribute("data-query") || "";
+            state.category = "";
+            search(false);
+          });
+        });
+      }
+
+      function readSession(sessionId) {
+        if (!sessionId) {
+          return null;
+        }
+        try {
+          const key = SESSION_PREFIX + sessionId;
+          let raw = window.sessionStorage && window.sessionStorage.getItem(key);
+          if (!raw && window.localStorage) {
+            raw = window.localStorage.getItem(key);
+            if (raw) {
+              window.localStorage.removeItem(key);
+            }
+          }
+          if (!raw) {
+            return null;
+          }
+          return JSON.parse(raw);
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function applySession(session) {
+        if (!session || typeof session !== "object") {
+          return;
+        }
+        config = Object.assign({}, config, {
+          apiBaseUrl: session.apiBaseUrl || config.apiBaseUrl,
+          mallId: session.mallId || config.mallId,
+          apiKey: session.apiKey || config.apiKey,
+          limit: session.limit || config.limit
+        });
+        if (session.query) {
+          els.query.value = session.query;
+        }
+        if (session.category) {
+          state.category = session.category;
+        }
+        if (session.image && session.image.dataUrl) {
+          const image = session.image;
+          state.imageDataUrl = image.dataUrl;
+          state.imageName = image.name || "upload-image";
+          state.imageFile = dataUrlToFile(image.dataUrl, state.imageName, image.type || "image/png");
+          renderPreview(image.dataUrl, state.imageName);
+        }
+      }
+
+      async function setImageFile(file) {
+        const error = validateImage(file);
+        if (error) {
+          showStatus(error, true);
+          return;
+        }
+        try {
+          const dataUrl = await fileToDataUrl(file);
+          state.imageFile = file;
+          state.imageDataUrl = dataUrl;
+          state.imageName = file.name || "upload-image";
+          renderPreview(dataUrl, state.imageName);
+          showStatus("", false);
+        } catch (error) {
+          showStatus("이미지를 읽을 수 없습니다.", true);
+        }
+      }
+
+      function validateImage(file) {
+        const validTypes = ["image/jpeg", "image/png", "image/webp"];
+        if (validTypes.indexOf(file.type) === -1) {
+          return "JPG, PNG, WEBP 이미지만 사용할 수 있습니다.";
+        }
+        const maxBytes = Number(config.maxImageMb || 5) * 1024 * 1024;
+        if (file.size > maxBytes) {
+          return "이미지는 " + Number(config.maxImageMb || 5) + "MB 이하로 업로드해 주세요.";
+        }
+        return "";
+      }
+
+      function renderPreview(dataUrl, name) {
+        els.previewImage.src = dataUrl;
+        els.previewName.textContent = name || "이미지";
+        els.previewRow.hidden = false;
+      }
+
+      function clearImage() {
+        state.imageFile = null;
+        state.imageDataUrl = "";
+        state.imageName = "";
+        els.imageInput.value = "";
+        els.previewImage.src = "";
+        els.previewName.textContent = "";
+        els.previewRow.hidden = true;
+      }
+
+      async function search(append) {
+        if (state.inFlight) {
+          return;
+        }
+        const query = els.query.value.trim();
+        if (!query && !state.imageFile) {
+          showStatus("검색어를 입력하거나 이미지를 업로드해 주세요.", true);
+          return;
+        }
+        state.inFlight = true;
+        state.lastQuery = query;
+        showStatus("AI 검색 중", false, true);
+        setLoading(true, append);
+        if (!append) {
+          clearResults();
+          state.nextOffset = null;
+        }
+        try {
+          const form = new FormData();
+          form.append("mall_id", config.mallId);
+          form.append("limit", String(config.limit || 24));
+          form.append("offset", String(append ? (state.nextOffset || 0) : 0));
+          if (query) {
+            form.append("q", query);
+          }
+          if (state.category) {
+            form.append("category", state.category);
+          }
+          if (state.imageFile) {
+            form.append("image", state.imageFile);
+          }
+          const response = await fetch(trimSlash(config.apiBaseUrl) + "/api/ai-search", {
+            method: "POST",
+            headers: apiHeaders(),
+            body: form
+          });
+          const data = await readJson(response);
+          if (!response.ok) {
+            throw new Error(apiErrorMessage(response.status, data));
+          }
+          renderResults(data, append);
+          showStatus("", false);
+        } catch (error) {
+          showStatus(normalizeError(error), true);
+          if (!append) {
+            els.empty.hidden = false;
+          }
+        } finally {
+          state.inFlight = false;
+          setLoading(false, append);
+        }
+      }
+
+      async function readJson(response) {
+        try {
+          return await response.json();
+        } catch (error) {
+          return {};
+        }
+      }
+
+      function clearResults() {
+        els.categoryList.innerHTML = "";
+        els.topGrid.innerHTML = "";
+        els.itemGrid.innerHTML = "";
+        els.categorySection.hidden = true;
+        els.topSection.hidden = true;
+        els.itemSection.hidden = true;
+        els.summary.hidden = true;
+        els.moreWrap.hidden = true;
+        els.empty.hidden = true;
+      }
+
+      function renderResults(data, append) {
+        const top = Array.isArray(data.top) ? data.top : [];
+        const items = Array.isArray(data.items) ? data.items : [];
+        const meta = data.meta || {};
+        state.queryType = meta.query_type || (state.imageFile ? "image" : "text");
+        if (!append) {
+          renderSummary(top.length + items.length, meta);
+          renderCategories(data.suggested_categories || []);
+          renderProducts(els.topGrid, top, false, 1);
+          renderProducts(els.itemGrid, items, false, 4 + Number(meta.offset || 0));
+          els.topSection.hidden = top.length === 0;
+          els.itemSection.hidden = items.length === 0;
+          els.empty.hidden = top.length + items.length > 0;
+        } else {
+          renderProducts(els.itemGrid, items, true, 4 + Number(meta.offset || 0));
+          if (items.length) {
+            els.itemSection.hidden = false;
+          }
+        }
+        state.nextOffset = meta.has_more ? meta.next_offset : null;
+        els.moreWrap.hidden = !(meta && meta.has_more && meta.next_offset !== null && meta.next_offset !== undefined);
+      }
+
+      function renderSummary(count, meta) {
+        const label = state.lastQuery || (state.imageFile ? "이미지" : "검색");
+        els.summaryText.innerHTML = "<strong>" + escapeHtml(label) + "</strong> 검색 결과";
+        const details = [];
+        if (count) {
+          details.push(count + "개 표시");
+        }
+        if (meta.elapsed_ms !== null && meta.elapsed_ms !== undefined) {
+          details.push(Number(meta.elapsed_ms).toLocaleString("ko-KR") + "ms");
+        }
+        els.summaryMeta.textContent = details.join(" / ");
+        els.summary.hidden = false;
+      }
+
+      function renderCategories(categories) {
+        els.categoryList.innerHTML = "";
+        const values = categories.filter(Boolean).slice(0, 10);
+        els.categorySection.hidden = values.length === 0;
+        values.forEach(function (category) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = category;
+          button.addEventListener("click", function () {
+            state.category = category;
+            search(false);
+          });
+          els.categoryList.appendChild(button);
+        });
+      }
+
+      function renderProducts(container, products, append, basePosition) {
+        if (!append) {
+          container.innerHTML = "";
+        }
+        products.forEach(function (product, index) {
+          const card = document.createElement("a");
+          const productUrl = safeUrl(product.product_url);
+          const imageUrl = safeImageUrl(product.image_url);
+          const productName = product.name || "";
+          const productId = product.product_id || "";
+          card.className = "product-card";
+          card.href = productUrl;
+          card.target = "_blank";
+          card.rel = "noreferrer";
+          card.innerHTML = [
+            '<div class="product-image">',
+              '<span class="score">' + escapeHtml(formatScore(product)) + '</span>',
+              imageUrl ? '<img src="' + escapeAttr(imageUrl) + '" alt="' + escapeAttr(productName) + '">' : '<span class="image-empty">이미지 없음</span>',
+            '</div>',
+            '<div class="product-body">',
+              '<div class="product-id">상품번호 ' + escapeHtml(productId) + '</div>',
+              '<h3 class="product-name">' + escapeHtml(productName) + '</h3>',
+              '<div class="product-category">' + escapeHtml(product.category || "") + '</div>',
+              '<div class="price">' + escapeHtml(formatPrice(product.price)) + '</div>',
+            '</div>'
+          ].join("");
+          const image = card.querySelector("img");
+          if (image) {
+            image.addEventListener("error", function () {
+              image.replaceWith(textNodeElement("span", "image-empty", "이미지 없음"));
+            });
+          }
+          card.addEventListener("click", function () {
+            recordClick(Object.assign({}, product, { product_url: productUrl === "#" ? null : productUrl }), (basePosition || 1) + index);
+          });
+          container.appendChild(card);
+        });
+      }
+
+      function recordClick(product, position) {
+        const payload = JSON.stringify({
+          mall_id: config.mallId,
+          product_id: product.product_id,
+          product_url: product.product_url,
+          position: position,
+          query: state.lastQuery,
+          score_percent: product.score_percent,
+          query_type: state.queryType
+        });
+        fetch(trimSlash(config.apiBaseUrl) + "/api/click-log", {
+          method: "POST",
+          headers: Object.assign({ "Content-Type": "application/json" }, apiHeaders()),
+          body: payload,
+          keepalive: true
+        }).catch(function () {});
+      }
+
+      function setLoading(loading, append) {
+        els.searchButton.disabled = loading;
+        els.moreButton.disabled = loading;
+        els.loadingGrid.hidden = !loading || append;
+      }
+
+      function showStatus(message, isError, loading) {
+        els.status.innerHTML = "";
+        els.status.className = "status" + (isError ? " is-error" : "");
+        if (!message) {
+          els.status.hidden = true;
+          return;
+        }
+        if (loading) {
+          els.status.appendChild(textNodeElement("span", "spinner", ""));
+        }
+        els.status.appendChild(document.createTextNode(message));
+        els.status.hidden = false;
+      }
+
+      function apiHeaders() {
+        return config.apiKey ? { "X-API-Key": config.apiKey } : {};
+      }
+
+      function apiErrorMessage(status, data) {
+        if (status === 401 || status === 403) {
+          return "현재 사이트에서 AI 검색을 사용할 수 없습니다.";
+        }
+        if (status === 413) {
+          return "이미지 용량이 제한을 초과했습니다.";
+        }
+        if (status === 429) {
+          return "요청이 많습니다. 잠시 후 다시 검색해 주세요.";
+        }
+        if (status >= 500) {
+          return "AI 검색 서버 응답이 지연되고 있습니다.";
+        }
+        return data.detail || data.message || "검색 요청에 실패했습니다.";
+      }
+
+      function normalizeError(error) {
+        const message = error && error.message ? error.message : String(error || "");
+        if (/failed to fetch|networkerror|load failed/i.test(message)) {
+          return "AI 검색 서버에 연결할 수 없습니다.";
+        }
+        return message || "검색 요청에 실패했습니다.";
+      }
+
+      function fileToDataUrl(file) {
+        return new Promise(function (resolve, reject) {
+          const reader = new FileReader();
+          reader.onload = function () { resolve(String(reader.result || "")); };
+          reader.onerror = function () { reject(new Error("이미지를 읽을 수 없습니다.")); };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function dataUrlToFile(dataUrl, name, type) {
+        const parts = String(dataUrl || "").split(",");
+        const header = parts[0] || "";
+        const base64 = parts[1] || "";
+        const match = header.match(/^data:([^;]+);base64$/);
+        const mime = type || (match ? match[1] : "image/png");
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) {
+          bytes[index] = binary.charCodeAt(index);
+        }
+        return new File([bytes], name || "upload-image", { type: mime });
+      }
+
+      function trimSlash(value) {
+        return String(value || "").replace(/\/$/, "");
+      }
+
+      function trimText(value) {
+        return String(value || "").trim();
+      }
+
+      function safeUrl(value) {
+        return safeBrowserUrl(value, "#");
+      }
+
+      function safeImageUrl(value) {
+        return safeBrowserUrl(value, "");
+      }
+
+      function safeBrowserUrl(value, fallback) {
+        const text = trimText(value);
+        if (!text || /[\u0000-\u001f\u007f\s\\]/.test(text)) {
+          return fallback;
+        }
+        try {
+          const url = new URL(text, window.location.href);
+          if (url.protocol === "http:" || url.protocol === "https:") {
+            return url.href;
+          }
+        } catch (error) {}
+        return fallback;
+      }
+
+      function formatScore(product) {
+        if (product.score_percent !== null && product.score_percent !== undefined) {
+          return "유사도 " + formatPercent(product.score_percent) + "%";
+        }
+        if (product.score !== null && product.score !== undefined) {
+          return "유사도 " + formatPercent(Number(product.score) * 100) + "%";
+        }
+        return "유사도 -";
+      }
+
+      function formatPercent(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) {
+          return "-";
+        }
+        return number.toFixed(1).replace(/\.0$/, "");
+      }
+
+      function formatPrice(value) {
+        if (value === null || value === undefined || value === "") {
+          return "견적문의";
+        }
+        const number = Number(value);
+        if (!Number.isFinite(number)) {
+          return String(value);
+        }
+        return Math.round(number).toLocaleString("ko-KR") + "원~";
+      }
+
+      function escapeHtml(value) {
+        return String(value || "").replace(/[&<>"']/g, function (char) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" }[char];
+        });
+      }
+
+      function escapeAttr(value) {
+        return escapeHtml(value);
+      }
+
+      function textNodeElement(tag, className, text) {
+        const element = document.createElement(tag);
+        element.className = className;
+        element.textContent = text;
+        return element;
+      }
+    })();
+  </script>
+</body>
+</html>
