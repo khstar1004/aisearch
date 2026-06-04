@@ -146,7 +146,7 @@ from app.sync import (
     row_to_product,
     validate_readonly_query,
 )
-from app.sync_worker import resolve_sync_since
+from app.sync_worker import SyncBaselineMissing, resolve_sync_since, run_once
 from app.url_safety import (
     SafePublicHTTPRedirectHandler,
     UnsafePublicHttpTargetError,
@@ -20720,6 +20720,34 @@ class HaeorumSearchServiceTest(unittest.TestCase):
             self.assertEqual(reindex.status.last_started_at, resolve_sync_since(service))
             self.assertEqual("2026-05-01T00:00:00Z", resolve_sync_since(service, "2026-05-01T00:00:00Z"))
             self.assertIsNone(resolve_sync_since(service, auto_since=False))
+
+    def test_sync_worker_requires_baseline_before_implicit_sync(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            csv_path = Path(temp_dir) / "products.csv"
+            sync_log = Path(temp_dir) / "sync.jsonl"
+            csv_path.write_text(
+                "\n".join(
+                    [
+                        "product_id,product_name,category_name,status,display_yn,price,updated_at",
+                        "P001,검정 우산,우산,active,Y,8500,2026-05-19T09:00:00Z",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            settings = Settings(
+                engine_backend="local",
+                index_name="test",
+                product_csv_path=csv_path,
+                sync_log_path=sync_log,
+            )
+            service = SyncService(LocalSearchEngine([]), CsvProductSource(csv_path), settings)
+
+            with self.assertRaises(SyncBaselineMissing):
+                resolve_sync_since(service, require_baseline=True)
+            with self.assertRaises(SyncBaselineMissing):
+                run_once(service, "sync")
+
+            self.assertEqual(0, run_once(service, "sync", allow_full_bootstrap_sync=True))
 
     def test_sync_logger_latest_successful_result_ignores_failed_runs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

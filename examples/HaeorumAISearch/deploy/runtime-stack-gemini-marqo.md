@@ -6,6 +6,8 @@
 
 기본 API stack은 상시 5개 컨테이너입니다. 운영에서는 DB 증분 동기화를 위해 `--profile sync up -d --build --no-deps sync-worker`까지 실행하므로 상시 6개가 됩니다. `sync-worker`를 올릴 때는 이미 색인된 Marqo/Vespa 의존 컨테이너가 재생성되지 않도록 `--no-deps`를 유지합니다.
 
+`sync-worker --mode sync`는 마지막으로 성공한 `sync` 또는 `reindex` 로그를 기준점으로 삼아 변경분만 처리합니다. 기준점 없이 전체 bootstrap sync를 실행하려면 `--allow-full-bootstrap-sync`를 명시해야 하며, 운영에서는 full reindex와 동일한 비용 작업으로 취급합니다.
+
 | 역할 | 컨테이너 |
 | --- | --- |
 | 공개/관리자 API | `haeorum-ai-search-marqo-ai-search-1` |
