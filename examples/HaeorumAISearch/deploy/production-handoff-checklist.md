@@ -13,14 +13,14 @@ Use `deploy/go-live-failure-scenarios.md` and `deploy/operational-risk-register.
 - SSH host, port, user, sudo policy
 - Linux release and CPU/RAM/disk free space
 - Docker Engine and Docker Compose plugin versions
-- Inbound firewall: only Nginx `80/443` public
+- Inbound firewall: only reverse proxy `80/443` public
 - API, Marqo, and Gemini embedding proxy ports kept private to localhost or internal network
 - Outbound HTTPS allowed for Gemini API and product image URLs
 - Subdomain, DNS target, TLS certificate method
 - Docker log rotation values: `HAEORUM_DOCKER_LOG_MAX_SIZE`, `HAEORUM_DOCKER_LOG_MAX_FILE`
 - Docker env uses service DNS inside containers: `MARQO_URL=http://marqo-api:8882`, `HAEORUM_GEMINI_EMBEDDING_URL=http://gemini-embedding:8098`
 - Host-run evidence config uses loopback endpoints: `marqo.url=http://127.0.0.1:8882`, `marqo.gemini_embedding_url=http://127.0.0.1:8098`
-- Docker published ports must bind to `127.0.0.1`, not `0.0.0.0`; external traffic reaches the API only through Nginx `80/443`.
+- Docker published ports must bind to `127.0.0.1`, not `0.0.0.0`; external traffic reaches the API only through Apache/Nginx `80/443`.
 
 ## 2. Database Inputs
 
@@ -49,7 +49,7 @@ Use `deploy/go-live-failure-scenarios.md` and `deploy/operational-risk-register.
 - Strong per-mall public API keys
 - Exact HTTPS CORS origins, no wildcard
 - `HAEORUM_TRUSTED_PROXY_IPS` includes only real reverse proxy peers
-- Nginx overwrites `X-Forwarded-For`; API port not exposed directly
+- Reverse proxy overwrites `X-Forwarded-For`; API port not exposed directly
 - Rate limits enabled for search, click, and image search
 - Redis configured before running multiple API containers
 - No local GPU embedding container running in the Haeorum production stack
@@ -60,13 +60,13 @@ Use `deploy/go-live-failure-scenarios.md` and `deploy/operational-risk-register.
 python scripts/server_db_intake_check.py --intake-file deploy/server-db-intake.md --print-summary
 python scripts/compose_exposure_check.py --print-summary
 python scripts/go_live_scenario_check.py --print-summary
-python scripts/pre_handoff_audit.py --require-runtime --base-url http://127.0.0.1:8000 --mall-id "<mall-id>" --admin-key "$HAEORUM_ADMIN_API_KEY" --api-key "<mall-public-api-key>" --origin https://www.haeorumgift.com
-python scripts/env_check.py --env-file /etc/haeorum-ai-search/haeorum.env --role api --api-server-count 1
-docker compose -f compose-haeorum-marqo.yaml -f compose-haeorum-gemini.yaml -f compose-haeorum-existing-8gb.yaml up -d --build
-curl -fsS http://127.0.0.1:8000/health
-curl -fsS -H "X-Admin-Key: $HAEORUM_ADMIN_API_KEY" http://127.0.0.1:8000/admin/metrics
+python scripts/pre_handoff_audit.py --require-runtime --base-url http://127.0.0.1:8120 --mall-id "<mall-id>" --admin-key "$HAEORUM_ADMIN_API_KEY" --api-key "<mall-public-api-key>" --origin https://www.haeorumgift.com
+python scripts/env_check.py --env-file /etc/haeorum-ai-search/haeorum-ai-search.env --role api --api-server-count 1
+docker compose -f compose-haeorum-marqo.yaml -f compose-haeorum-gemini.yaml -f compose-haeorum-existing-8gb.yaml -f compose-haeorum-server82.yaml up -d --build
+curl -fsS http://127.0.0.1:8120/health
+curl -fsS -H "X-Admin-Key: $HAEORUM_ADMIN_API_KEY" http://127.0.0.1:8120/admin/metrics
 curl -fsS http://127.0.0.1:8098/health
-docker compose -f compose-haeorum-marqo.yaml -f compose-haeorum-gemini.yaml -f compose-haeorum-existing-8gb.yaml --profile reindex run --rm reindex-once
+docker compose -f compose-haeorum-marqo.yaml -f compose-haeorum-gemini.yaml -f compose-haeorum-existing-8gb.yaml -f compose-haeorum-server82.yaml --profile reindex run --rm reindex-once
 ```
 
 ## 6. Rollout Gate

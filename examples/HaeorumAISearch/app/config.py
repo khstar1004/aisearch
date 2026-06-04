@@ -55,6 +55,32 @@ PRODUCTION_CONFIG_FILE_ENV_NAMES = (
 PRODUCTION_SAMPLE_CONFIG_FILENAMES = {
     "HAEORUM_MALL_CONFIG_PATH": {"sample_malls.json"},
 }
+DEFAULT_MSSQL_QUERY = (
+    "SELECT CAST(p_idx AS varchar(100)) AS product_id, "
+    "product_name, "
+    "LEFT(COALESCE(NULLIF(category_name1, ''), NULLIF(category_name2, ''), "
+    "NULLIF(category_name3, ''), NULLIF(category_name4, ''), ''), 100) AS category_name, "
+    "TRY_CONVERT(float, price) AS price, "
+    "TRY_CONVERT(float, price) AS price_min, "
+    "TRY_CONVERT(float, price) AS price_max, "
+    "CAST('' AS nvarchar(4000)) AS print_methods, "
+    "CAST('' AS nvarchar(4000)) AS materials, "
+    "CAST('' AS nvarchar(4000)) AS colors, "
+    "CAST(NULL AS int) AS min_order_qty, "
+    "CAST(NULL AS int) AS delivery_days, "
+    "CAST(p_idx AS varchar(100)) AS product_group_id, "
+    "main_image_url, "
+    "product_url, "
+    "status, "
+    "updated_at, "
+    "CAST(CASE WHEN status = '승인' THEN 0 ELSE 1 END AS bit) AS is_deleted, "
+    "CASE WHEN status = '승인' THEN 'Y' ELSE 'N' END AS display_yn, "
+    "CAST(mall_id AS varchar(64)) AS mall_id "
+    "FROM dbo.v_ai_search_products "
+    "WHERE p_idx IS NOT NULL "
+    "AND product_name IS NOT NULL "
+    "AND LTRIM(RTRIM(product_name)) <> ''"
+)
 
 
 def required_api_threadpool_tokens(search_max_concurrency: int, image_search_max_concurrency: int) -> int:
@@ -193,6 +219,8 @@ class Settings:
     qwen_embedding_proxy_api_key: str | None = None
     qwen_query_timeout_seconds: float = 15.0
     qwen_mixed_query_parallelism: int = 8
+    qwen_query_image_batch_size: int = 1
+    qwen_query_image_batch_wait_ms: float = 0.0
     qwen_query_embedding_cache_path: Path | None = None
     qwen_query_runtime_text_cache_entries: int = 2048
     qwen_query_runtime_image_cache_entries: int = 512
@@ -203,9 +231,12 @@ class Settings:
     max_offset: int = 200
     max_image_mb: int = 5
     max_image_dimension: int = 1600
+    query_image_max_dimension: int = 640
+    query_image_analysis: bool = False
     min_image_dimension: int = 16
     image_validation_cache_ttl_seconds: float = 30.0
     image_validation_cache_max_entries: int = 32
+    image_validation_wait_seconds: float = 5.0
     mixed_text_weight: float = 0.4
     mixed_image_weight: float = 0.6
     text_auxiliary_weight: float = 0.12
@@ -243,12 +274,7 @@ class Settings:
     cors_origins: tuple[str, ...] = ("*",)
     product_csv_path: Path = ROOT / "sample_products.csv"
     mssql_connection_string: str | None = None
-    mssql_query: str = (
-        "SELECT product_id, product_name, price, price_min, price_max, category_name, "
-        "print_methods, materials, colors, min_order_qty, delivery_days, product_group_id, main_image_url, "
-        "product_url, status, updated_at, is_deleted, display_yn, mall_id "
-        "FROM dbo.v_ai_search_products"
-    )
+    mssql_query: str = DEFAULT_MSSQL_QUERY
     mssql_product_id_column: str = "product_id"
     mssql_updated_at_column: str = "updated_at"
     mssql_sync_fetch_size: int = 1000
@@ -289,6 +315,10 @@ def load_settings() -> Settings:
     )
     embedding_url_field_name = embedding_url_env_name or (
         "HAEORUM_GEMINI_EMBEDDING_URL" if raw_embedding_backend == "gemini" else "HAEORUM_QWEN_EMBEDDING_URL"
+    )
+    cache_miss_wait_seconds = _float_env(
+        "HAEORUM_CACHE_MISS_WAIT_SECONDS",
+        Settings.cache_miss_wait_seconds,
     )
     settings = Settings(
         environment=environment,
@@ -376,6 +406,14 @@ def load_settings() -> Settings:
             ("HAEORUM_GEMINI_MIXED_QUERY_PARALLELISM", "HAEORUM_QWEN_MIXED_QUERY_PARALLELISM"),
             Settings.qwen_mixed_query_parallelism,
         ),
+        qwen_query_image_batch_size=_int_env_alias(
+            ("HAEORUM_GEMINI_QUERY_IMAGE_BATCH_SIZE", "HAEORUM_QWEN_QUERY_IMAGE_BATCH_SIZE"),
+            Settings.qwen_query_image_batch_size,
+        ),
+        qwen_query_image_batch_wait_ms=_float_env_alias(
+            ("HAEORUM_GEMINI_QUERY_IMAGE_BATCH_WAIT_MS", "HAEORUM_QWEN_QUERY_IMAGE_BATCH_WAIT_MS"),
+            Settings.qwen_query_image_batch_wait_ms,
+        ),
         qwen_query_embedding_cache_path=optional_path_env_alias(
             ("HAEORUM_GEMINI_QUERY_EMBEDDING_CACHE", "HAEORUM_QWEN_QUERY_EMBEDDING_CACHE")
         ),
@@ -400,6 +438,8 @@ def load_settings() -> Settings:
         max_offset=_int_env("HAEORUM_MAX_OFFSET", 200),
         max_image_mb=_int_env("HAEORUM_MAX_IMAGE_MB", 5),
         max_image_dimension=_int_env("HAEORUM_MAX_IMAGE_DIMENSION", 1600),
+        query_image_max_dimension=_int_env("HAEORUM_QUERY_IMAGE_MAX_DIMENSION", Settings.query_image_max_dimension),
+        query_image_analysis=_bool_env("HAEORUM_QUERY_IMAGE_ANALYSIS", Settings.query_image_analysis),
         min_image_dimension=_int_env("HAEORUM_MIN_IMAGE_DIMENSION", 16),
         image_validation_cache_ttl_seconds=_float_env(
             "HAEORUM_IMAGE_VALIDATION_CACHE_TTL_SECONDS",
@@ -408,6 +448,10 @@ def load_settings() -> Settings:
         image_validation_cache_max_entries=_int_env(
             "HAEORUM_IMAGE_VALIDATION_CACHE_MAX_ENTRIES",
             Settings.image_validation_cache_max_entries,
+        ),
+        image_validation_wait_seconds=_float_env(
+            "HAEORUM_IMAGE_VALIDATION_WAIT_SECONDS",
+            cache_miss_wait_seconds,
         ),
         mixed_text_weight=_float_env("HAEORUM_MIXED_TEXT_WEIGHT", 0.4),
         mixed_image_weight=_float_env("HAEORUM_MIXED_IMAGE_WEIGHT", 0.6),
@@ -430,10 +474,7 @@ def load_settings() -> Settings:
             "HAEORUM_CACHE_MISS_LOCK_SECONDS",
             Settings.cache_miss_lock_seconds,
         ),
-        cache_miss_wait_seconds=_float_env(
-            "HAEORUM_CACHE_MISS_WAIT_SECONDS",
-            Settings.cache_miss_wait_seconds,
-        ),
+        cache_miss_wait_seconds=cache_miss_wait_seconds,
         cache_miss_poll_seconds=_float_env(
             "HAEORUM_CACHE_MISS_POLL_SECONDS",
             Settings.cache_miss_poll_seconds,
@@ -620,6 +661,24 @@ def validate_numeric_settings(settings: Settings) -> None:
     require_at_least(
         active_embedding_env_name(
             settings,
+            "HAEORUM_GEMINI_QUERY_IMAGE_BATCH_SIZE",
+            "HAEORUM_QWEN_QUERY_IMAGE_BATCH_SIZE",
+        ),
+        settings.qwen_query_image_batch_size,
+        1,
+    )
+    require_at_least(
+        active_embedding_env_name(
+            settings,
+            "HAEORUM_GEMINI_QUERY_IMAGE_BATCH_WAIT_MS",
+            "HAEORUM_QWEN_QUERY_IMAGE_BATCH_WAIT_MS",
+        ),
+        settings.qwen_query_image_batch_wait_ms,
+        0.0,
+    )
+    require_at_least(
+        active_embedding_env_name(
+            settings,
             "HAEORUM_GEMINI_QUERY_RUNTIME_TEXT_CACHE_ENTRIES",
             "HAEORUM_QWEN_QUERY_RUNTIME_TEXT_CACHE_ENTRIES",
         ),
@@ -637,11 +696,15 @@ def validate_numeric_settings(settings: Settings) -> None:
     )
     require_at_least("HAEORUM_MAX_IMAGE_MB", settings.max_image_mb, 1)
     require_at_least("HAEORUM_MAX_IMAGE_DIMENSION", settings.max_image_dimension, 1)
+    require_at_least("HAEORUM_QUERY_IMAGE_MAX_DIMENSION", settings.query_image_max_dimension, 1)
     require_at_least("HAEORUM_MIN_IMAGE_DIMENSION", settings.min_image_dimension, 1)
     if settings.max_image_dimension < settings.min_image_dimension:
         raise ValueError("HAEORUM_MAX_IMAGE_DIMENSION must be at least HAEORUM_MIN_IMAGE_DIMENSION")
+    if settings.query_image_max_dimension < settings.min_image_dimension:
+        raise ValueError("HAEORUM_QUERY_IMAGE_MAX_DIMENSION must be at least HAEORUM_MIN_IMAGE_DIMENSION")
     require_at_least("HAEORUM_IMAGE_VALIDATION_CACHE_TTL_SECONDS", settings.image_validation_cache_ttl_seconds, 0.0)
     require_at_least("HAEORUM_IMAGE_VALIDATION_CACHE_MAX_ENTRIES", settings.image_validation_cache_max_entries, 1)
+    require_at_least("HAEORUM_IMAGE_VALIDATION_WAIT_SECONDS", settings.image_validation_wait_seconds, 0.0)
     require_at_least("HAEORUM_MIXED_TEXT_WEIGHT", settings.mixed_text_weight, 0.0)
     require_at_least("HAEORUM_MIXED_IMAGE_WEIGHT", settings.mixed_image_weight, 0.0)
     if settings.mixed_text_weight + settings.mixed_image_weight <= 0:
@@ -751,6 +814,7 @@ def validate_production_environment_variables(settings: Settings) -> None:
     readonly_configured = bool(readonly_mssql) and not is_placeholder_config_value(readonly_mssql)
     legacy_configured = bool(legacy_mssql) and not is_placeholder_config_value(legacy_mssql)
     product_csv_configured = bool(product_csv) and not is_placeholder_config_value(product_csv)
+    allow_mssql_trust_server_certificate = _bool_env("HAEORUM_MSSQL_ALLOW_TRUST_SERVER_CERTIFICATE", False)
     if not readonly_configured and not legacy_configured and not product_csv_configured:
         raise ValueError(
             "Production data source must be explicitly set in production: "
@@ -763,9 +827,17 @@ def validate_production_environment_variables(settings: Settings) -> None:
         if not csv_path.exists():
             raise ValueError("HAEORUM_PRODUCT_CSV does not exist in production")
     if readonly_configured:
-        validate_mssql_connection_string_value(readonly_mssql, "HAEORUM_MSSQL_READONLY_CONNECTION_STRING")
+        validate_mssql_connection_string_value(
+            readonly_mssql,
+            "HAEORUM_MSSQL_READONLY_CONNECTION_STRING",
+            allow_trust_server_certificate=allow_mssql_trust_server_certificate,
+        )
     if legacy_configured:
-        validate_mssql_connection_string_value(legacy_mssql, "HAEORUM_MSSQL_CONNECTION_STRING")
+        validate_mssql_connection_string_value(
+            legacy_mssql,
+            "HAEORUM_MSSQL_CONNECTION_STRING",
+            allow_trust_server_certificate=allow_mssql_trust_server_certificate,
+        )
     backend_raw = str(os.environ.get("HAEORUM_EMBEDDING_BACKEND", "") or "").strip()
     if not backend_raw or is_placeholder_config_value(backend_raw):
         raise ValueError(
@@ -1137,6 +1209,8 @@ def validate_redis_url_value(value: object, field_name: str = "HAEORUM_REDIS_URL
 def validate_mssql_connection_string_value(
     value: object,
     field_name: str = "HAEORUM_MSSQL_READONLY_CONNECTION_STRING",
+    *,
+    allow_trust_server_certificate: bool = False,
 ) -> dict[str, str]:
     text = str(value or "").strip()
     if not text:
@@ -1164,7 +1238,10 @@ def validate_mssql_connection_string_value(
     if encrypt not in MSSQL_CONNECTION_ENCRYPT_VALUES:
         raise ValueError(f"{field_name} must set Encrypt=yes, Encrypt=mandatory, or Encrypt=strict")
     trust_server_certificate = parts["trustservercertificate"].strip().lower()
-    if trust_server_certificate not in MSSQL_CONNECTION_TRUST_CERT_FALSE_VALUES:
+    if (
+        trust_server_certificate not in MSSQL_CONNECTION_TRUST_CERT_FALSE_VALUES
+        and not allow_trust_server_certificate
+    ):
         raise ValueError(f"{field_name} must set TrustServerCertificate=no")
     application_intent = " ".join(parts["applicationintent"].strip().lower().split())
     if application_intent not in MSSQL_CONNECTION_READONLY_VALUES:

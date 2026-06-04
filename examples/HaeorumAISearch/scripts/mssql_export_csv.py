@@ -956,6 +956,10 @@ def main() -> int:
         validate_mssql_connection_string_value(
             connection_string,
             "HAEORUM_MSSQL_READONLY_CONNECTION_STRING",
+            allow_trust_server_certificate=str(
+                os.environ.get("HAEORUM_MSSQL_ALLOW_TRUST_SERVER_CERTIFICATE", "")
+            ).strip().lower()
+            in {"1", "true", "yes", "y", "on"},
         )
     except ValueError as exc:
         report = failure_report(

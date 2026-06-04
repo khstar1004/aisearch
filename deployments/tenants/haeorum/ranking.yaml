@@ -1,0 +1,28 @@
+profile_id: haeorum-gift-default
+description: "해오름기프트 판촉물/기념품 상품 검색 기본 튜닝"
+
+query_normalization:
+  enable_spacing_normalization: true
+  enable_common_typo_correction: true
+  synonym_file: "./query-synonyms.json"
+
+category_intent:
+  enabled: true
+  boost_weight: 0.2
+  examples:
+    수건: ["타올", "타월"]
+    포스트잇: ["점착메모지"]
+    텀블러: ["보온병", "스텐컵"]
+
+scoring:
+  low_score_threshold: 0.4
+  text_auxiliary_weight: 0.12
+  mixed_text_weight: 0.4
+  mixed_image_weight: 0.6
+
+result_policy:
+  top_count: 3
+  category_suggestion_limit: 15
+  collapse_by_product_group_id: true
+  require_display_image: true
+

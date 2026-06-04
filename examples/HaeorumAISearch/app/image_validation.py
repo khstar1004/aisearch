@@ -61,6 +61,8 @@ def validate_image_base64(
     max_bytes: int,
     max_dimension: int | None = None,
     min_dimension: int | None = None,
+    resize_dimension: int | None = None,
+    analyze_features: bool = True,
 ) -> ValidatedImage:
     mime_type = "application/octet-stream"
     payload = value.strip()
@@ -82,6 +84,8 @@ def validate_image_base64(
         declared_mime_type=mime_type,
         max_dimension=max_dimension,
         min_dimension=min_dimension,
+        resize_dimension=resize_dimension,
+        analyze_features=analyze_features,
     )
 
 
@@ -91,6 +95,8 @@ def validate_image_bytes(
     declared_mime_type: str | None = None,
     max_dimension: int | None = None,
     min_dimension: int | None = None,
+    resize_dimension: int | None = None,
+    analyze_features: bool = True,
 ) -> ValidatedImage:
     if not raw:
         raise ValueError("image is empty")
@@ -106,13 +112,17 @@ def validate_image_bytes(
     normalized = False
     if dimensions:
         validate_safe_decode_dimensions(dimensions, max_dimension=max_dimension)
-        raw, dimensions, normalized = normalize_image_bytes(raw, detected, max_dimension=max_dimension)
+        raw, dimensions, normalized = normalize_image_bytes(
+            raw,
+            detected,
+            max_dimension=effective_normalize_dimension(max_dimension, resize_dimension),
+        )
     if normalized:
         normalized = True
         validate_min_image_dimensions(dimensions, min_dimension)
         if len(raw) > max_bytes:
             raise ValueError(f"image exceeds {max_bytes} bytes after preprocessing")
-    features = analyze_image_features(raw)
+    features = analyze_image_features(raw) if analyze_features else ImageFeatures()
     encoded = base64.b64encode(raw).decode("ascii")
     return ValidatedImage(
         data_url=f"data:{detected};base64,{encoded}",
@@ -125,6 +135,15 @@ def validate_image_bytes(
         normalized=normalized,
         quality_warnings=features.quality_warnings,
     )
+
+
+def effective_normalize_dimension(max_dimension: int | None = None, resize_dimension: int | None = None) -> int | None:
+    dimensions = [
+        int(value)
+        for value in (max_dimension, resize_dimension)
+        if value is not None and int(value) > 0
+    ]
+    return min(dimensions) if dimensions else None
 
 
 async def read_upload_bytes_limited(

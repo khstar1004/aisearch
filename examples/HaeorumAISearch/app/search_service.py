@@ -31,6 +31,7 @@ MAX_LOG_TAIL_LIMIT = 1000
 DEFAULT_LOG_KEEP_OPEN_SECONDS = 0.0
 CACHE_POLICY_VERSION = 12
 PRODUCT_GROUP_COLLAPSE_OVERFETCH = 2
+DEFAULT_RESPONSE_CATEGORY = "기타"
 EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 PHONE_PATTERN = re.compile(r"\b(?:\+?82[-\s]?)?0?1[016789][-\s]?\d{3,4}[-\s]?\d{4}\b")
 LANDLINE_PATTERN = re.compile(r"\b0\d{1,2}[-\s]?\d{3,4}[-\s]?\d{4}\b")
@@ -840,15 +841,19 @@ class AISearchService:
         while True:
             query = replace(engine_query, limit=candidate_limit)
             raw_hits = self.engine.search(query)
+            raw_hit_count = len(raw_hits)
+            visible_hits = apply_mall_visibility_policy(raw_hits, self.settings, mall_id)
+            if should_require_display_image(self.engine):
+                visible_hits = filter_hits_with_display_image(visible_hits)
             hits = collapse_product_groups(
                 enforce_response_mall_filter(
-                    apply_mall_visibility_policy(raw_hits, self.settings, mall_id),
+                    visible_hits,
                     self.settings,
                     mall_id,
                 )
             )
             candidate_limits.append(candidate_limit)
-            raw_candidate_counts.append(len(raw_hits))
+            raw_candidate_counts.append(raw_hit_count)
             collapsed_candidate_counts.append(len(hits))
             if len(hits) > required_count or candidate_limit >= max_candidate_limit:
                 return hits, SearchExecutionStats(
@@ -858,7 +863,6 @@ class AISearchService:
                     max_candidate_limit=max_candidate_limit,
                     required_count=required_count,
                 )
-            raw_hit_count = len(raw_hits)
             if raw_hit_count < candidate_limit:
                 return hits, SearchExecutionStats(
                     tuple(candidate_limits),
@@ -958,7 +962,7 @@ class AISearchService:
 
         if not owner:
             wait_started = time.perf_counter()
-            completed = inflight.event.wait(timeout=self._singleflight_wait_timeout_seconds())
+            completed = inflight.event.wait(timeout=self._image_validation_wait_timeout_seconds())
             elapsed_seconds = time.perf_counter() - wait_started
             self._record_image_validation_wait(completed, elapsed_seconds)
             if not completed:
@@ -995,6 +999,8 @@ class AISearchService:
             max_bytes=self.settings.max_image_mb * 1024 * 1024,
             max_dimension=self.settings.max_image_dimension,
             min_dimension=self.settings.min_image_dimension,
+            resize_dimension=self.settings.query_image_max_dimension,
+            analyze_features=self.settings.query_image_analysis,
         )
 
     def _image_validation_key(self, image_base64: str) -> str:
@@ -1005,6 +1011,8 @@ class AISearchService:
                 "payload_sha256": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
                 "max_bytes": self.settings.max_image_mb * 1024 * 1024,
                 "max_dimension": self.settings.max_image_dimension,
+                "query_image_max_dimension": self.settings.query_image_max_dimension,
+                "query_image_analysis": self.settings.query_image_analysis,
                 "min_dimension": self.settings.min_image_dimension,
             },
             sort_keys=True,
@@ -1048,6 +1056,12 @@ class AISearchService:
             if not completed:
                 self._image_validation_wait_timeouts += 1
 
+    def _image_validation_wait_timeout_seconds(self) -> float:
+        try:
+            return max(float(self.settings.image_validation_wait_seconds), 0.0)
+        except (TypeError, ValueError):
+            return self._singleflight_wait_timeout_seconds()
+
     def image_validation_status(self) -> dict[str, Any]:
         with self._image_validation_lock:
             in_flight = len(self._image_validation_inflight)
@@ -1066,6 +1080,7 @@ class AISearchService:
             max_wait_ms = round(self._image_validation_max_wait_seconds * 1000, 3)
         return {
             "in_flight": in_flight,
+            "wait_timeout_seconds": self._image_validation_wait_timeout_seconds(),
             "wait_events": wait_events,
             "wait_timeouts": wait_timeouts,
             "total_wait_ms": total_wait_ms,
@@ -1134,7 +1149,7 @@ class AISearchService:
         return SearchResultItem(
             product_id=product.product_id,
             name=product.name,
-            category=product.category,
+            category=response_category(product.category),
             price=resolve_product_price(product.price, source_mall_id, self.settings),
             image_url=safe_absolute_http_url(product.image_url),
             product_url=resolve_product_url(product.product_url, product.product_id, source_mall_id, self.settings),
@@ -1365,6 +1380,14 @@ def collapse_product_groups(hits: list[EngineHit]) -> list[EngineHit]:
     return collapsed
 
 
+def should_require_display_image(engine: SearchEngine) -> bool:
+    return getattr(engine, "name", "") == "marqo"
+
+
+def filter_hits_with_display_image(hits: list[EngineHit]) -> list[EngineHit]:
+    return [hit for hit in hits if safe_absolute_http_url(hit.document.image_url) is not None]
+
+
 def mall_policy_overfetch(settings: Settings, mall_id: str | None) -> int:
     if not mall_id:
         return 1
@@ -1490,6 +1513,11 @@ def low_confidence_notice(items: list[SearchResultItem], threshold: float) -> st
     return "유사도가 낮은 결과입니다. 다른 검색어를 추가하거나 더 선명한 이미지를 사용해 주세요."
 
 
+def response_category(category: str | None) -> str:
+    text = str(category or "").strip()
+    return text or DEFAULT_RESPONSE_CATEGORY
+
+
 def resolve_product_url(product_url: str | None, product_id: str, mall_id: str | None, settings: Settings) -> str | None:
     values = product_url_format_values(product_id, mall_id)
     if product_url:
@@ -1534,6 +1562,8 @@ def absolute_product_url(product_url: str, mall_id: str | None, settings: Settin
             return None
         base_parsed = urlparse(base)
         if parsed.scheme.lower() == base_parsed.scheme.lower() and parsed.netloc.lower() == base_parsed.netloc.lower():
+            return product_url
+        if not settings.filter_by_mall_id:
             return product_url
         return None
     if parsed.scheme or parsed.netloc:

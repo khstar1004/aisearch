@@ -31,7 +31,10 @@ RUN if [ "$INSTALL_MSSQL_ODBC" = "true" ]; then \
 
 COPY app ./app
 COPY admin_dashboard.html ./admin_dashboard.html
+COPY contracts ./contracts
+COPY deploy ./deploy
 COPY widget ./widget
+COPY compose-haeorum*.yaml ./
 COPY scripts ./scripts
 COPY sample_products.csv ./sample_products.csv
 COPY sample_malls.json ./sample_malls.json

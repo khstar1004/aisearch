@@ -99,6 +99,7 @@ INT_MINIMUMS = {
     "HAEORUM_MAX_OFFSET": 0,
     "HAEORUM_MAX_IMAGE_MB": 1,
     "HAEORUM_MAX_IMAGE_DIMENSION": 1,
+    "HAEORUM_QUERY_IMAGE_MAX_DIMENSION": 1,
     "HAEORUM_MIN_IMAGE_DIMENSION": 1,
     "HAEORUM_IMAGE_VALIDATION_CACHE_MAX_ENTRIES": 1,
     "HAEORUM_CACHE_TTL_SECONDS": 0,
@@ -118,9 +119,11 @@ INT_MINIMUMS = {
     "HAEORUM_MARQO_ADD_DOCUMENTS_MAX_REQUEST_BYTES": 0,
     "HAEORUM_MARQO_DELETE_DOCUMENTS_BATCH_SIZE": 1,
     "HAEORUM_GEMINI_MIXED_QUERY_PARALLELISM": 0,
+    "HAEORUM_GEMINI_QUERY_IMAGE_BATCH_SIZE": 1,
     "HAEORUM_GEMINI_QUERY_RUNTIME_TEXT_CACHE_ENTRIES": 0,
     "HAEORUM_GEMINI_QUERY_RUNTIME_IMAGE_CACHE_ENTRIES": 0,
     "HAEORUM_QWEN_MIXED_QUERY_PARALLELISM": 0,
+    "HAEORUM_QWEN_QUERY_IMAGE_BATCH_SIZE": 1,
     "HAEORUM_QWEN_QUERY_RUNTIME_TEXT_CACHE_ENTRIES": 0,
     "HAEORUM_QWEN_QUERY_RUNTIME_IMAGE_CACHE_ENTRIES": 0,
     "HAEORUM_SEARCH_MAX_CONCURRENCY": 0,
@@ -163,6 +166,8 @@ FLOAT_MINIMUMS = {
     "HAEORUM_BACKEND_CIRCUIT_COOLDOWN_SECONDS": 0.0,
     "HAEORUM_ADMIN_METRICS_HEALTH_CACHE_SECONDS": 0.0,
     "HAEORUM_IMAGE_VALIDATION_CACHE_TTL_SECONDS": 0.0,
+    "HAEORUM_GEMINI_QUERY_IMAGE_BATCH_WAIT_MS": 0.0,
+    "HAEORUM_QWEN_QUERY_IMAGE_BATCH_WAIT_MS": 0.0,
     "HAEORUM_RATE_LIMIT_PRUNE_INTERVAL_SECONDS": 0.0,
     "HAEORUM_GEMINI_QUERY_TIMEOUT_SECONDS": 0.001,
     "HAEORUM_QWEN_QUERY_TIMEOUT_SECONDS": 0.001,
@@ -186,6 +191,7 @@ DEFAULT_NUMERIC_VALUES: dict[str, int | float] = {
     "HAEORUM_MAX_LIMIT": 50,
     "HAEORUM_MAX_OFFSET": Settings.max_offset,
     "HAEORUM_MAX_IMAGE_DIMENSION": 1600,
+    "HAEORUM_QUERY_IMAGE_MAX_DIMENSION": Settings.query_image_max_dimension,
     "HAEORUM_MIN_IMAGE_DIMENSION": 16,
     "HAEORUM_IMAGE_VALIDATION_CACHE_TTL_SECONDS": Settings.image_validation_cache_ttl_seconds,
     "HAEORUM_IMAGE_VALIDATION_CACHE_MAX_ENTRIES": Settings.image_validation_cache_max_entries,
@@ -209,10 +215,14 @@ DEFAULT_NUMERIC_VALUES: dict[str, int | float] = {
     "HAEORUM_MARQO_DELETE_DOCUMENTS_BATCH_SIZE": Settings.marqo_delete_documents_batch_size,
     "HAEORUM_GEMINI_QUERY_TIMEOUT_SECONDS": Settings.qwen_query_timeout_seconds,
     "HAEORUM_GEMINI_MIXED_QUERY_PARALLELISM": Settings.qwen_mixed_query_parallelism,
+    "HAEORUM_GEMINI_QUERY_IMAGE_BATCH_SIZE": Settings.qwen_query_image_batch_size,
+    "HAEORUM_GEMINI_QUERY_IMAGE_BATCH_WAIT_MS": Settings.qwen_query_image_batch_wait_ms,
     "HAEORUM_GEMINI_QUERY_RUNTIME_TEXT_CACHE_ENTRIES": Settings.qwen_query_runtime_text_cache_entries,
     "HAEORUM_GEMINI_QUERY_RUNTIME_IMAGE_CACHE_ENTRIES": Settings.qwen_query_runtime_image_cache_entries,
     "HAEORUM_QWEN_QUERY_TIMEOUT_SECONDS": Settings.qwen_query_timeout_seconds,
     "HAEORUM_QWEN_MIXED_QUERY_PARALLELISM": Settings.qwen_mixed_query_parallelism,
+    "HAEORUM_QWEN_QUERY_IMAGE_BATCH_SIZE": Settings.qwen_query_image_batch_size,
+    "HAEORUM_QWEN_QUERY_IMAGE_BATCH_WAIT_MS": Settings.qwen_query_image_batch_wait_ms,
     "HAEORUM_QWEN_QUERY_RUNTIME_TEXT_CACHE_ENTRIES": Settings.qwen_query_runtime_text_cache_entries,
     "HAEORUM_QWEN_QUERY_RUNTIME_IMAGE_CACHE_ENTRIES": Settings.qwen_query_runtime_image_cache_entries,
     "HAEORUM_CACHE_MAX_ENTRIES": Settings.cache_max_entries,
@@ -253,6 +263,7 @@ DEFAULT_NUMERIC_VALUES: dict[str, int | float] = {
 }
 BOOLEAN_SETTING_NAMES = (
     "HAEORUM_FILTER_BY_MALL_ID",
+    "HAEORUM_MSSQL_ALLOW_TRUST_SERVER_CERTIFICATE",
     "HAEORUM_VALIDATE_PRODUCT_IMAGES",
 )
 
@@ -526,6 +537,9 @@ def data_source_check(values: Mapping[str, str], require_paths: bool) -> dict[st
 def mssql_connection_string_check(values: Mapping[str, str], require_production: bool) -> dict[str, Any]:
     readonly_mssql = env_value(values, "HAEORUM_MSSQL_READONLY_CONNECTION_STRING")
     legacy_mssql = env_value(values, "HAEORUM_MSSQL_CONNECTION_STRING")
+    allow_trust_server_certificate = (
+        env_value(values, "HAEORUM_MSSQL_ALLOW_TRUST_SERVER_CERTIFICATE").lower() in BOOLEAN_TRUE_VALUES
+    )
     selected_name = ""
     selected_value = ""
     if not is_missing_config_value(readonly_mssql):
@@ -556,7 +570,11 @@ def mssql_connection_string_check(values: Mapping[str, str], require_production:
             problems=[f"{selected_name} must not be a placeholder"],
         )
     try:
-        parsed = validate_mssql_connection_string_value(selected_value, selected_name)
+        parsed = validate_mssql_connection_string_value(
+            selected_value,
+            selected_name,
+            allow_trust_server_certificate=allow_trust_server_certificate,
+        )
     except ValueError as exc:
         return check(
             "mssql_connection_string",
@@ -566,17 +584,26 @@ def mssql_connection_string_check(values: Mapping[str, str], require_production:
             env_var=selected_name,
             problems=[str(exc)],
         )
+    trust_server_certificate = parsed.get("trustservercertificate")
+    temporary_exception = (
+        allow_trust_server_certificate
+        and str(trust_server_certificate or "").strip().lower() not in {"no", "false", "0"}
+    )
     return check(
         "mssql_connection_string",
         True,
-        "MSSQL connection string is hardened for read-only TLS access",
+        "MSSQL connection string uses temporary TrustServerCertificate exception"
+        if temporary_exception
+        else "MSSQL connection string is hardened for read-only TLS access",
         configured=True,
         env_var=selected_name,
         has_server=any(name in parsed for name in ["server", "address", "addr", "networkaddress", "datasource"]),
         has_database=any(name in parsed for name in ["database", "initialcatalog"]),
         encrypt=parsed.get("encrypt"),
-        trust_server_certificate=parsed.get("trustservercertificate"),
+        trust_server_certificate=trust_server_certificate,
         application_intent=parsed.get("applicationintent"),
+        allow_trust_server_certificate=allow_trust_server_certificate,
+        temporary_exception=temporary_exception,
     )
 
 

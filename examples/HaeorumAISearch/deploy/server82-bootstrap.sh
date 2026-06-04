@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+DOCKER_DATA_ROOT="${HAEORUM_DOCKER_DATA_ROOT:-/home/docker}"
+
 if [ "$(id -u)" -ne 0 ]; then
   echo "Run as root." >&2
   exit 1
@@ -16,9 +18,10 @@ EOF
 modprobe br_netfilter || true
 sysctl --system
 
-mkdir -p /etc/docker
-cat >/etc/docker/daemon.json <<'EOF'
+mkdir -p /etc/docker "$DOCKER_DATA_ROOT"
+cat >/etc/docker/daemon.json <<EOF
 {
+  "data-root": "$DOCKER_DATA_ROOT",
   "log-driver": "json-file",
   "log-opts": {
     "max-size": "20m",

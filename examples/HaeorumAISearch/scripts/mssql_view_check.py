@@ -206,9 +206,9 @@ SELECT
     IS_ROLEMEMBER('db_backupoperator') AS db_backupoperator
 """
 DATABASE_PERMISSION_QUERY = """
-SELECT permission_name, state_desc
+SELECT permission_name, CAST('GRANT' AS varchar(32)) AS state_desc
 FROM fn_my_permissions(NULL, 'DATABASE')
-ORDER BY permission_name, state_desc
+ORDER BY permission_name
 """
 
 
@@ -419,7 +419,11 @@ def row_value(row: dict[str, Any], *names: str) -> Any:
     return ""
 
 
-def validate_sample_report(sample_report: dict[str, Any]) -> dict[str, Any]:
+def validate_sample_report(
+    sample_report: dict[str, Any],
+    *,
+    require_domain_filter_coverage: bool = True,
+) -> dict[str, Any]:
     problems = []
     if int(sample_report.get("sample_rows", 0) or 0) <= 0:
         problems.append("sample query returned no rows")
@@ -483,7 +487,7 @@ def validate_sample_report(sample_report: dict[str, Any]) -> dict[str, Any]:
         if isinstance(sample_report.get("domain_filter_coverage"), dict)
         else {}
     )
-    if domain_filter_coverage.get("ok") is not True:
+    if require_domain_filter_coverage and domain_filter_coverage.get("ok") is not True:
         for problem in domain_filter_coverage.get("problems") or ["domain_filter_coverage"]:
             problems.append(f"domain_filter_coverage: {problem}")
     return {
@@ -588,7 +592,28 @@ def build_sample_query(query: str, sample_size: int) -> str:
     validate_readonly_query(query)
     if sample_size <= 0:
         raise ValueError("sample_size must be at least 1")
-    return build_wrapped_mssql_query(query, top=sample_size)
+    return build_wrapped_mssql_query(query, top=sample_size, order_by=active_first_order_by(query))
+
+
+def active_first_order_by(query: str) -> str | None:
+    normalized = normalize_external_field_name(query)
+    clauses: list[str] = []
+    if "is_deleted" in normalized:
+        clauses.append("CASE WHEN TRY_CONVERT(int, [is_deleted]) = 0 THEN 0 ELSE 1 END")
+    if "display_yn" in normalized:
+        clauses.append(
+            "CASE WHEN [display_yn] IN ('Y', 'y', '1', 'true', 'TRUE', 'active', 'ACTIVE', NCHAR(49849) + NCHAR(51064)) "
+            "THEN 0 ELSE 1 END"
+        )
+    if "status" in normalized:
+        clauses.append(
+            "CASE WHEN TRY_CONVERT(int, [status]) = 1 "
+            "OR [status] IN ('Y', 'y', '1', 'true', 'TRUE', 'active', 'ACTIVE', NCHAR(49849) + NCHAR(51064)) "
+            "THEN 0 ELSE 1 END"
+        )
+    if "updated_at" in normalized:
+        clauses.append("[updated_at] DESC")
+    return ", ".join(clauses) if clauses else None
 
 
 def normalized_query_text(query: str) -> str:
@@ -604,19 +629,29 @@ def query_fingerprint_report(query: str) -> dict[str, Any]:
     }
 
 
-def run(connection_string: str, query: str, sample_size: int) -> dict[str, Any]:
+def run(
+    connection_string: str,
+    query: str,
+    sample_size: int,
+    *,
+    require_domain_filter_coverage: bool = True,
+) -> dict[str, Any]:
     started = time.perf_counter()
     build_sample_query(query, sample_size)
     permission_report = fetch_readonly_permissions(connection_string)
     columns, rows = fetch_sample(connection_string, query, sample_size)
     column_report = validate_columns(columns)
     sample_report = analyze_sample(rows)
-    sample_quality_report = validate_sample_report(sample_report)
+    sample_quality_report = validate_sample_report(
+        sample_report,
+        require_domain_filter_coverage=require_domain_filter_coverage,
+    )
     return {
         "ok": column_report["ok"] and sample_quality_report["ok"] and permission_report["ok"],
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "elapsed_ms": round((time.perf_counter() - started) * 1000, 1),
         "query_configured": True,
+        "domain_filter_coverage_required": require_domain_filter_coverage,
         "query_fingerprint": query_fingerprint_report(query),
         "sample_size": sample_size,
         "permission_report": permission_report,
@@ -677,6 +712,11 @@ def main() -> int:
     )
     parser.add_argument("--query", default=os.environ.get("HAEORUM_MSSQL_QUERY", ""))
     parser.add_argument("--sample-size", type=int, default=20)
+    parser.add_argument(
+        "--allow-missing-domain-filter-fields",
+        action="store_true",
+        help="Report, but do not fail on missing print/material/color/min-order/delivery filter coverage.",
+    )
     parser.add_argument("--output", default="")
     args = parser.parse_args()
 
@@ -711,6 +751,10 @@ def main() -> int:
         validate_mssql_connection_string_value(
             connection_string,
             "HAEORUM_MSSQL_READONLY_CONNECTION_STRING",
+            allow_trust_server_certificate=str(
+                os.environ.get("HAEORUM_MSSQL_ALLOW_TRUST_SERVER_CERTIFICATE", "")
+            ).strip().lower()
+            in {"1", "true", "yes", "y", "on"},
         )
     except ValueError as exc:
         report = failure_report(
@@ -723,7 +767,12 @@ def main() -> int:
         write_report(report, args.output)
         return 2
     try:
-        report = run(connection_string, query, args.sample_size)
+        report = run(
+            connection_string,
+            query,
+            args.sample_size,
+            require_domain_filter_coverage=not args.allow_missing_domain_filter_fields,
+        )
     except Exception as exc:
         report = failure_report(
             exc,

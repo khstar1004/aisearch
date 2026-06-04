@@ -1,0 +1,20 @@
+[project]
+name = "commerce-ai-search"
+version = "0.1.0"
+description = "Productized AI commerce search service"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.119",
+    "uvicorn>=0.37",
+    "pydantic>=2.12",
+    "python-multipart>=0.0.20",
+    "pillow>=12.1",
+    "redis>=6.4",
+    "psutil>=5.9",
+    "google-auth>=2.38",
+    "requests>=2.32",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+

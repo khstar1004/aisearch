@@ -67,16 +67,17 @@ python examples\HaeorumAISearch\scripts\mall_config_check.py `
 </form>
 ```
 
-페이지 하단에는 위젯 스크립트를 로드하고 가맹점 값을 주입합니다.
+페이지 하단에는 위젯 스크립트를 로드하고 가맹점 값을 주입합니다. 별도 결과 페이지 방식에서는 `ai-search.html`, `widget.js`, `haeorum-logo.jpg`를 기존 쇼핑몰 서버의 같은 폴더에 올리고 `resultPageUrl`을 그 페이지 경로로 지정합니다.
 
 ```html
-<script src="https://ai-search.haeorumgift.com/widget.js"></script>
+<script src="/ai-search/widget.js"></script>
 <script>
   HaeorumAISearch.init({
     target: "#haeorum-ai-search",
     mallId: "shop001",
     apiKey: "replace-with-shop001-public-key",
     apiBaseUrl: "https://ai-search.haeorumgift.com",
+    resultPageUrl: "/ai-search/ai-search.html",
     limit: 20,
     maxImageMb: 5,
     minImageDimension: 16
@@ -87,7 +88,7 @@ python examples\HaeorumAISearch\scripts\mall_config_check.py `
 컨테이너를 추가하기 어렵다면 기존 검색 input과 검색 버튼 selector를 사용합니다. 이 경우 AI 검색 팝업을 열 때마다 현재 기존 검색창의 값을 팝업 입력창에 자동으로 채웁니다.
 
 ```html
-<script src="https://ai-search.haeorumgift.com/widget.js"></script>
+<script src="/ai-search/widget.js"></script>
 <script>
   HaeorumAISearch.init({
     target: "",
@@ -95,7 +96,8 @@ python examples\HaeorumAISearch\scripts\mall_config_check.py `
     attachAfterSelector: "#searchForm button[type='submit']",
     mallId: "shop001",
     apiKey: "replace-with-shop001-public-key",
-    apiBaseUrl: "https://ai-search.haeorumgift.com"
+    apiBaseUrl: "https://ai-search.haeorumgift.com",
+    resultPageUrl: "/ai-search/ai-search.html"
   });
 </script>
 ```
@@ -104,10 +106,12 @@ inline script 변경이 어렵거나 CSP로 제한되는 템플릿은 script 태
 
 ```html
 <script
-  src="https://ai-search.haeorumgift.com/widget.js"
+  src="/ai-search/widget.js"
   data-hai-auto-init="true"
   data-mall-id="shop001"
   data-api-key="replace-with-shop001-public-key"
+  data-api-base-url="https://ai-search.haeorumgift.com"
+  data-result-page-url="/ai-search/ai-search.html"
   data-attach-to-search-input="#keyword"
   data-attach-after-selector="#searchForm button[type='submit']"
   data-trigger-title="AI검색"></script>

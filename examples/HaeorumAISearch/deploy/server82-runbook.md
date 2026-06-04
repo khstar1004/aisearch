@@ -21,7 +21,7 @@ Review `deploy/go-live-failure-scenarios.md` and `deploy/operational-risk-regist
 
 - Docker Engine and Docker Compose plugin installed
 - Outbound HTTPS allowed for Gemini API
-- Inbound public traffic allowed only to Nginx `80/443`
+- Inbound public traffic allowed only to Apache/Nginx reverse proxy `80/443`
 - API, Marqo, and Gemini embedding proxy published ports bind to `127.0.0.1` only; they are not bound to `0.0.0.0`
 - Enough memory for the conservative profile: recommended `8GB+ RAM`
 
@@ -67,25 +67,32 @@ GEMINI_API_KEY=<protected-gemini-api-key>
 # GEMINI_AUTH_MODE=adc
 # GEMINI_QUOTA_PROJECT=<google-cloud-project-id>
 
-# If Nginx proxies to a Docker-published API port, include the Docker bridge CIDR.
+# If the reverse proxy targets a Docker-published API port, include the Docker bridge CIDR.
 # Do not expose the API port directly to the internet when trusting forwarded headers.
 HAEORUM_TRUSTED_PROXY_IPS=127.0.0.1,::1,172.16.0.0/12
+HAEORUM_BACKEND_CIRCUIT_FAILURE_THRESHOLD=5
+HAEORUM_BACKEND_CIRCUIT_COOLDOWN_SECONDS=5
+HAEORUM_BACKEND_CIRCUIT_HALF_OPEN_MAX_CALLS=1
+MARQO_API_KEEPALIVE_TIMEOUT=75
+MARQO_API_GZIP_MINIMUM_SIZE=1024
 ```
 
 Initial guardrails:
 
 ```bash
-HAEORUM_SEARCH_RATE_LIMIT_PER_MINUTE=300
-HAEORUM_IMAGE_RATE_LIMIT_PER_MINUTE=60
+HAEORUM_SEARCH_RATE_LIMIT_PER_MINUTE=900
+HAEORUM_IMAGE_RATE_LIMIT_PER_MINUTE=300
 HAEORUM_MALL_SEARCH_RATE_LIMIT_PER_MINUTE=2000
 HAEORUM_MALL_IMAGE_RATE_LIMIT_PER_MINUTE=600
 HAEORUM_SEARCH_MAX_CONCURRENCY=16
 HAEORUM_IMAGE_SEARCH_MAX_CONCURRENCY=3
-HAEORUM_SEARCH_QUEUE_TIMEOUT_SECONDS=2
-HAEORUM_IMAGE_SEARCH_QUEUE_TIMEOUT_SECONDS=2
+HAEORUM_SEARCH_QUEUE_TIMEOUT_SECONDS=6
+HAEORUM_IMAGE_SEARCH_QUEUE_TIMEOUT_SECONDS=10
 HAEORUM_DOCKER_LOG_MAX_SIZE=20m
 HAEORUM_DOCKER_LOG_MAX_FILE=5
 ```
+
+The longer queue timeouts are intentional on the 8GB profile. They let short bursts around 100 simultaneous text searches queue instead of failing immediately while still keeping image searches bounded. The per-IP search/image rate limits are intentionally high enough for the required 850-user mixed-traffic evidence; use Apache/Nginx/WAF abuse controls and mall-level limits for public protection during rollout.
 
 ## 3. Start
 
@@ -114,27 +121,28 @@ docker compose \
   --profile reindex run --rm reindex-once
 ```
 
-## 5. Nginx
+## 5. Apache
 
-Use `deploy/nginx/haeorum-ai-search.conf` and replace:
+server82 currently runs Apache httpd on `80/443`; Nginx is not installed. Use `deploy/apache/haeorum-ai-search.conf` and replace:
 
-- `server_name ai-search.haeorumgift.com`
+- `ServerName ai-search.haeorumgift.com`
 - certificate paths
-- upstream port if different
+- `ProxyPass` upstream port if different from `127.0.0.1:8120`
 
 The config must overwrite forwarded headers:
 
-```nginx
-proxy_set_header X-Real-IP $remote_addr;
-proxy_set_header X-Forwarded-For $remote_addr;
-proxy_set_header Forwarded "";
+```apache
+RequestHeader unset Forwarded early
+RequestHeader unset X-Forwarded-For early
+RequestHeader set X-Forwarded-For "%{CLIENT_REMOTE_ADDR}e" early
+RequestHeader set X-Real-IP "%{CLIENT_REMOTE_ADDR}e" early
 ```
 
 ## 6. Smoke Checks
 
 ```bash
-curl -fsS http://127.0.0.1:8000/health
-curl -fsS -H "X-Admin-Key: $HAEORUM_ADMIN_API_KEY" http://127.0.0.1:8000/admin/metrics
+curl -fsS http://127.0.0.1:8120/health
+curl -fsS -H "X-Admin-Key: $HAEORUM_ADMIN_API_KEY" http://127.0.0.1:8120/admin/metrics
 curl -fsS http://127.0.0.1:8098/health
 ```
 
@@ -149,7 +157,7 @@ For host-run operational evidence, set `/etc/haeorum-ai-search/operational-evide
 
 Do not put those loopback URLs into the Docker service env; containers still use `marqo-api` and `gemini-embedding` service DNS.
 
-Open the local admin dashboard through the HTTPS domain after Nginx is connected:
+Open the local admin dashboard through the HTTPS domain after Apache/Nginx is connected:
 
 ```text
 https://ai-search.haeorumgift.com/admin-ui
@@ -163,7 +171,7 @@ Run the local handoff audit against the deployed API:
 ```bash
 python scripts/pre_handoff_audit.py \
   --require-runtime \
-  --base-url http://127.0.0.1:8000 \
+  --base-url http://127.0.0.1:8120 \
   --mall-id <mall-id> \
   --admin-key "$HAEORUM_ADMIN_API_KEY" \
   --api-key <mall-public-api-key> \
@@ -174,7 +182,7 @@ Run a public API check from the deployment host:
 
 ```bash
 python scripts/load_test.py \
-  --base-url http://127.0.0.1:8000 \
+  --base-url http://127.0.0.1:8120 \
   --mall-id shop001 \
   --api-key <mall-public-api-key> \
   --origin https://www.haeorumgift.com \

@@ -652,9 +652,15 @@ class HaeorumSearchServiceTest(unittest.TestCase):
             self.assertEqual("우산", normalize_query_text("우싼"))
             self.assertEqual("우산 우싼", build_search_query("우싼", "우산"))
             self.assertEqual("에코백", normalize_query_text("에코빽"))
+            self.assertEqual("무선마우스", normalize_query_text("무선 마우스"))
+            self.assertEqual("무선마우스", build_search_query("무선 마우스", "무선마우스"))
+            self.assertEqual("무선마우스", normalize_query_text("마우스"))
+            self.assertEqual("무선마우스", build_search_query("마우스", "무선마우스"))
             self.assertEqual(("타올",), infer_category_intents("호텔 수건", limit=1))
             self.assertEqual(("부채",), infer_category_intents("노란부채", limit=1))
             self.assertEqual(("달력",), infer_category_intents("카렌다", limit=1))
+            self.assertEqual(("마우스/키보드",), infer_category_intents("무선 마우스", limit=1))
+            self.assertEqual(("마우스패드",), infer_category_intents("마우스패드", limit=1))
 
         self.assertGreaterEqual(normalize_query_text.cache_info().hits, 7)
         self.assertGreaterEqual(build_search_query.cache_info().hits, 7)
@@ -872,6 +878,57 @@ class HaeorumSearchServiceTest(unittest.TestCase):
 
             self.assertEqual("https://shop001.example.test/product_view.asp?p_idx=P001", result.top[0].product_url)
 
+    def test_catalog_mode_preserves_safe_absolute_source_product_url(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = self.make_service(
+                [
+                    ProductDocument(
+                        product_id="P001",
+                        name="외부 원본 URL 우산",
+                        category="우산",
+                        status="active",
+                        product_url="https://catalog.example.test/product_w/product_view.asp?p_idx=P001",
+                    )
+                ],
+                Path(temp_dir) / "search.jsonl",
+            )
+
+            result = service.search(SearchRequest(mall_id="shop001", q="우산", limit=5))
+
+            self.assertEqual(
+                "https://catalog.example.test/product_w/product_view.asp?p_idx=P001",
+                result.top[0].product_url,
+            )
+
+    def test_blank_source_category_uses_response_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            service = self.make_service(
+                [
+                    ProductDocument(
+                        product_id="P001",
+                        name="카테고리 없는 무선 마우스",
+                        category=" ",
+                        status="active",
+                    )
+                ],
+                Path(temp_dir) / "search.jsonl",
+            )
+
+            item = service._to_item(
+                EngineHit(
+                    ProductDocument(
+                        product_id="P001",
+                        name="카테고리 없는 무선 마우스",
+                        category=" ",
+                        status="active",
+                    ),
+                    0.9,
+                ),
+                "shop001",
+            )
+
+            self.assertEqual("기타", item.category)
+
     def test_unsafe_product_url_falls_back_to_mall_template(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             service = self.make_service(
@@ -1035,6 +1092,43 @@ class HaeorumSearchServiceTest(unittest.TestCase):
             self.assertIsNone(image_urls["P006"])
             self.assertIsNone(image_urls["P007"])
             self.assertIsNone(image_urls["P008"])
+
+    def test_marqo_display_image_filter_removes_blank_or_unsafe_images(self) -> None:
+        hits = [
+            EngineHit(
+                document=ProductDocument(
+                    product_id="P001",
+                    name="정상 이미지 우산",
+                    category="우산",
+                    status="active",
+                    main_image_url="https://images.example.test/p001.jpg",
+                ),
+                score=0.9,
+            ),
+            EngineHit(
+                document=ProductDocument(
+                    product_id="P002",
+                    name="이미지 없는 우산",
+                    category="우산",
+                    status="active",
+                ),
+                score=0.8,
+            ),
+            EngineHit(
+                document=ProductDocument(
+                    product_id="P003",
+                    name="안전하지 않은 이미지 우산",
+                    category="우산",
+                    status="active",
+                    main_image_url="https://token@images.example.test/p003.jpg",
+                ),
+                score=0.7,
+            ),
+        ]
+
+        filtered = search_service_module.filter_hits_with_display_image(hits)
+
+        self.assertEqual(["P001"], [hit.document.product_id for hit in filtered])
 
     def test_limit_applies_to_related_items_after_top3(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -6254,6 +6348,17 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         self.assertEqual((32, 16), (image.width, image.height))
         self.assertLessEqual(image.size_bytes, 1024 * 1024)
 
+    def test_image_validation_can_resize_query_image_below_upload_limit(self) -> None:
+        image = validate_image_bytes(
+            make_png_bytes(120, 60),
+            max_bytes=1024 * 1024,
+            max_dimension=1600,
+            resize_dimension=48,
+        )
+
+        self.assertTrue(image.normalized)
+        self.assertEqual((48, 24), (image.width, image.height))
+
     def test_image_validation_rejects_excessive_decode_dimensions_before_resize(self) -> None:
         with self.assertRaisesRegex(ValueError, "image dimensions are too large"):
             validate_safe_decode_dimensions((20000, 20000), max_dimension=1600)
@@ -6285,6 +6390,14 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         analyze_features.assert_called_once()
         self.assertEqual(("low_contrast_or_plain_background",), image.quality_warnings)
         self.assertEqual("0" * 16, image.perceptual_hash)
+
+    def test_image_validation_can_skip_feature_analysis(self) -> None:
+        with patch("app.image_validation.analyze_image_features") as analyze_features:
+            image = validate_image_bytes(PNG_BYTES, max_bytes=1024 * 1024, analyze_features=False)
+
+        analyze_features.assert_not_called()
+        self.assertEqual((), image.quality_warnings)
+        self.assertIsNone(image.perceptual_hash)
 
     def test_image_validation_normalizes_exif_orientation(self) -> None:
         image = validate_image_bytes(make_oriented_jpeg_bytes(), max_bytes=1024 * 1024)
@@ -6788,10 +6901,15 @@ class HaeorumSearchServiceTest(unittest.TestCase):
                 "HAEORUM_MARQO_DELETE_DOCUMENTS_BATCH_SIZE": "23",
                 "HAEORUM_QWEN_QUERY_TIMEOUT_SECONDS": "3.5",
                 "HAEORUM_QWEN_MIXED_QUERY_PARALLELISM": "4",
+                "HAEORUM_QWEN_QUERY_IMAGE_BATCH_SIZE": "6",
+                "HAEORUM_QWEN_QUERY_IMAGE_BATCH_WAIT_MS": "7.5",
                 "HAEORUM_QWEN_QUERY_RUNTIME_TEXT_CACHE_ENTRIES": "111",
                 "HAEORUM_QWEN_QUERY_RUNTIME_IMAGE_CACHE_ENTRIES": "22",
+                "HAEORUM_QUERY_IMAGE_MAX_DIMENSION": "512",
+                "HAEORUM_QUERY_IMAGE_ANALYSIS": "false",
                 "HAEORUM_IMAGE_VALIDATION_CACHE_TTL_SECONDS": "6.5",
                 "HAEORUM_IMAGE_VALIDATION_CACHE_MAX_ENTRIES": "9",
+                "HAEORUM_IMAGE_VALIDATION_WAIT_SECONDS": "8.5",
                 "HAEORUM_SEARCH_MAX_CONCURRENCY": "13",
                 "HAEORUM_SEARCH_QUEUE_TIMEOUT_SECONDS": "1.25",
                 "HAEORUM_API_THREADPOOL_TOKENS": "33",
@@ -6828,10 +6946,15 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         self.assertEqual(23, settings.marqo_delete_documents_batch_size)
         self.assertEqual(3.5, settings.qwen_query_timeout_seconds)
         self.assertEqual(4, settings.qwen_mixed_query_parallelism)
+        self.assertEqual(6, settings.qwen_query_image_batch_size)
+        self.assertEqual(7.5, settings.qwen_query_image_batch_wait_ms)
         self.assertEqual(111, settings.qwen_query_runtime_text_cache_entries)
         self.assertEqual(22, settings.qwen_query_runtime_image_cache_entries)
+        self.assertEqual(512, settings.query_image_max_dimension)
+        self.assertFalse(settings.query_image_analysis)
         self.assertEqual(6.5, settings.image_validation_cache_ttl_seconds)
         self.assertEqual(9, settings.image_validation_cache_max_entries)
+        self.assertEqual(8.5, settings.image_validation_wait_seconds)
         self.assertEqual(13, settings.search_max_concurrency)
         self.assertEqual(1.25, settings.search_queue_timeout_seconds)
         self.assertEqual(33, settings.api_threadpool_tokens)
@@ -6866,6 +6989,7 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         self.assertEqual(1234, settings.cache_max_entries)
         self.assertEqual(9.5, settings.cache_miss_lock_seconds)
         self.assertEqual(2.5, settings.cache_miss_wait_seconds)
+        self.assertEqual(2.5, settings.image_validation_wait_seconds)
         self.assertEqual(0.02, settings.cache_miss_poll_seconds)
 
     def test_trusted_proxy_ips_rejects_invalid_networks(self) -> None:
@@ -16267,6 +16391,51 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         self.assertGreaterEqual(status["wait_events"], 1)
         self.assertEqual(0, status["wait_timeouts"])
 
+    def test_marqo_qwen_query_vector_micro_batches_distinct_image_embeddings(self) -> None:
+        class BatchingQwenMarqoSearchEngine(MarqoSearchEngine):
+            def __init__(self):
+                super().__init__(
+                    "http://localhost:8882",
+                    "test",
+                    embedding_backend="qwen",
+                    qwen_embedding_dimensions=2,
+                    qwen_query_image_batch_size=4,
+                    qwen_query_image_batch_wait_ms=20,
+                )
+                self.batch_sizes: list[int] = []
+                self.lock = threading.Lock()
+
+            def qwen_embed_images(self, images: list[str], **_: object) -> list[list[float]]:
+                with self.lock:
+                    self.batch_sizes.append(len(images))
+                time.sleep(0.01)
+                return [[float(index), float(len(images))] for index, _image in enumerate(images)]
+
+        engine = BatchingQwenMarqoSearchEngine()
+        barrier = threading.Barrier(8)
+
+        def vector_once(index: int) -> tuple[list[float], str, str]:
+            barrier.wait(timeout=10)
+            return engine.qwen_query_vector(
+                EngineQuery(
+                    image_data_url=f"data:image/png;base64,UNIQUE{index}",
+                    image_hash=f"image-{index}",
+                )
+            )
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(vector_once, range(8)))
+
+        self.assertEqual(8, len(results))
+        self.assertLess(len(engine.batch_sizes), 8)
+        self.assertEqual(8, sum(engine.batch_sizes))
+        self.assertGreater(max(engine.batch_sizes), 1)
+        status = engine.qwen_query_vector_status()["image_batcher"]
+        self.assertTrue(status["enabled"])
+        self.assertEqual(8, status["submitted"])
+        self.assertEqual(8, status["batched_input_count"])
+        self.assertGreater(status["avg_batch_size"], 1)
+
     def test_marqo_qwen_mixed_query_context_computes_text_and_image_vectors_in_parallel(self) -> None:
         class BarrierQwenMarqoSearchEngine(MarqoSearchEngine):
             def __init__(self):
@@ -17689,7 +17858,52 @@ class HaeorumSearchServiceTest(unittest.TestCase):
             self.assertEqual(1, service.image_validation_status()["cache_hits"])
             self.assertEqual([False, True], [entry["cached"] for entry in service.logger.tail(10)])
 
-    def test_image_singleflight_waiters_do_not_hold_image_compute_context(self) -> None:
+    def test_service_image_search_scopes_compute_context_to_validation_and_execution(self) -> None:
+        class CountingContext:
+            def __init__(self, events: list[str]):
+                self.events = events
+
+            def __enter__(self) -> None:
+                self.events.append("enter")
+
+            def __exit__(self, exc_type, exc, traceback) -> bool:  # type: ignore[no-untyped-def]
+                self.events.append("exit")
+                return False
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            image = validate_image_bytes(PNG_BYTES, max_bytes=1024)
+            engine = LocalSearchEngine(
+                [
+                    ProductDocument(
+                        product_id="P001",
+                        name="검정 우산",
+                        category="우산",
+                        status="active",
+                        extra={"image_hash": image.sha256},
+                    )
+                ]
+            )
+            service = AISearchService(
+                engine,
+                Settings(
+                    engine_backend="local",
+                    index_name="test",
+                    search_log_path=Path(temp_dir) / "search.jsonl",
+                    cache_ttl_seconds=0,
+                ),
+                cache=MemorySearchCache(0),
+            )
+            events: list[str] = []
+
+            result = service.search(
+                SearchRequest(mall_id="shop001", image_base64=base64.b64encode(PNG_BYTES).decode("ascii")),
+                lambda: CountingContext(events),
+            )
+
+        self.assertEqual("P001", result.top[0].product_id)
+        self.assertEqual(["enter", "exit", "enter", "exit"], events)
+
+    def test_image_singleflight_waiters_share_image_compute_context_policy(self) -> None:
         validated_image = validate_image_bytes(PNG_BYTES, max_bytes=1024)
         engine_entered = threading.Event()
         release_engine = threading.Event()
@@ -20759,7 +20973,7 @@ class HaeorumSearchServiceTest(unittest.TestCase):
             self.assertEqual(0, metrics["singleflight"]["wait_events"])
             self.assertEqual(0, metrics["singleflight"]["wait_timeouts"])
             self.assertTrue(metrics["image_validation"]["enabled"])
-            self.assertEqual(settings.cache_miss_wait_seconds, metrics["image_validation"]["wait_timeout_seconds"])
+            self.assertEqual(settings.image_validation_wait_seconds, metrics["image_validation"]["wait_timeout_seconds"])
             self.assertEqual(0, metrics["image_validation"]["in_flight"])
             self.assertEqual(0, metrics["image_validation"]["wait_events"])
             self.assertEqual(0, metrics["image_validation"]["wait_timeouts"])
@@ -21870,6 +22084,16 @@ class HaeorumSearchServiceTest(unittest.TestCase):
                     "mall_id": "shop001",
                     "_score": 0.40,
                 },
+                {
+                    "_id": product_document_id("shop001", "P003"),
+                    "product_id": "P003",
+                    "product_name": "블루투스 무선 마우스",
+                    "category_name": "마우스/키보드",
+                    "status": "active",
+                    "display_yn": "Y",
+                    "mall_id": "shop001",
+                    "_score": 0.90,
+                },
             ]
         }
 
@@ -21881,12 +22105,16 @@ class HaeorumSearchServiceTest(unittest.TestCase):
             auxiliary_source="text_auxiliary",
         )
 
-        self.assertEqual(["P001", "P002"], [hit.document.product_id for hit in boosted])
-        self.assertAlmostEqual(0.66, boosted[0].score)
-        self.assertAlmostEqual(0.576, boosted[1].score)
+        self.assertEqual(["P003", "P001", "P002"], [hit.document.product_id for hit in boosted])
+        self.assertAlmostEqual(0.72, boosted[0].score)
+        self.assertAlmostEqual(0.66, boosted[1].score)
+        self.assertAlmostEqual(0.576, boosted[2].score)
         self.assertEqual(0.9, boosted[0].source_scores["text_auxiliary"])
         self.assertEqual(0.9, boosted[0].source_scores["qwen_text_vector"])
-        self.assertEqual(0.6, boosted[0].source_scores["marqo_primary"])
+        self.assertEqual(0.0, boosted[0].source_scores["marqo_primary"])
+        self.assertEqual(0.9, boosted[1].source_scores["text_auxiliary"])
+        self.assertEqual(0.9, boosted[1].source_scores["qwen_text_vector"])
+        self.assertEqual(0.6, boosted[1].source_scores["marqo_primary"])
 
     def test_qwen_marqo_upsert_payload_uses_structured_custom_vector_fields(self) -> None:
         class FakeQwenMarqoSearchEngine(MarqoSearchEngine):
@@ -22048,7 +22276,7 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         self.assertEqual(["shop001", "shop002"], [doc["mall_id"] for doc in payload["documents"]])
         self.assertEqual(document_ids, [doc["document_id"] for doc in payload["documents"]])
         self.assertEqual(2, len(set(document_ids)))
-        self.assertTrue(all(document_id.endswith("|product:P001") for document_id in document_ids))
+        self.assertTrue(all(document_id.endswith("-product-P001") for document_id in document_ids))
 
     def test_marqo_upsert_deletes_legacy_product_id_document_after_composite_upsert(self) -> None:
         class FakeMarqoSearchEngine(MarqoSearchEngine):

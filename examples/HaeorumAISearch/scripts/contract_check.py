@@ -460,9 +460,9 @@ def check_deployment_files() -> dict[str, Any]:
         assert "replace-with-google-cloud-project-id" not in compose_gemini
         assert "replace-with-google-cloud-account-number" not in compose_gemini
         assert "/gcp/application_default_credentials.json" not in compose_gemini
-        assert 'GEMINI_AUTH_MODE: "${GEMINI_AUTH_MODE:-adc}"' in compose_gemini_localtest
-        assert 'GEMINI_QUOTA_PROJECT: "${GEMINI_QUOTA_PROJECT:?' in compose_gemini_localtest
-        assert "/gcp/application_default_credentials.json" in compose_gemini_localtest
+        assert 'GEMINI_AUTH_MODE: "${GEMINI_AUTH_MODE:-api_key}"' in compose_gemini_localtest
+        assert 'GEMINI_API_KEY: "${GEMINI_API_KEY:?' in compose_gemini_localtest
+        assert "/gcp/application_default_credentials.json" not in compose_gemini_localtest
 
         demo_compose = (ROOT / "compose-haeorum-demo.yaml").read_text(encoding="utf-8")
         assert "INSTALL_MSSQL_ODBC" in demo_compose
@@ -623,7 +623,7 @@ def check_deployment_files() -> dict[str, Any]:
         assert "Persistent=true" in reindex_timer
         assert "upstream haeorum_ai_search_api" in nginx_config
         assert "least_conn" in nginx_config
-        assert "server 127.0.0.1:8000 max_fails=3 fail_timeout=10s" in nginx_config
+        assert "server 127.0.0.1:8120 max_fails=3 fail_timeout=10s" in nginx_config
         assert "proxy_pass http://haeorum_ai_search_api" in nginx_config
         assert "keepalive 64" in nginx_config
         assert "ssl_certificate" in nginx_config

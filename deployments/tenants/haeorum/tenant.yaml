@@ -1,0 +1,98 @@
+tenant_id: haeorum
+display_name: "Haeorum Gift"
+deployment_mode: single_tenant
+
+runtime:
+  environment: production
+  public_api_base_url: "https://ai-search.haeorumgift.com"
+  api_title: "Haeorum Gift AI Search API"
+  legacy_env_prefix: "HAEORUM"
+  future_env_prefix: "AISEARCH"
+
+search:
+  backend: marqo
+  index_name: "haeorum-products"
+  marqo_url: "http://marqo-api:8882"
+  marqo_model: "Marqo/marqo-ecommerce-embeddings-L"
+  default_limit: 20
+  max_limit: 50
+  max_offset: 200
+  low_score_threshold: 0.4
+  category_suggestion_limit: 15
+  mixed_text_weight: 0.4
+  mixed_image_weight: 0.6
+  text_auxiliary_weight: 0.12
+
+embedding:
+  provider: gemini
+  proxy_url: "http://embedding-service:8098"
+  model: "gemini-embedding-2"
+  dimensions: 1536
+  query_timeout_seconds: 15
+  mixed_query_parallelism: 8
+  runtime_text_cache_entries: 2048
+  runtime_image_cache_entries: 512
+
+catalog:
+  source: mssql
+  query_file: "./sql/product-mapping.sql"
+  product_id_column: product_id
+  updated_at_column: updated_at
+  sync_fetch_size: 1000
+  sync_interval_seconds: 3600
+  filter_by_site_id: false
+  product_url_template: "https://{mall_id}.haeorumgift.com/product_view.asp?p_idx={product_id}"
+
+sites:
+  file: "./sites.json"
+  id_aliases:
+    - mall_id
+    - site_id
+
+security:
+  cors_origins_file: "./cors-origins.txt"
+  trusted_proxy_ips:
+    - "127.0.0.1"
+    - "::1"
+  require_https_origins_in_production: true
+  reject_placeholder_keys_in_production: true
+
+rate_limits:
+  search_per_ip_per_minute: 900
+  search_per_site_per_minute: 2000
+  image_per_ip_per_minute: 300
+  image_per_site_per_minute: 600
+  click_per_ip_per_minute: 600
+  click_per_site_per_minute: 3000
+
+cache:
+  ttl_seconds: 30
+  max_entries: 10000
+  redis_key_prefix: "haeorum-ai-search"
+  miss_lock_seconds: 35
+  miss_wait_seconds: 5
+  miss_poll_seconds: 0.05
+
+widget:
+  script_path: "/ai-search/widget.js"
+  result_page_path: "/ai-search/ai-search.html"
+  legacy_global_name: "HaeorumAISearch"
+  future_global_name: "CommerceAISearch"
+  default_target: "#haeorum-ai-search"
+  default_attach_to_search_input: "#keyword"
+  default_attach_after_selector: "#searchForm button[type='submit']"
+  trigger_title: "AI검색"
+  trigger_aria_label: "AI 상품 검색 열기"
+  accent_color: "#0f766e"
+  accent_soft_color: "#ecfdf5"
+  theme_file: "./theme.css"
+
+operations:
+  logs_dir: "/var/log/haeorum-ai-search"
+  env_file: "/etc/haeorum-ai-search/haeorum-ai-search.env"
+  nginx_config: "/etc/nginx/sites-enabled/haeorum-ai-search.conf"
+  systemd_service: "haeorum-ai-search.service"
+  sync_service: "haeorum-ai-sync.service"
+  reindex_service: "haeorum-ai-reindex.service"
+  reindex_timer: "haeorum-ai-reindex.timer"
+

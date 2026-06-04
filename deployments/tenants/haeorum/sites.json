@@ -1,0 +1,28 @@
+{
+  "sites": [
+    {
+      "site_id": "shop001",
+      "mall_id": "shop001",
+      "display_name": "Haeorum shop001",
+      "enabled": true,
+      "api_key": "replace-with-shop001-public-key",
+      "allowed_origins": [
+        "https://shop001.haeorumgift.com"
+      ],
+      "product_url_template": "https://shop001.haeorumgift.com/product_view.asp?p_idx={product_id}",
+      "excluded_product_ids": [],
+      "excluded_categories": [],
+      "hide_prices": false,
+      "price_multiplier": 1.0,
+      "price_adjustment": 0,
+      "price_round_to": 10,
+      "widget": {
+        "target": "#haeorum-ai-search",
+        "attach_to_search_input": "#keyword",
+        "attach_after_selector": "#searchForm button[type='submit']",
+        "result_page_url": "/ai-search/ai-search.html"
+      }
+    }
+  ]
+}
+

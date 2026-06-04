@@ -1,0 +1,32 @@
+name: ${AISEARCH_COMPOSE_PROJECT:-aisearch}
+
+services:
+  aisearch-api:
+    image: ${AISEARCH_API_IMAGE:-aisearch-api:latest}
+    env_file:
+      - ${AISEARCH_ENV_FILE:-./tenant.env}
+    volumes:
+      - ${AISEARCH_TENANT_DIR:-./tenant}:/etc/aisearch/tenant:ro
+      - ${AISEARCH_LOG_DIR:-./logs}:/var/log/aisearch
+    ports:
+      - "127.0.0.1:${AISEARCH_API_PORT:-8000}:8000"
+    restart: unless-stopped
+
+  aisearch-sync-worker:
+    image: ${AISEARCH_SYNC_WORKER_IMAGE:-aisearch-api:latest}
+    env_file:
+      - ${AISEARCH_ENV_FILE:-./tenant.env}
+    volumes:
+      - ${AISEARCH_TENANT_DIR:-./tenant}:/etc/aisearch/tenant:ro
+      - ${AISEARCH_LOG_DIR:-./logs}:/var/log/aisearch
+    command: ["python", "-m", "commerce_ai_search.sync_worker"]
+    restart: unless-stopped
+
+  aisearch-embedding-proxy:
+    image: ${AISEARCH_EMBEDDING_PROXY_IMAGE:-aisearch-api:latest}
+    env_file:
+      - ${AISEARCH_ENV_FILE:-./tenant.env}
+    command: ["python", "-m", "uvicorn", "commerce_ai_search.gemini_embedding_proxy:app", "--host", "0.0.0.0", "--port", "8098"]
+    expose:
+      - "8098"
+    restart: unless-stopped

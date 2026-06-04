@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>해오름기프트 AI 검색 위젯 데모</title>
+  <style>
+    * { box-sizing: border-box; letter-spacing: 0; }
+    body { margin: 0; font-family: Arial, "Noto Sans KR", sans-serif; background: #fff; color: #111; }
+    a { color: inherit; text-decoration: none; }
+    .top-event { background: #0d3164; color: #fff; }
+    .top-event-inner { width: min(1180px, calc(100% - 32px)); margin: 0 auto; min-height: 74px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .top-event strong { font-size: 25px; color: #ffe780; }
+    .top-event span { font-size: 15px; font-weight: 700; }
+    .top-event .event-buttons { display: flex; gap: 10px; }
+    .top-event .event-buttons b { min-width: 132px; min-height: 42px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.45); border-radius: 8px; font-size: 15px; }
+    .page { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+    .member-line { height: 30px; display: flex; justify-content: flex-end; align-items: center; gap: 14px; font-size: 12px; color: #555; }
+    .header-main { display: grid; grid-template-columns: 260px minmax(0, 1fr) 300px; gap: 24px; align-items: center; padding: 12px 0 10px; }
+    .logo { display: flex; align-items: center; gap: 12px; font-weight: 900; font-size: 30px; }
+    .logo-mark { position: relative; width: 58px; height: 52px; flex: 0 0 auto; }
+    .logo-mark span { position: absolute; display: block; border-radius: 14px; }
+    .logo-mark span:nth-child(1) { width: 38px; height: 38px; left: 0; top: 10px; background: #ffca08; }
+    .logo-mark span:nth-child(2) { width: 38px; height: 38px; left: 19px; top: 2px; background: rgba(238,27,36,.92); }
+    .logo-mark span:nth-child(3) { width: 34px; height: 34px; left: 25px; top: 18px; background: rgba(22,79,160,.88); }
+    .search-area { min-width: 0; }
+    .search-tabs { display: flex; justify-content: center; gap: 14px; margin-bottom: 7px; font-size: 13px; font-weight: 900; }
+    .search-tabs .active { color: #ee1b24; }
+    .searchbar { display: grid; grid-template-columns: 74px minmax(0, 1fr) 84px auto; align-items: center; border: 2px solid #ee1b24; background: #fff; }
+    .searchbar select, .searchbar input { height: 42px; border: 0; background: #fff; font-size: 14px; }
+    .searchbar select { border-right: 1px solid #e6e6e6; padding-left: 10px; }
+    .searchbar input { min-width: 0; padding: 0 12px; outline: 0; }
+    .searchbar .demo-submit { height: 42px; border: 0; background: #ee1b24; color: #fff; font-size: 16px; font-weight: 900; cursor: pointer; }
+    .searchbar #haeorum-ai-search { justify-self: stretch; }
+    .cs-box { text-align: right; color: #ee1b24; font-weight: 900; font-size: 17px; }
+    .cs-box strong { display: block; color: #000; font-size: 31px; letter-spacing: -1px; }
+    .nav { background: #ee1b24; color: #fff; }
+    .nav-inner { width: min(1180px, calc(100% - 32px)); margin: 0 auto; display: flex; align-items: center; min-height: 42px; overflow-x: auto; }
+    .nav a { flex: 0 0 auto; padding: 0 15px; min-height: 42px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 900; border-right: 1px solid rgba(255,255,255,.3); }
+    .layout { width: min(1180px, calc(100% - 32px)); margin: 14px auto 42px; display: grid; grid-template-columns: 150px minmax(0, 1fr) 130px; gap: 14px; }
+    .side { display: grid; gap: 10px; align-content: start; }
+    .banner { min-height: 116px; border: 1px solid #ddd; display: grid; place-items: center; text-align: center; padding: 10px; font-weight: 900; line-height: 1.25; }
+    .banner.purple { background: #481fc8; color: #fff; }
+    .banner.blue { background: #e6f4ff; color: #074ea2; }
+    .banner.yellow { background: #fff1a8; color: #c4141b; }
+    .category-box { border: 1px solid #ddd; }
+    .category-title { background: #535b67; color: #fff; padding: 8px 10px; font-weight: 900; font-size: 13px; }
+    .category-box a { display: block; padding: 8px 10px; border-top: 1px solid #eee; font-size: 12px; color: #333; }
+    .hero { border: 1px solid #d6d6d6; background: #f2f4f7; min-height: 330px; display: grid; grid-template-columns: 1fr 280px; overflow: hidden; }
+    .hero-copy { padding: 36px; background: linear-gradient(135deg, #323b45, #667280); color: #fff; display: grid; align-content: center; gap: 14px; }
+    .hero-copy h1 { margin: 0; font-size: 38px; line-height: 1.15; color: #ffe780; }
+    .hero-copy p { margin: 0; font-size: 17px; font-weight: 700; }
+    .hero-products { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 20px; background: #fff; }
+    .hero-products div { border: 1px solid #e2e2e2; display: grid; place-items: center; font-weight: 900; color: #333; background: #fafafa; }
+    .below-tabs { display: grid; grid-template-columns: repeat(6, 1fr); margin-top: 10px; border: 1px solid #ddd; }
+    .below-tabs a { padding: 11px 8px; text-align: center; border-right: 1px solid #ddd; font-size: 13px; font-weight: 800; background: #f8f8f8; }
+    .below-tabs a:first-child { background: #ee1b24; color: #fff; }
+    .status { margin-top: 12px; padding: 11px 12px; border: 1px solid #e0e0e0; background: #fafafa; font-size: 13px; color: #555; }
+    .status strong { color: #ee1b24; }
+    .quick { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+    .quick button { min-height: 34px; border: 1px solid #ddd; background: #fff; color: #333; cursor: pointer; padding: 0 12px; font-weight: 700; }
+    .quick button:hover { border-color: #ee1b24; color: #ee1b24; }
+    .right .banner { min-height: 92px; }
+    .keyword { border: 1px solid #ddd; }
+    .keyword h3 { margin: 0; padding: 8px; background: #b0135b; color: #fff; font-size: 13px; text-align: center; }
+    .keyword ol { margin: 0; padding: 8px 8px 8px 28px; font-size: 12px; line-height: 1.9; }
+    @media (max-width: 900px) {
+      .top-event-inner, .page, .nav-inner, .layout { width: min(100% - 20px, 760px); }
+      .top-event .event-buttons, .cs-box, .side, .right { display: none; }
+      .header-main { grid-template-columns: 1fr; gap: 12px; }
+      .searchbar { grid-template-columns: 70px minmax(0, 1fr) 82px; }
+      .searchbar #haeorum-ai-search { grid-column: 1 / -1; border-top: 1px solid #eee; }
+      .layout { grid-template-columns: 1fr; }
+      .hero { grid-template-columns: 1fr; }
+      .below-tabs { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-event">
+    <div class="top-event-inner">
+      <span>무점포/소자본/투잡 <strong>판촉물 쇼핑몰 창업</strong></span>
+      <div class="event-buttons"><b>전문가 지원</b><b>무료 컨설팅</b><b>노하우 전수</b></div>
+    </div>
+  </div>
+  <div class="page">
+    <div class="member-line">즐겨찾기추가 <span>로그인</span><span>회원가입</span><span>고객센터</span><span>주문조회</span></div>
+    <header class="header-main">
+      <a class="logo" href="#">
+        <span class="logo-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span>해오름 <small>판촉물</small></span>
+      </a>
+      <div class="search-area">
+        <div class="search-tabs"><span class="active">베스트상품</span><span>인기상품</span><span>이달의추천상품</span><span>길거리홍보물</span></div>
+        <div class="searchbar">
+          <select aria-label="검색 조건"><option>상품명</option><option>상품번호</option></select>
+          <input id="demo-keyword" placeholder="상품명 또는 상품번호로 찾아주세요">
+          <button type="button" class="demo-submit">검색</button>
+          <span id="haeorum-ai-search"></span>
+        </div>
+      </div>
+      <div class="cs-box">고객 콜센터<strong>02)2647-3093</strong></div>
+    </header>
+  </div>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="#">우산</a><a href="#">타올</a><a href="#">볼펜/필기구</a><a href="#">생활용품</a><a href="#">주방용품</a><a href="#">사무문구</a><a href="#">컴퓨터/전자</a><a href="#">계절/시계</a><a href="#">가방/지갑</a><a href="#">선물세트</a>
+    </div>
+  </nav>
+  <main class="layout">
+    <aside class="side">
+      <div class="banner purple">창업비 48만원으로<br>월매출 3600만원</div>
+      <div class="banner blue">여름 판촉물<br>추천 기획전</div>
+      <div class="category-box">
+        <div class="category-title">카테고리 전체</div>
+        <a href="#">선풍기/손풍기</a><a href="#">우산</a><a href="#">볼펜</a><a href="#">에코백</a><a href="#">부채</a><a href="#">보조배터리</a><a href="#">메모지</a>
+      </div>
+    </aside>
+    <section>
+      <div class="hero">
+        <div class="hero-copy">
+          <h1>프리미엄 판촉물<br>AI 이미지 검색</h1>
+          <p>사진 한 장으로 비슷한 상품과 카테고리를 바로 추천합니다.</p>
+        </div>
+        <div class="hero-products">
+          <div>우산</div><div>타올</div><div>텀블러</div><div>부채</div>
+        </div>
+      </div>
+      <div class="below-tabs">
+        <a href="#">학교/기관단체</a><a href="#">VIP/주주총회</a><a href="#">인기상품</a><a href="#">행사다</a><a href="#">홍보물</a><a href="#">시즌/계절</a>
+      </div>
+      <div id="demo-status" class="status">검색 서버 상태 확인 중...</div>
+      <div class="quick">
+        <button type="button" data-query="텀블러">텀블러</button>
+        <button type="button" data-query="우산">우산</button>
+        <button type="button" data-query="노란 부채">노란 부채</button>
+        <button type="button" data-query="송월타올">송월타올</button>
+      </div>
+    </section>
+    <aside class="side right">
+      <div class="banner yellow">상품 구입 시<br>추가 적립금 1%</div>
+      <div class="banner blue">톡톡문의<br>빠른 상담</div>
+      <div class="keyword">
+        <h3>인기검색 키워드 BEST 10</h3>
+        <ol>
+          <li>텀블러</li><li>우산</li><li>선풍기</li><li>볼펜</li><li>다이어리</li><li>타올</li><li>상패</li><li>에코백</li>
+        </ol>
+      </div>
+    </aside>
+  </main>
+  <script src="./widget.js"></script>
+  <script>
+    const demoApiBaseUrl = "http://127.0.0.1:8120";
+    HaeorumAISearch.init({
+      target: "#haeorum-ai-search",
+      attachToSearchInput: "#demo-keyword",
+      mallId: "shop001",
+      apiKey: "public-shop001-dev-key",
+      apiBaseUrl: demoApiBaseUrl,
+      resultPageUrl: "./ai-search.html"
+    });
+
+    document.querySelectorAll("[data-query]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const input = document.querySelector("#demo-keyword");
+        input.value = button.dataset.query || "";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    });
+
+    const demoParams = new URLSearchParams(window.location.search);
+    if (demoParams.get("q")) {
+      document.querySelector("#demo-keyword").value = demoParams.get("q");
+    }
+    if (demoParams.get("open") === "1") {
+      window.setTimeout(() => {
+        HaeorumAISearch.open();
+        if (demoParams.get("search") === "1") {
+          window.setTimeout(() => {
+            const form = document.querySelector(".hai-search-form");
+            if (form && typeof form.requestSubmit === "function") {
+              form.requestSubmit();
+            }
+          }, 250);
+        }
+      }, 200);
+    }
+
+    fetch(`${demoApiBaseUrl}/health`)
+      .then((response) => response.json())
+      .then((data) => {
+        const backend = data.backend || data.engine || "-";
+        const index = data.index || "-";
+        const embeddingModel = data.gemini_model || "";
+        const embedding = [data.embedding_backend, embeddingModel].filter(Boolean).join(" / ");
+        document.querySelector("#demo-status").innerHTML =
+          `API <strong>${backend}</strong> / index <strong>${index}</strong>${embedding ? ` / ${embedding}` : ""}`;
+      })
+      .catch((error) => {
+        document.querySelector("#demo-status").textContent = `검색 서버 상태 확인 실패: ${error.message}`;
+      });
+  </script>
+</body>
+</html>
