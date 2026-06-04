@@ -14,7 +14,8 @@ from urllib.request import Request, urlopen
 from app.cache import make_search_cache
 from app.config import DEFAULT_MSSQL_QUERY, load_settings
 from app.engine_factory import create_search_engine
-from app.sync import build_wrapped_mssql_query, row_to_product
+from app.models import SyncResult, SyncStatus
+from app.sync import SyncLogger, build_wrapped_mssql_query, row_to_product
 
 
 SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -229,10 +230,11 @@ def main() -> int:
 
     cache_report = search_cache.clear() if search_cache else {}
     elapsed_ms = round((time.perf_counter() - started) * 1000, 1)
+    finished_at = datetime.now(timezone.utc).isoformat()
     result = {
         "event": "live_mssql_full_reindex_finished",
         "started_at": started_at,
-        "finished_at": datetime.now(timezone.utc).isoformat(),
+        "finished_at": finished_at,
         "elapsed_ms": elapsed_ms,
         "index": settings.index_name,
         "indexed": indexed,
@@ -251,7 +253,40 @@ def main() -> int:
         output_path = Path(args.output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_sync_result(settings, engine, started_at, finished_at, elapsed_ms, indexed, failed)
     return 1 if failed else 0
+
+
+def write_sync_result(
+    settings: Any,
+    engine: Any,
+    started_at: str,
+    finished_at: str,
+    elapsed_ms: float,
+    indexed: int,
+    failed: int,
+) -> None:
+    status = SyncStatus(
+        last_started_at=started_at,
+        last_finished_at=finished_at,
+        last_mode="reindex",
+        last_error=None if failed == 0 else "live MSSQL full reindex completed with failed products",
+        indexed=indexed,
+        deleted=0,
+        failed=failed,
+        engine=getattr(engine, "name", "marqo"),
+        index=settings.index_name,
+    )
+    SyncLogger(settings.sync_log_path).write(
+        SyncResult(
+            mode="reindex",
+            indexed=indexed,
+            deleted=0,
+            failed=failed,
+            elapsed_ms=elapsed_ms,
+            status=status,
+        )
+    )
 
 
 def upsert_batch_once(

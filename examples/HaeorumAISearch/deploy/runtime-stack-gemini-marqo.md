@@ -4,7 +4,7 @@
 
 ## 실행 중이어야 하는 컨테이너
 
-기본 API stack은 상시 5개 컨테이너입니다. 운영에서는 DB 증분 동기화를 위해 `--profile sync up -d sync-worker`까지 실행하므로 상시 6개가 됩니다.
+기본 API stack은 상시 5개 컨테이너입니다. 운영에서는 DB 증분 동기화를 위해 `--profile sync up -d --build --no-deps sync-worker`까지 실행하므로 상시 6개가 됩니다. `sync-worker`를 올릴 때는 이미 색인된 Marqo/Vespa 의존 컨테이너가 재생성되지 않도록 `--no-deps`를 유지합니다.
 
 | 역할 | 컨테이너 |
 | --- | --- |
@@ -20,6 +20,8 @@
 `reindex-once`는 full reindex 때만 `--profile reindex run --rm reindex-once`로 뜨는 1회성 컨테이너입니다. 정상 종료 후 삭제되므로 상시 컨테이너 수에는 포함하지 않습니다.
 
 MSSQL 자체는 외부 DB(`221.143.49.208:1433`)를 read-only로 읽습니다. AI 검색 서버 안에 DB 컨테이너를 추가로 띄우지 않습니다.
+
+Vespa 데이터는 `vespa-data` named volume을 `/opt/vespa/var`에 mount해서 보존합니다. 일반 재시작이나 sync-worker rollout 중 이 volume을 삭제하지 않습니다.
 
 ## 실행되면 안 되는 것
 

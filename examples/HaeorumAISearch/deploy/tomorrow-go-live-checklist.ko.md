@@ -11,6 +11,7 @@
 - 서버 outbound가 막혀 있으면 그때만 별도 머신에서 이미지를 빌드해 `docker save` / `docker load`로 반입합니다. 기본값은 서버 빌드입니다.
 - 운영 env 파일은 `/etc/haeorum-ai-search/haeorum-ai-search.env` 하나로 통일합니다.
 - server82 기준 API host port는 `127.0.0.1:8120`입니다. 현재 서버는 Nginx가 아니라 Apache httpd가 80/443을 처리하므로 Apache가 이 포트로 proxy합니다.
+- Vespa 인덱스 데이터는 Docker named volume `vespa-data`(`/opt/vespa/var`)에 보존합니다. 운영 중 `docker compose down -v`나 volume 삭제는 하지 않습니다.
 
 ## 0. 오늘 밤까지 반드시 받아야 하는 값
 

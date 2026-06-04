@@ -158,7 +158,7 @@ echo "== full reindex =="
 "${COMPOSE[@]}" --profile reindex run --rm reindex-once
 
 echo "== start sync worker =="
-"${COMPOSE[@]}" --profile sync up -d sync-worker
+"${COMPOSE[@]}" --profile sync up -d --build --no-deps sync-worker
 
 echo "== API smoke =="
 "${COMPOSE[@]}" exec -T ai-search python scripts/api_smoke_test.py \
