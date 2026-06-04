@@ -7,6 +7,8 @@
     apiKey: "",
     resultPageUrl: "",
     resultPageTarget: "_self",
+    presentation: "modal",
+    autoSubmitOnImage: false,
     limit: 20,
     maxImageMb: 5,
     minImageDimension: 16,
@@ -42,7 +44,9 @@
     deferredInitScheduled: false,
     pendingMountOptions: null,
     pendingMountObserver: null,
-    pendingMountTimer: null
+    pendingMountTimer: null,
+    popoverPositionHandler: null,
+    outsideClickHandler: null
   };
 
   const MALL_ID_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$/;
@@ -84,6 +88,8 @@
       state.options.resultPageUrl = resultPageUrl;
     }
     state.options.resultPageTarget = normalizeResultPageTarget(state.options.resultPageTarget);
+    state.options.presentation = normalizePresentation(state.options.presentation);
+    state.options.autoSubmitOnImage = truthyOption(state.options.autoSubmitOnImage);
     const explicitTargetSelector = trimText(providedOptions.target);
     const explicitSearchInputSelector = trimText(providedOptions.attachToSearchInput);
     const explicitAttachAfterSelector = trimText(providedOptions.attachAfterSelector);
@@ -466,6 +472,7 @@
     state.lastCategory = "";
     state.lastQueryType = "";
     state.nextOffset = null;
+    unbindPopoverListeners();
     removeNode(state.modal);
     if (state.root) {
       if (state.root.classList && state.root.classList.contains("hai-attached")) {
@@ -530,6 +537,9 @@
   function buildModal() {
     const modal = document.createElement("div");
     modal.className = "hai-modal";
+    if (isPopoverPresentation()) {
+      modal.classList.add("hai-popover-mode");
+    }
     modal.setAttribute("aria-hidden", "true");
     modal.innerHTML = `
       <div class="hai-backdrop" data-close="true"></div>
@@ -539,8 +549,8 @@
             <div class="hai-brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
             <div>
               <div class="hai-eyebrow">해오름 판촉물 AI 검색</div>
-              <h2 id="hai-title">상품명과 사진으로 비슷한 판촉물을 찾습니다</h2>
-              <p>기존 검색 결과 흐름은 유지하면서, AI가 이미지와 의미를 함께 비교해 추천합니다.</p>
+              <h2 id="hai-title">AI 이미지 검색</h2>
+              <p>사진이나 상품명으로 비슷한 판촉물을 찾습니다.</p>
               <div class="hai-badges" aria-hidden="true">
                 <span>이미지 검색</span>
                 <span>유사도 추천</span>
@@ -569,7 +579,7 @@
               <div class="hai-upload-icon" aria-hidden="true">${aiSearchIcon()}</div>
               <div class="hai-upload-copy">
                 <strong>사진으로 비슷한 상품 찾기</strong>
-                <span>클릭 또는 드래그 앤 드롭 (JPG, PNG, WEBP, 최대 ${escapeHtml(String(state.options.maxImageMb))}MB, 최소 ${escapeHtml(String(minImageDimension()))}px)</span>
+                <span>클릭 또는 드래그 앤 드롭하면 AI 검색 결과 페이지로 이동합니다. (JPG, PNG, WEBP)</span>
               </div>
             </div>
             <div class="hai-preview" hidden>
@@ -578,7 +588,7 @@
             </div>
           </form>
           <div class="hai-error" role="alert" hidden></div>
-          <div class="hai-loading" hidden>검색 중입니다.</div>
+          <div class="hai-loading" hidden>AI가 비슷한 상품을 찾고 있습니다.</div>
           <div class="hai-notice" hidden></div>
           <section class="hai-categories" hidden>
             <h3><span></span>비슷한 카테고리 추천</h3>
@@ -684,19 +694,106 @@
     state.lastFocusedElement = document.activeElement || null;
     state.modal.classList.add("hai-open");
     state.modal.setAttribute("aria-hidden", "false");
+    if (isPopoverPresentation()) {
+      updatePopoverPosition();
+      bindPopoverListeners();
+    }
     const input = state.modal.querySelector(".hai-query");
     if (state.options.prefillFromSearchInput && state.searchInput && state.searchInput.value) {
       input.value = state.searchInput.value.trim();
     }
-    window.setTimeout(function () { input.focus(); }, 30);
+    const focusTarget = isPopoverPresentation() ? state.modal.querySelector(".hai-dropzone") : input;
+    window.setTimeout(function () {
+      if (focusTarget && typeof focusTarget.focus === "function") {
+        focusTarget.focus();
+      }
+    }, 30);
   }
 
   function close() {
+    unbindPopoverListeners();
     state.modal.classList.remove("hai-open");
     state.modal.setAttribute("aria-hidden", "true");
     if (state.lastFocusedElement && typeof state.lastFocusedElement.focus === "function") {
       state.lastFocusedElement.focus();
     }
+  }
+
+  function isPopoverPresentation() {
+    return state.options.presentation === "popover";
+  }
+
+  function bindPopoverListeners() {
+    unbindPopoverListeners();
+    state.popoverPositionHandler = function () {
+      updatePopoverPosition();
+    };
+    if (typeof window.addEventListener === "function") {
+      window.addEventListener("resize", state.popoverPositionHandler);
+      window.addEventListener("scroll", state.popoverPositionHandler, true);
+    }
+    state.outsideClickHandler = function (event) {
+      if (!state.modal || !hasClass(state.modal, "hai-open")) {
+        return;
+      }
+      const target = event && event.target;
+      const dialog = state.modal.querySelector(".hai-dialog");
+      if (isElementInside(dialog, target) || isElementInside(state.root, target)) {
+        return;
+      }
+      close();
+    };
+    window.setTimeout(function () {
+      if (typeof document.addEventListener === "function" && state.outsideClickHandler) {
+        document.addEventListener("mousedown", state.outsideClickHandler, true);
+        document.addEventListener("touchstart", state.outsideClickHandler, true);
+      }
+    }, 0);
+  }
+
+  function unbindPopoverListeners() {
+    if (state.popoverPositionHandler && typeof window.removeEventListener === "function") {
+      window.removeEventListener("resize", state.popoverPositionHandler);
+      window.removeEventListener("scroll", state.popoverPositionHandler, true);
+    }
+    if (state.outsideClickHandler && typeof document.removeEventListener === "function") {
+      document.removeEventListener("mousedown", state.outsideClickHandler, true);
+      document.removeEventListener("touchstart", state.outsideClickHandler, true);
+    }
+    state.popoverPositionHandler = null;
+    state.outsideClickHandler = null;
+  }
+
+  function updatePopoverPosition() {
+    if (!state.modal || !state.root || !isPopoverPresentation()) {
+      return;
+    }
+    const anchor = state.root.querySelector(".hai-trigger") || state.root;
+    const dialog = state.modal.querySelector(".hai-dialog");
+    if (!anchor || !dialog || typeof anchor.getBoundingClientRect !== "function") {
+      return;
+    }
+    const rect = anchor.getBoundingClientRect();
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1024;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 768;
+    const dialogWidth = Math.min(392, Math.max(320, viewportWidth - 20));
+    const preferredLeft = rect.left + rect.width - dialogWidth;
+    const left = clamp(10, preferredLeft, viewportWidth - dialogWidth - 10);
+    const measuredHeight = dialog.getBoundingClientRect && dialog.getBoundingClientRect().height;
+    const dialogHeight = measuredHeight || 330;
+    let top = rect.bottom + 8;
+    if (top + dialogHeight > viewportHeight - 10 && rect.top - dialogHeight - 8 > 10) {
+      top = rect.top - dialogHeight - 8;
+    }
+    top = clamp(10, top, Math.max(10, viewportHeight - Math.min(dialogHeight, viewportHeight - 20) - 10));
+    state.modal.style.setProperty("--hai-popover-left", left.toFixed(0) + "px");
+    state.modal.style.setProperty("--hai-popover-top", top.toFixed(0) + "px");
+    state.modal.style.setProperty("--hai-popover-width", dialogWidth.toFixed(0) + "px");
+    state.modal.style.setProperty("--hai-popover-max-height", Math.max(260, viewportHeight - top - 10).toFixed(0) + "px");
+  }
+
+  function clamp(min, value, max) {
+    return Math.max(min, Math.min(value, max));
   }
 
   function setFile(file) {
@@ -729,6 +826,9 @@
       }
       state.file = file;
       preview.hidden = false;
+      if (state.options.autoSubmitOnImage && state.options.resultPageUrl) {
+        window.setTimeout(function () { submitSearch(); }, 0);
+      }
     };
     previewImage.onerror = function () {
       if (state.objectUrl !== objectUrl) {
@@ -1401,8 +1501,127 @@
       .hai-detail:hover { border-color: var(--hai-accent, #ee1b24); background: var(--hai-accent, #ee1b24); color: #fff; }
       .hai-more { border: 1px solid #d8d8d8; background: #fff; color: #333; }
       .hai-empty { border-radius: 0; }
+      .hai-modal.hai-popover-mode {
+        pointer-events: none;
+      }
+      .hai-modal.hai-popover-mode .hai-backdrop {
+        display: none;
+      }
+      .hai-modal.hai-popover-mode .hai-dialog {
+        position: fixed;
+        left: var(--hai-popover-left, 12px);
+        top: var(--hai-popover-top, 80px);
+        width: var(--hai-popover-width, min(392px, calc(100vw - 20px)));
+        max-height: var(--hai-popover-max-height, calc(100vh - 92px));
+        min-width: 0;
+        margin: 0;
+        border: 1px solid #e2e2e2;
+        border-radius: 6px;
+        pointer-events: auto;
+        box-shadow: 0 18px 42px rgba(15, 23, 42, .18);
+      }
+      .hai-modal.hai-popover-mode .hai-header {
+        border-bottom: 1px solid #eeeeee;
+      }
+      .hai-modal.hai-popover-mode .hai-header::before,
+      .hai-modal.hai-popover-mode .hai-brand-mark,
+      .hai-modal.hai-popover-mode .hai-eyebrow,
+      .hai-modal.hai-popover-mode .hai-header p,
+      .hai-modal.hai-popover-mode .hai-badges,
+      .hai-modal.hai-popover-mode .hai-mode-strip,
+      .hai-modal.hai-popover-mode .hai-row,
+      .hai-modal.hai-popover-mode .hai-categories,
+      .hai-modal.hai-popover-mode .hai-top,
+      .hai-modal.hai-popover-mode .hai-items,
+      .hai-modal.hai-popover-mode .hai-empty,
+      .hai-modal.hai-popover-mode .hai-notice {
+        display: none !important;
+      }
+      .hai-modal.hai-popover-mode .hai-brand-head {
+        display: block;
+        padding: 12px 46px 10px 14px;
+      }
+      .hai-modal.hai-popover-mode .hai-header h2 {
+        margin: 0;
+        color: #222;
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.2;
+      }
+      .hai-modal.hai-popover-mode .hai-icon-button {
+        top: 7px;
+        right: 8px;
+        width: 28px;
+        height: 28px;
+        border: 0;
+        background: transparent;
+        color: #111;
+      }
+      .hai-modal.hai-popover-mode .hai-icon-button:hover {
+        background: #f5f5f5;
+      }
+      .hai-modal.hai-popover-mode .hai-body {
+        padding: 14px;
+        gap: 10px;
+      }
+      .hai-modal.hai-popover-mode .hai-search-form {
+        border: 0;
+      }
+      .hai-modal.hai-popover-mode .hai-dropzone {
+        min-height: 116px;
+        margin: 0;
+        border: 1px dashed #d6d6d6;
+        background: #fff;
+        border-radius: 6px;
+        gap: 8px;
+      }
+      .hai-modal.hai-popover-mode .hai-dropzone::after {
+        display: none;
+      }
+      .hai-modal.hai-popover-mode .hai-upload-icon {
+        width: 36px;
+        height: 36px;
+        background: #fff3f0;
+        color: var(--hai-accent, #ee1b24);
+        border: 1px solid #ffd4cf;
+      }
+      .hai-modal.hai-popover-mode .hai-upload-icon svg {
+        width: 19px;
+        height: 19px;
+      }
+      .hai-modal.hai-popover-mode .hai-upload-copy {
+        color: #777;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .hai-modal.hai-popover-mode .hai-upload-copy strong {
+        color: #777;
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .hai-modal.hai-popover-mode .hai-preview {
+        padding: 10px 0 0;
+      }
+      .hai-modal.hai-popover-mode .hai-preview img {
+        width: 54px;
+        height: 54px;
+        border-radius: 4px;
+      }
+      .hai-modal.hai-popover-mode .hai-error,
+      .hai-modal.hai-popover-mode .hai-loading {
+        border-radius: 4px;
+        padding: 8px 10px;
+        font-size: 12px;
+      }
       @media (max-width: 560px) {
         .hai-dialog { width: min(100vw - 16px, 680px); margin: 8px auto; max-height: calc(100vh - 16px); }
+        .hai-modal.hai-popover-mode .hai-dialog {
+          left: 10px;
+          top: var(--hai-popover-top, 74px);
+          width: calc(100vw - 20px);
+          max-height: calc(100vh - 84px);
+          margin: 0;
+        }
         .hai-header, .hai-body { padding-left: 14px; padding-right: 14px; }
         .hai-header { padding-left: 0; padding-right: 0; }
         .hai-brand-head { grid-template-columns: 1fr; padding: 22px 48px 14px 14px; gap: 8px; }
@@ -1417,6 +1636,13 @@
       }
       @media (min-width: 561px) and (max-width: 860px) {
         .hai-dialog { width: min(100vw - 20px, 760px); margin: 10px auto; max-height: calc(100vh - 20px); }
+        .hai-modal.hai-popover-mode .hai-dialog {
+          left: var(--hai-popover-left, 10px);
+          top: var(--hai-popover-top, 74px);
+          width: var(--hai-popover-width, min(392px, calc(100vw - 20px)));
+          max-height: var(--hai-popover-max-height, calc(100vh - 84px));
+          margin: 0;
+        }
         .hai-header, .hai-body { padding-left: 16px; padding-right: 16px; }
         .hai-header { padding-left: 0; padding-right: 0; }
         .hai-brand-head { padding-left: 16px; padding-right: 52px; }
@@ -1467,6 +1693,21 @@
 
   function normalizeResultPageTarget(value) {
     return trimText(value) === "_blank" ? "_blank" : "_self";
+  }
+
+  function normalizePresentation(value) {
+    return lowerText(value) === "popover" ? "popover" : "modal";
+  }
+
+  function truthyOption(value) {
+    if (value === true) {
+      return true;
+    }
+    if (value === false || value === null || value === undefined) {
+      return false;
+    }
+    const text = lowerText(value).trim();
+    return ["1", "true", "yes", "y", "on"].indexOf(text) !== -1;
   }
 
   function inferApiBaseUrlFromScript() {
@@ -1690,6 +1931,7 @@
       ["attachAfterSelector", ["data-hai-attach-after-selector", "data-attach-after-selector"]],
       ["triggerTitle", ["data-hai-trigger-title", "data-trigger-title"]],
       ["triggerAriaLabel", ["data-hai-trigger-aria-label", "data-trigger-aria-label"]],
+      ["presentation", ["data-hai-presentation", "data-presentation"]],
       ["accentColor", ["data-hai-accent-color", "data-accent-color"]],
       ["accentTextColor", ["data-hai-accent-text-color", "data-accent-text-color"]],
       ["accentSoftColor", ["data-hai-accent-soft-color", "data-accent-soft-color"]]
@@ -1714,7 +1956,8 @@
     [
       ["autoAttach", ["data-hai-auto-attach", "data-auto-attach"]],
       ["fallbackFloating", ["data-hai-fallback-floating", "data-fallback-floating"]],
-      ["prefillFromSearchInput", ["data-hai-prefill-from-search-input", "data-prefill-from-search-input"]]
+      ["prefillFromSearchInput", ["data-hai-prefill-from-search-input", "data-prefill-from-search-input"]],
+      ["autoSubmitOnImage", ["data-hai-auto-submit-on-image", "data-auto-submit-on-image"]]
     ].forEach(function (entry) {
       const value = booleanAttribute(firstAttributeValue(script, entry[1]));
       if (value !== null) {

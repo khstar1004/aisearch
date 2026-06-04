@@ -785,7 +785,8 @@
 
     <div class="preview-note">
       이 파일은 AI 검색 삽입 위치 확인용 샘플입니다. 운영 사이트에는 기존 공통 검색 템플릿의 검색 버튼 오른쪽에
-      <strong>&lt;span id="haeorum-ai-search"&gt;&lt;/span&gt;</strong>을 추가하고, 실제 API 도메인/API key로 위젯을 초기화하면 됩니다.
+      <strong>&lt;span id="haeorum-ai-search"&gt;&lt;/span&gt;</strong>을 추가합니다. 사용자가 AI 이미지 검색 버튼을 누르면 작은 레이어가 열리고,
+      이미지를 선택하면 전용 AI 검색 결과 페이지로 이동합니다.
     </div>
   </div>
 
@@ -908,12 +909,25 @@
       mallId: "haeorum",
       apiKey: "preview-public-key",
       apiBaseUrl: "https://preview-ai-search.local",
+      resultPageUrl: "./widget/ai-search.html",
+      presentation: "popover",
+      autoSubmitOnImage: true,
       limit: 20,
       accentColor: "#ed1c24",
       accentTextColor: "#ffffff",
       accentSoftColor: "#fff4f4",
-      triggerTitle: "AI검색"
+      triggerTitle: "AI 이미지 검색"
     });
+
+    const previewParams = new URLSearchParams(window.location.search);
+    if (previewParams.get("q")) {
+      document.querySelector("#haeorum-search-keyword-preview").value = previewParams.get("q");
+    }
+    if (previewParams.get("open") === "1") {
+      window.setTimeout(function () {
+        HaeorumAISearch.open();
+      }, 180);
+    }
   </script>
 </body>
 </html>

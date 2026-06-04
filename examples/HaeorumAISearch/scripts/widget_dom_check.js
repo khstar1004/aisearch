@@ -636,7 +636,7 @@ async function runScenario(scenario) {
     /AI 상품 이미지 검색/,
     /찾고 싶은 판촉물/,
     /사진으로 비슷한 상품 찾기/,
-    /검색 중입니다/,
+    /AI가 비슷한 상품을 찾고 있습니다/,
   ].every((pattern) => pattern.test(modalHtml));
   const resultSectionHeadings = [
     /비슷한 카테고리 추천/,

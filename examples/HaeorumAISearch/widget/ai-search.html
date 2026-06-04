@@ -964,6 +964,7 @@
         quickButtons: Array.prototype.slice.call(document.querySelectorAll("[data-query]"))
       };
 
+      installPreviewApiMock();
       init();
 
       function init() {
@@ -1054,6 +1055,106 @@
             search(false);
           });
         });
+      }
+
+      function installPreviewApiMock() {
+        const previewApiBaseUrl = "https://preview-ai-search.local";
+        const originalFetch = window.fetch ? window.fetch.bind(window) : null;
+        const sampleProducts = [
+          {
+            product_id: "H-10021",
+            name: "심플 스텐 텀블러 500ml",
+            category: "생활용품 > 텀블러",
+            price: 4200,
+            image_url: "https://placehold.co/480x480/e8f6ff/1554a3.png?text=Tumbler",
+            product_url: "https://www.haeorumgift.com/product_view.asp?p_idx=H-10021",
+            score_percent: 94
+          },
+          {
+            product_id: "H-20318",
+            name: "컬러 자동 장우산",
+            category: "우산 > 장우산",
+            price: 6900,
+            image_url: "https://placehold.co/480x480/fff1c2/ed1c24.png?text=Umbrella",
+            product_url: "https://www.haeorumgift.com/product_view.asp?p_idx=H-20318",
+            score_percent: 91
+          },
+          {
+            product_id: "H-33007",
+            name: "코튼 에코백 기본형",
+            category: "가방/지갑 > 에코백",
+            price: 2800,
+            image_url: "https://placehold.co/480x480/f2f2f2/333333.png?text=Eco+Bag",
+            product_url: "https://www.haeorumgift.com/product_view.asp?p_idx=H-33007",
+            score_percent: 88
+          },
+          {
+            product_id: "H-44012",
+            name: "점착 메모지 홍보형",
+            category: "사무문구 > 메모지",
+            price: 650,
+            image_url: "https://placehold.co/480x480/fff4d6/a05a00.png?text=Memo",
+            product_url: "https://www.haeorumgift.com/product_view.asp?p_idx=H-44012",
+            score_percent: 84
+          },
+          {
+            product_id: "H-51004",
+            name: "송월 호텔 타올 170g",
+            category: "타올 > 호텔수건",
+            price: 3900,
+            image_url: "https://placehold.co/480x480/eaf4ff/0f63e5.png?text=Towel",
+            product_url: "https://www.haeorumgift.com/product_view.asp?p_idx=H-51004",
+            score_percent: 81
+          },
+          {
+            product_id: "H-61009",
+            name: "휴대용 미니 선풍기",
+            category: "계절용품 > 선풍기",
+            price: 7600,
+            image_url: "https://placehold.co/480x480/e8fff3/00865a.png?text=Fan",
+            product_url: "https://www.haeorumgift.com/product_view.asp?p_idx=H-61009",
+            score_percent: 78
+          }
+        ];
+
+        window.fetch = function previewFetch(input, init) {
+          const url = typeof input === "string" ? input : (input && input.url) || "";
+          if (url.indexOf(previewApiBaseUrl + "/api/ai-search") === 0) {
+            const form = init && init.body instanceof FormData ? init.body : null;
+            const q = form ? String(form.get("q") || "") : "";
+            const image = form && form.get("image");
+            return previewJsonResponse({
+              top: sampleProducts.slice(0, 3),
+              items: sampleProducts.slice(3),
+              suggested_categories: ["텀블러", "우산", "타올", "에코백", "선풍기"],
+              meta: {
+                query_type: image && q ? "text_image" : image ? "image" : "text",
+                engine: "preview-marqo",
+                limit: 24,
+                offset: 0,
+                mall_id: "haeorum",
+                has_more: false,
+                next_offset: null,
+                low_confidence: false,
+                notice: null
+              }
+            });
+          }
+          if (url.indexOf(previewApiBaseUrl + "/api/click-log") === 0) {
+            return previewJsonResponse({ ok: true });
+          }
+          if (originalFetch) {
+            return originalFetch(input, init);
+          }
+          return Promise.reject(new Error("fetch is not available"));
+        };
+      }
+
+      function previewJsonResponse(body, init) {
+        return Promise.resolve(new Response(JSON.stringify(body), Object.assign({
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        }, init || {})));
       }
 
       function readSession(sessionId) {
