@@ -3,10 +3,10 @@
     {
       "mall_id": "haeorumgift",
       "api_key": "replace-with-strong-public-api-key-at-least-24-chars",
-      "product_url_template": "https://www.haeorumgift.com/product_view.asp?p_idx={product_id}",
+      "product_url_template": "https://www.jclgift.com/product_w/product_view.asp?p_idx={product_id}",
       "allowed_origins": [
-        "https://www.haeorumgift.com",
-        "https://haeorumgift.com"
+        "https://www.jclgift.com",
+        "https://jclgift.com"
       ],
       "enabled": true
     }

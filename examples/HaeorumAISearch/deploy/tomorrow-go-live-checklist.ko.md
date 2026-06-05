@@ -35,7 +35,7 @@
 - [x] Gemini 운영 인증 방식: `api_key`, 서버 env에 보호 저장 완료
 - [ ] `STOP` Gemini quota: `gemini-embedding-2` RPM/TPM/RPD Google Console 확인
 - [ ] `STOP` Google budget alert 설정
-- [x] 최초 노출 origin: `https://www.haeorumgift.com`, 필요 시 `https://haeorumgift.com`
+- [x] 최초 노출 origin: `https://www.jclgift.com`, 필요 시 `https://jclgift.com`
 - [x] mall public API key 서버 `malls.json`에 생성 완료
 - [ ] 장애 시 기존 검색으로 즉시 돌아가는 fallback/rollback 담당자
 
@@ -173,7 +173,7 @@ python3 scripts/api_smoke_test.py \
   --base-url https://ai-search.haeorumgift.com \
   --mall-id <mall-id> \
   --api-key <mall-public-api-key> \
-  --origin https://www.haeorumgift.com \
+  --origin https://www.jclgift.com \
   --mall-config /etc/haeorum-ai-search/malls.json \
   --admin-key <admin-key> \
   --output logs/public-api-smoke.json

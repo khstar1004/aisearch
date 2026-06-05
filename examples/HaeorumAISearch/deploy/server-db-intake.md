@@ -55,7 +55,7 @@ Required policy:
 - Incremental sync timestamp column: updated_at
 - Product deletion/hidden/sold-out rules: status=1 or status label 승인 is active/sale; status 0/2/3/4/5/6/7 or 승인대기/삭제/승인보류/관리비미납/일시품절/가맹점상품/가맹점삭제/알수없음 is inactive and should be deleted from search index
 - Mall identifier column: mall_id, fallback to haeorumgift when blank
-- Product detail URL template: https://www.haeorumgift.com/product_view.asp?p_idx={product_id}
+- Product detail URL template: https://www.jclgift.com/product_w/product_view.asp?p_idx={product_id}
 
 Connection string must include:
 
@@ -91,8 +91,8 @@ status, updated_at, is_deleted or display_yn, mall_id
 
 ## 4. Haeorum Site Integration
 
-- First rollout page(s): https://www.haeorumgift.com search/result flow, with https://haeorumgift.com origin allowed if used
-- Exact CORS origins: https://www.haeorumgift.com, https://haeorumgift.com
+- First rollout page(s): https://www.jclgift.com search/result flow, with https://jclgift.com origin allowed if used
+- Exact CORS origins: https://www.jclgift.com, https://jclgift.com
 - Public API key per mall/site: generated and stored in protected /etc/haeorum-ai-search/malls.json on server82; not stored in git or this markdown
 - Widget insertion location: existing search entry plus /ai-search/ai-search.html result page
 - Fallback behavior if AI API is down: keep existing classic search path and remove/disable AI widget script to restore 기존 검색 immediately

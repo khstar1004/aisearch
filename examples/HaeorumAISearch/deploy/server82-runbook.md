@@ -39,7 +39,7 @@ HAEORUM_SEARCH_ENGINE=marqo
 MARQO_URL=http://marqo-api:8882
 HAEORUM_MARQO_MODEL=Marqo/marqo-ecommerce-embeddings-L
 HAEORUM_ADMIN_API_KEY=<strong-admin-key>
-HAEORUM_CORS_ORIGINS=https://www.haeorumgift.com,https://haeorumgift.com
+HAEORUM_CORS_ORIGINS=https://www.jclgift.com,https://jclgift.com
 HAEORUM_INDEX_NAME=haeorum-products
 
 HAEORUM_EMBEDDING_BACKEND=gemini
@@ -175,7 +175,7 @@ python scripts/pre_handoff_audit.py \
   --mall-id <mall-id> \
   --admin-key "$HAEORUM_ADMIN_API_KEY" \
   --api-key <mall-public-api-key> \
-  --origin https://www.haeorumgift.com
+  --origin https://www.jclgift.com
 ```
 
 Run a public API check from the deployment host:
@@ -185,7 +185,7 @@ python scripts/load_test.py \
   --base-url http://127.0.0.1:8120 \
   --mall-id shop001 \
   --api-key <mall-public-api-key> \
-  --origin https://www.haeorumgift.com \
+  --origin https://www.jclgift.com \
   --admin-key "$HAEORUM_ADMIN_API_KEY" \
   --allow-local-target \
   --mode text \

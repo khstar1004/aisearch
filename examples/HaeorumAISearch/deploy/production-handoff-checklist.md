@@ -60,7 +60,7 @@ Use `deploy/go-live-failure-scenarios.md` and `deploy/operational-risk-register.
 python scripts/server_db_intake_check.py --intake-file deploy/server-db-intake.md --print-summary
 python scripts/compose_exposure_check.py --print-summary
 python scripts/go_live_scenario_check.py --print-summary
-python scripts/pre_handoff_audit.py --require-runtime --base-url http://127.0.0.1:8120 --mall-id "<mall-id>" --admin-key "$HAEORUM_ADMIN_API_KEY" --api-key "<mall-public-api-key>" --origin https://www.haeorumgift.com
+python scripts/pre_handoff_audit.py --require-runtime --base-url http://127.0.0.1:8120 --mall-id "<mall-id>" --admin-key "$HAEORUM_ADMIN_API_KEY" --api-key "<mall-public-api-key>" --origin https://www.jclgift.com
 python scripts/env_check.py --env-file /etc/haeorum-ai-search/haeorum-ai-search.env --role api --api-server-count 1
 docker compose -f compose-haeorum-marqo.yaml -f compose-haeorum-gemini.yaml -f compose-haeorum-existing-8gb.yaml -f compose-haeorum-server82.yaml up -d --build
 curl -fsS http://127.0.0.1:8120/health

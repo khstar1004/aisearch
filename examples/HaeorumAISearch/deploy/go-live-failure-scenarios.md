@@ -38,7 +38,7 @@ python scripts/go_live_scenario_check.py \
   --base-url https://ai-search.haeorumgift.com \
   --admin-key "$HAEORUM_ADMIN_API_KEY" \
   --mall-id "<운영몰ID>" \
-  --origin "https://www.haeorumgift.com" \
+  --origin "https://www.jclgift.com" \
   --public-api-key "$HAEORUM_PUBLIC_API_KEY" \
   --output /var/log/haeorum-ai-search/go-live-scenario-check.json \
   --markdown-output /var/log/haeorum-ai-search/go-live-scenario-check.md \

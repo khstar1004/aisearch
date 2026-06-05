@@ -747,7 +747,7 @@ def write_env_file(path: Path, paths: SimulationPaths, mall_config: dict[str, An
         "HAEORUM_MALL_CONFIG_PATH": str(paths.malls_json),
         "HAEORUM_CORS_ORIGINS_FILE": str(paths.cors_origins_file),
         "HAEORUM_PRODUCT_CSV": str(paths.products_csv),
-        "HAEORUM_PRODUCT_URL_TEMPLATE": "https://www.haeorumgift.com/product_view.asp?p_idx={product_id}",
+        "HAEORUM_PRODUCT_URL_TEMPLATE": "https://www.jclgift.com/product_w/product_view.asp?p_idx={product_id}",
         "HAEORUM_REDIS_URL": "redis://redis:6379/0",
         "HAEORUM_SEARCH_RATE_LIMIT_PER_MINUTE": "900",
         "HAEORUM_MALL_SEARCH_RATE_LIMIT_PER_MINUTE": "2000",
