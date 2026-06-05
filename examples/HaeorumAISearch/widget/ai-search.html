@@ -769,11 +769,32 @@
       .upload-icon { width: 48px; height: 48px; }
       .upload-zone strong { font-size: 15px; overflow-wrap: anywhere; }
       .upload-zone span:last-child { font-size: 13px; }
-      .quick-row { display: grid; grid-template-columns: 1fr; gap: 8px; width: 100%; max-width: 100%; overflow: hidden; }
-      .quick-row button {
+      .quick-row {
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        gap: 6px;
         width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .quick-row::-webkit-scrollbar,
+      .category-list::-webkit-scrollbar {
+        display: none;
+      }
+      .quick-row button {
+        flex: 0 0 auto;
+        width: auto;
+        max-width: 150px;
+        min-height: 32px;
         min-width: 0;
-        padding: 0 8px;
+        padding: 0 12px;
+        border-radius: 999px;
+        font-size: 13px;
         overflow: hidden;
         text-overflow: ellipsis;
       }
@@ -783,7 +804,44 @@
         margin-right: auto;
         padding-top: 20px;
       }
-      .summary { align-items: flex-start; flex-direction: column; }
+      .summary {
+        min-height: 0;
+        align-items: center;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 12px;
+      }
+      .section {
+        margin-top: 12px;
+        padding: 14px 12px;
+      }
+      .section-head {
+        margin-bottom: 10px;
+      }
+      .section h2 {
+        font-size: 17px;
+      }
+      .category-list {
+        flex-wrap: nowrap;
+        gap: 6px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 0 12px 2px 0;
+        margin-right: -12px;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .category-list button {
+        flex: 0 0 auto;
+        max-width: 220px;
+        min-height: 32px;
+        padding: 0 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
       .loading-head { align-items: flex-start; }
       .top-grid, .product-grid, .skeleton-grid { grid-template-columns: 1fr; }
       .product-card { grid-template-columns: 124px minmax(0, 1fr); grid-template-rows: 1fr; }
