@@ -970,12 +970,13 @@
     (function () {
       const SESSION_PREFIX = "haeorumAiSearch:";
       let config = Object.assign({
-        apiBaseUrl: "http://127.0.0.1:8120",
-        mallId: "shop001",
-        apiKey: "public-shop001-dev-key",
+        apiBaseUrl: "/ai-api",
+        mallId: "haeorumgift",
+        apiKey: "",
         limit: 24,
         maxImageMb: 5
       }, window.HAEORUM_AI_SEARCH_CONFIG || {});
+      config.apiBaseUrl = publicSafeApiBaseUrl(config.apiBaseUrl);
 
       const state = {
         imageFile: null,
@@ -1242,7 +1243,7 @@
           return;
         }
         config = Object.assign({}, config, {
-          apiBaseUrl: session.apiBaseUrl || config.apiBaseUrl,
+          apiBaseUrl: publicSafeApiBaseUrl(session.apiBaseUrl || config.apiBaseUrl),
           mallId: session.mallId || config.mallId,
           apiKey: session.apiKey || config.apiKey,
           limit: session.limit || config.limit
@@ -1644,6 +1645,24 @@
 
       function trimText(value) {
         return String(value || "").trim();
+      }
+
+      function publicSafeApiBaseUrl(value) {
+        const fallback = "/ai-api";
+        const text = trimText(value) || fallback;
+        const currentHost = window.location && window.location.hostname ? window.location.hostname : "";
+        const isCurrentLoopback = /^(localhost|127(?:\.\d{1,3}){3}|\[?::1\]?)$/i.test(currentHost);
+        try {
+          const parsed = new URL(text, window.location.href);
+          const apiHost = parsed.hostname || "";
+          const isApiLoopback = /^(localhost|127(?:\.\d{1,3}){3}|::1)$/i.test(apiHost);
+          if (isApiLoopback && !isCurrentLoopback) {
+            return fallback;
+          }
+        } catch (error) {
+          return fallback;
+        }
+        return text;
       }
 
       function safeUrl(value) {
