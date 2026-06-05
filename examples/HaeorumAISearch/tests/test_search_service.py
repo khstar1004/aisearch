@@ -586,6 +586,39 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         self.assertEqual(0, reranked[1].source_scores["text_evidence"])
         self.assertGreater(reranked[0].score - reranked[1].score, 0.1)
 
+    def test_text_to_image_evidence_rerank_preserves_query_qualifiers(self) -> None:
+        hits = [
+            EngineHit(
+                ProductDocument(
+                    product_id="P001",
+                    product_name="고급 볼펜",
+                    category="볼펜/필기구 > 중가볼펜(1천원~1만원미만)",
+                    status="active",
+                ),
+                score=0.90,
+                source_scores={"marqo": 0.90, "gemini_image_vector": 0.90},
+            ),
+            EngineHit(
+                ProductDocument(
+                    product_id="P002",
+                    product_name="나무 고급 선물용 우드 볼펜",
+                    category="볼펜/필기구 > 중가볼펜(1천원~1만원미만)",
+                    status="active",
+                ),
+                score=0.70,
+                source_scores={"marqo": 0.70, "gemini_image_vector": 0.70},
+            ),
+        ]
+        query = EngineQuery(q="우드 볼펜", inferred_categories=("볼펜",), limit=2)
+
+        reranked = engine_module.rerank_text_to_image_hits(query, hits)
+
+        self.assertEqual("P002", reranked[0].document.product_id)
+        self.assertGreater(
+            reranked[0].source_scores["text_evidence"],
+            reranked[1].source_scores["text_evidence"],
+        )
+
     def test_text_search_logs_normalized_query_and_searches_common_corrections(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             log_path = Path(temp_dir) / "search.jsonl"
@@ -22089,7 +22122,7 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         )
         self.assertIn("노란", mixed_payload["_haeorumAuxTextPayload"]["q"])
         self.assertIn("우산", mixed_payload["_haeorumAuxTextPayload"]["q"])
-        self.assertIn("umbrella", mixed_payload["_haeorumAuxTextPayload"]["q"])
+        self.assertNotIn("umbrella", mixed_payload["_haeorumAuxTextPayload"]["q"])
         self.assertEqual([0.1, 0.2], mixed_payload["context"]["tensor"][0]["vector"])
         self.assertEqual(0.4, mixed_payload["context"]["tensor"][0]["weight"])
         self.assertEqual([0.3, 0.4], mixed_payload["context"]["tensor"][1]["vector"])

@@ -2684,13 +2684,13 @@ def rerank_text_to_image_hits(query: EngineQuery, hits: list[EngineHit]) -> list
                 ),
             )
         )
-    reranked.sort(key=lambda item: (-item[1].score, -item[1].source_scores.get("text_evidence", 0.0), item[0]))
+    reranked.sort(key=lambda item: (-item[1].source_scores.get("text_evidence", 0.0), -item[1].score, item[0]))
     return [hit for _rank, hit in reranked]
 
 
 def qwen_text_auxiliary_query_text(query: EngineQuery) -> str | None:
-    expanded = expanded_query_text(query.q, query.query_synonyms)
-    return append_inferred_categories(expanded, query.inferred_categories) or normalize_text(query.q or "") or None
+    text = normalize_text(query.q or "")
+    return append_inferred_categories(text, query.inferred_categories) or text or None
 
 
 def is_text_lexical_auxiliary_source(source: str) -> bool:
@@ -2698,18 +2698,29 @@ def is_text_lexical_auxiliary_source(source: str) -> bool:
 
 
 def build_text_to_image_evidence_query(query: EngineQuery) -> TextRelevanceQuery:
-    expanded = expanded_query_text(query.q or "", query.query_synonyms)
-    with_categories = append_inferred_categories(expanded, query.inferred_categories)
-    return build_text_relevance_query(with_categories or query.q or "", query.query_synonyms)
+    with_categories = qwen_text_auxiliary_query_text(query)
+    return build_text_relevance_query(
+        with_categories or query.q or "",
+        query.query_synonyms,
+        include_default_synonyms=False,
+    )
 
 
 def build_text_relevance_query(
     query: str,
     query_synonyms: Mapping[str, Iterable[str]] | None = None,
+    *,
+    include_default_synonyms: bool = True,
 ) -> TextRelevanceQuery:
     return TextRelevanceQuery(
         normalized=normalize_text(query),
-        terms=tuple(expand_terms(tokenize(query), query_synonyms)),
+        terms=tuple(
+            expand_terms(
+                tokenize(query),
+                query_synonyms,
+                include_default_synonyms=include_default_synonyms,
+            )
+        ),
     )
 
 
@@ -3285,11 +3296,17 @@ SYNONYMS = {
 }
 
 
-def expand_terms(terms: Iterable[str], custom_synonyms: Mapping[str, Iterable[str]] | None = None) -> list[str]:
+def expand_terms(
+    terms: Iterable[str],
+    custom_synonyms: Mapping[str, Iterable[str]] | None = None,
+    *,
+    include_default_synonyms: bool = True,
+) -> list[str]:
     expanded: list[str] = []
     for term in terms:
         expanded.append(term)
-        expanded.extend(SYNONYMS.get(term, []))
+        if include_default_synonyms:
+            expanded.extend(SYNONYMS.get(term, []))
         if custom_synonyms:
             expanded.extend(str(value).strip() for value in custom_synonyms.get(term, []) if str(value).strip())
     seen = set()
