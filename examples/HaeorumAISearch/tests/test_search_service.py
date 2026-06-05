@@ -22180,6 +22180,116 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         self.assertIn("min_order_qty", payload["attributesToRetrieve"])
         self.assertIn("delivery_days", payload["attributesToRetrieve"])
 
+    def test_qwen_text_lexical_fast_path_skips_embedding_when_confident(self) -> None:
+        class FakeQwenMarqoSearchEngine(MarqoSearchEngine):
+            def __init__(self) -> None:
+                super().__init__(
+                    "http://marqo.example.test",
+                    "products",
+                    embedding_backend="qwen",
+                    qwen_embedding_dimensions=2,
+                )
+                self.payloads: list[dict[str, object]] = []
+
+            def qwen_embed_query_texts(self, texts: list[str], **_: object) -> list[list[float]]:
+                raise AssertionError("confident lexical fast path must not request query embeddings")
+
+            def _execute_search_payload(self, payload: dict[str, object]) -> dict[str, object]:
+                self.payloads.append(copy.deepcopy(payload))
+                return {
+                    "hits": [
+                        {
+                            "_id": product_document_id("shop001", "P001"),
+                            "product_id": "P001",
+                            "product_name": "우드 각인 비즈니스 볼펜",
+                            "category_name": "볼펜/필기구 > 중가볼펜(1천원~1만원미만)",
+                            "status": "active",
+                            "display_yn": "Y",
+                            "mall_id": "shop001",
+                            "_score": 23.0,
+                        },
+                        {
+                            "_id": product_document_id("shop001", "P002"),
+                            "product_id": "P002",
+                            "product_name": "고급 볼펜",
+                            "category_name": "볼펜/필기구 > 중가볼펜(1천원~1만원미만)",
+                            "status": "active",
+                            "display_yn": "Y",
+                            "mall_id": "shop001",
+                            "_score": 18.0,
+                        },
+                    ]
+                }
+
+        engine = FakeQwenMarqoSearchEngine()
+
+        hits = engine.search(EngineQuery(q="우드 볼펜", inferred_categories=("볼펜",), limit=2))
+
+        self.assertEqual(["P001", "P002"], [hit.document.product_id for hit in hits])
+        self.assertEqual(1, len(engine.payloads))
+        self.assertEqual("LEXICAL", engine.payloads[0]["searchMethod"])
+        self.assertNotIn("context", engine.payloads[0])
+        self.assertIn(engine_module.TEXT_LEXICAL_FAST_PATH_SOURCE, hits[0].source_scores)
+        self.assertGreater(hits[0].source_scores[engine_module.TEXT_LEXICAL_FAST_PATH_SOURCE], 0)
+        self.assertGreaterEqual(hits[0].source_scores["text_evidence"], 1.0)
+
+    def test_qwen_text_lexical_fast_path_falls_back_when_evidence_is_weak(self) -> None:
+        class FakeQwenMarqoSearchEngine(MarqoSearchEngine):
+            def __init__(self) -> None:
+                super().__init__(
+                    "http://marqo.example.test",
+                    "products",
+                    embedding_backend="qwen",
+                    qwen_embedding_dimensions=2,
+                    text_auxiliary_search_parallelism=0,
+                )
+                self.payloads: list[dict[str, object]] = []
+                self.text_calls = 0
+
+            def qwen_embed_query_texts(self, texts: list[str], **_: object) -> list[list[float]]:
+                self.text_calls += 1
+                return [[0.1, 0.2]]
+
+            def _execute_search_payload(self, payload: dict[str, object]) -> dict[str, object]:
+                self.payloads.append(copy.deepcopy(payload))
+                if payload.get("searchMethod") == "TENSOR":
+                    return {
+                        "hits": [
+                            {
+                                "_id": product_document_id("shop001", "P002"),
+                                "product_id": "P002",
+                                "product_name": "시즈넬 블랙 라벨 선물 세트",
+                                "category_name": "생활용품 > 방향제/디퓨져",
+                                "status": "active",
+                                "display_yn": "Y",
+                                "mall_id": "shop001",
+                                "_score": 0.72,
+                            }
+                        ]
+                    }
+                return {
+                    "hits": [
+                        {
+                            "_id": product_document_id("shop001", "P001"),
+                            "product_id": "P001",
+                            "product_name": "고급스러운 가죽 데스크 마우스패드",
+                            "category_name": "컴퓨터/전자 > 마우스패드",
+                            "status": "active",
+                            "display_yn": "Y",
+                            "mall_id": "shop001",
+                            "_score": 22.0,
+                        }
+                    ]
+                }
+
+        engine = FakeQwenMarqoSearchEngine()
+
+        hits = engine.search(EngineQuery(q="고급스러운 블랙 선물", limit=1))
+
+        self.assertEqual(["P002"], [hit.document.product_id for hit in hits[:1]])
+        self.assertGreaterEqual(sum(1 for payload in engine.payloads if payload.get("searchMethod") == "TENSOR"), 1)
+        self.assertEqual(1, engine.text_calls)
+
     def test_qwen_text_auxiliary_score_blends_with_image_candidates(self) -> None:
         engine = MarqoSearchEngine(
             "http://marqo.example.test",

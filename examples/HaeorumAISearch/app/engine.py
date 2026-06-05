@@ -34,6 +34,9 @@ QWEN_IMAGE_VECTOR_FIELD = "qwen_image_vector"
 GEMINI_TEXT_VECTOR_FIELD = "gemini_text_vector"
 GEMINI_IMAGE_VECTOR_FIELD = "gemini_image_vector"
 TEXT_LEXICAL_AUXILIARY_SOURCE = "text_lexical"
+TEXT_LEXICAL_FAST_PATH_SOURCE = "text_lexical_fast_path"
+TEXT_LEXICAL_FAST_PATH_MIN_CATEGORY_EVIDENCE = 0.65
+TEXT_LEXICAL_FAST_PATH_MIN_TEXT_EVIDENCE = 0.85
 QWEN_QUERY_PROMPT = "Retrieve relevant ecommerce product images for the user query."
 GEMINI_QUERY_PROMPT = "Retrieve relevant ecommerce products for the user query."
 MARQO_ADD_DOCUMENTS_BATCH_SIZE = 128
@@ -1254,6 +1257,9 @@ class MarqoSearchEngine(SearchEngine):
             self._text_auxiliary_search_executor.shutdown(wait=False, cancel_futures=True)
 
     def search(self, query: EngineQuery) -> list[EngineHit]:
+        fast_path_hits = self.try_qwen_text_lexical_fast_path(query)
+        if fast_path_hits is not None:
+            return fast_path_hits[: query.limit]
         payload = self.build_search_payload(query)
         payload_limit = int(payload.get("limit") or query.limit)
         vector_field = payload.pop("_haeorumVectorField", None)
@@ -1960,6 +1966,22 @@ class MarqoSearchEngine(SearchEngine):
             return None
         if QWEN_TEXT_VECTOR_FIELD in set(primary_vector_fields):
             return None
+        return self.build_qwen_text_lexical_search_payload(
+            query,
+            limit=qwen_text_auxiliary_candidate_limit(
+                query,
+                multiplier=self.text_auxiliary_candidate_multiplier,
+            ),
+            source=TEXT_LEXICAL_AUXILIARY_SOURCE,
+        )
+
+    def build_qwen_text_lexical_search_payload(
+        self,
+        query: EngineQuery,
+        *,
+        limit: int,
+        source: str,
+    ) -> dict[str, Any] | None:
         text_query = qwen_text_auxiliary_query_text(query)
         if not text_query:
             return None
@@ -1967,18 +1989,84 @@ class MarqoSearchEngine(SearchEngine):
             "q": text_query,
             "searchMethod": "LEXICAL",
             "searchableAttributes": [*TEXT_FIELDS, SEARCH_TEXT_FIELD],
-            "limit": qwen_text_auxiliary_candidate_limit(
-                query,
-                multiplier=self.text_auxiliary_candidate_multiplier,
-            ),
+            "limit": limit,
             "attributesToRetrieve": attributes_to_retrieve_for_query(query, rerank_text=True),
             "_haeorumVectorField": SEARCH_TEXT_FIELD,
-            "_haeorumVectorSource": TEXT_LEXICAL_AUXILIARY_SOURCE,
+            "_haeorumVectorSource": source,
         }
         filters = build_filter_terms(query, include_numeric=False)
         if filters:
             payload["filter"] = filters
         return payload
+
+    def try_qwen_text_lexical_fast_path(self, query: EngineQuery) -> list[EngineHit] | None:
+        if self.embedding_backend != "qwen" or not query.q or query.image_data_url:
+            return None
+        if self.text_auxiliary_weight <= 0:
+            return None
+        payload = self.build_qwen_text_lexical_search_payload(
+            query,
+            limit=qwen_text_lexical_fast_path_candidate_limit(query),
+            source=TEXT_LEXICAL_FAST_PATH_SOURCE,
+        )
+        if payload is None:
+            return None
+        payload = dict(payload)
+        source = str(payload.pop("_haeorumVectorSource", TEXT_LEXICAL_FAST_PATH_SOURCE))
+        field = str(payload.pop("_haeorumVectorField", SEARCH_TEXT_FIELD))
+        prepared_filters = prepare_product_filters(query)
+        data = self._execute_search_payload(payload)
+        hits = self.lexical_fast_path_hits(data, source=source, field=field, prepared_filters=prepared_filters)
+        if not hits:
+            return None
+        reranked = rerank_text_to_image_hits(query, hits)
+        if not qwen_text_lexical_fast_path_is_confident(query, reranked):
+            return None
+        return reranked
+
+    def lexical_fast_path_hits(
+        self,
+        data: Mapping[str, Any],
+        *,
+        source: str,
+        field: str,
+        prepared_filters: PreparedProductFilters | None,
+    ) -> list[EngineHit]:
+        raw_hits: list[tuple[int, ProductDocument, float]] = []
+        for rank, raw_hit in enumerate(data.get("hits", []) if isinstance(data, Mapping) else []):
+            try:
+                if not isinstance(raw_hit, dict):
+                    raise ValueError("Marqo hit must be an object")
+                product = marqo_hit_to_product(raw_hit)
+                if prepared_filters is not None and not product_matches_prepared_filters(product, prepared_filters):
+                    continue
+                score = float(raw_hit.get("_score") or 0.0)
+            except Exception:
+                continue
+            if math.isfinite(score) and score > 0:
+                raw_hits.append((rank, product, score))
+        if not raw_hits:
+            return []
+        max_score = max(score for _rank, _product, score in raw_hits)
+        if max_score <= 0:
+            return []
+        display_field = self.display_vector_field_name(field)
+        hits: list[EngineHit] = []
+        for _rank, product, raw_score in raw_hits:
+            score = max(0.0, min(1.0, raw_score / max_score))
+            hits.append(
+                EngineHit(
+                    document=product,
+                    score=round(score, 6),
+                    source_scores={
+                        "marqo": round(score, 6),
+                        source: round(score, 6),
+                        f"{source}_raw": round(raw_score, 6),
+                        display_field: round(score, 6),
+                    },
+                )
+            )
+        return hits
 
     def build_qwen_upsert_payload(self, products: Iterable[ProductDocument]) -> dict[str, Any]:
         docs = [product_to_marqo_doc(product) for product in products]
@@ -2528,6 +2616,12 @@ def qwen_text_auxiliary_candidate_limit(query: EngineQuery, *, multiplier: float
     return min(max(scaled, query.limit), max(int(query.max_candidates or 1), 1))
 
 
+def qwen_text_lexical_fast_path_candidate_limit(query: EngineQuery) -> int:
+    base_limit = qwen_text_auxiliary_candidate_limit(query, multiplier=1.0)
+    expanded_limit = max(base_limit, query.limit * 6, 60)
+    return min(expanded_limit, max(int(query.max_candidates or 1), 1))
+
+
 def attributes_to_retrieve_for_query(query: EngineQuery, *, rerank_text: bool | None = None) -> list[str]:
     fields = list(ATTRIBUTES_TO_RETRIEVE)
     should_rerank = should_rerank_text_query(query) if rerank_text is None else rerank_text
@@ -2695,6 +2789,15 @@ def qwen_text_auxiliary_query_text(query: EngineQuery) -> str | None:
 
 def is_text_lexical_auxiliary_source(source: str) -> bool:
     return source == TEXT_LEXICAL_AUXILIARY_SOURCE or source.startswith(f"{TEXT_LEXICAL_AUXILIARY_SOURCE}:")
+
+
+def qwen_text_lexical_fast_path_is_confident(query: EngineQuery, hits: list[EngineHit]) -> bool:
+    if not hits:
+        return False
+    top_evidence = float(hits[0].source_scores.get("text_evidence", 0.0) or 0.0)
+    if normalized_inferred_categories(query.inferred_categories):
+        return top_evidence >= TEXT_LEXICAL_FAST_PATH_MIN_CATEGORY_EVIDENCE
+    return top_evidence >= TEXT_LEXICAL_FAST_PATH_MIN_TEXT_EVIDENCE
 
 
 def build_text_to_image_evidence_query(query: EngineQuery) -> TextRelevanceQuery:
