@@ -33,6 +33,7 @@ QWEN_TEXT_VECTOR_FIELD = "qwen_text_vector"
 QWEN_IMAGE_VECTOR_FIELD = "qwen_image_vector"
 GEMINI_TEXT_VECTOR_FIELD = "gemini_text_vector"
 GEMINI_IMAGE_VECTOR_FIELD = "gemini_image_vector"
+TEXT_LEXICAL_AUXILIARY_SOURCE = "text_lexical"
 QWEN_QUERY_PROMPT = "Retrieve relevant ecommerce product images for the user query."
 GEMINI_QUERY_PROMPT = "Retrieve relevant ecommerce products for the user query."
 MARQO_ADD_DOCUMENTS_BATCH_SIZE = 128
@@ -1362,13 +1363,24 @@ class MarqoSearchEngine(SearchEngine):
         if not auxiliary_hits:
             return hits
         display_field = self.display_vector_field_name(auxiliary_field)
+        normalize_auxiliary = is_text_lexical_auxiliary_source(auxiliary_source)
+        max_auxiliary_score = max((float(hit.score) for hit in auxiliary_hits.values()), default=0.0)
+
+        def auxiliary_score_value(raw_score: float) -> float:
+            if not normalize_auxiliary:
+                return raw_score
+            if max_auxiliary_score <= 0:
+                return 0.0
+            return max(0.0, min(1.0, raw_score / max_auxiliary_score))
+
         weighted: list[tuple[int, EngineHit]] = []
         weight = max(0.0, float(auxiliary_weight))
         seen_document_keys: set[str] = set()
         for rank, hit in enumerate(hits):
             document_key = product_document_id(hit.document.mall_id, hit.document.product_id)
             seen_document_keys.add(document_key)
-            auxiliary_score = float((auxiliary_hits.get(document_key) or hit).score if document_key in auxiliary_hits else 0.0)
+            raw_auxiliary_score = float((auxiliary_hits.get(document_key) or hit).score if document_key in auxiliary_hits else 0.0)
+            auxiliary_score = auxiliary_score_value(raw_auxiliary_score)
             primary_score = float(hit.score)
             combined_score = (primary_score * (1.0 - weight)) + (auxiliary_score * weight)
             source_scores = dict(hit.source_scores)
@@ -1377,6 +1389,8 @@ class MarqoSearchEngine(SearchEngine):
             source_scores["hybrid"] = round(combined_score, 6)
             source_scores[auxiliary_source] = round(auxiliary_score, 6)
             source_scores[display_field] = round(auxiliary_score, 6)
+            if normalize_auxiliary:
+                source_scores[f"{auxiliary_source}_raw"] = round(raw_auxiliary_score, 6)
             weighted.append(
                 (
                     rank,
@@ -1394,7 +1408,8 @@ class MarqoSearchEngine(SearchEngine):
                 continue
             if prepared_filters is not None and not product_matches_prepared_filters(hit.document, prepared_filters):
                 continue
-            auxiliary_score = float(hit.score)
+            raw_auxiliary_score = float(hit.score)
+            auxiliary_score = auxiliary_score_value(raw_auxiliary_score)
             combined_score = auxiliary_score * auxiliary_only_multiplier
             source_scores = dict(hit.source_scores)
             source_scores["marqo_primary"] = 0.0
@@ -1402,6 +1417,8 @@ class MarqoSearchEngine(SearchEngine):
             source_scores["hybrid"] = round(combined_score, 6)
             source_scores[auxiliary_source] = round(auxiliary_score, 6)
             source_scores[display_field] = round(auxiliary_score, 6)
+            if normalize_auxiliary:
+                source_scores[f"{auxiliary_source}_raw"] = round(raw_auxiliary_score, 6)
             weighted.append(
                 (
                     next_rank,
@@ -1943,18 +1960,20 @@ class MarqoSearchEngine(SearchEngine):
             return None
         if QWEN_TEXT_VECTOR_FIELD in set(primary_vector_fields):
             return None
-        vector, _field, source = self.qwen_text_query_vector(query)
+        text_query = qwen_text_auxiliary_query_text(query)
+        if not text_query:
+            return None
         payload: dict[str, Any] = {
-            "searchMethod": "TENSOR",
-            "context": {"tensor": [{"vector": vector, "weight": 1}]},
-            "searchableAttributes": [QWEN_TEXT_VECTOR_FIELD],
+            "q": text_query,
+            "searchMethod": "LEXICAL",
+            "searchableAttributes": [*TEXT_FIELDS, SEARCH_TEXT_FIELD],
             "limit": qwen_text_auxiliary_candidate_limit(
                 query,
                 multiplier=self.text_auxiliary_candidate_multiplier,
             ),
-            "attributesToRetrieve": attributes_to_retrieve_for_query(query, rerank_text=False),
-            "_haeorumVectorField": QWEN_TEXT_VECTOR_FIELD,
-            "_haeorumVectorSource": qwen_auxiliary_text_source(source),
+            "attributesToRetrieve": attributes_to_retrieve_for_query(query, rerank_text=True),
+            "_haeorumVectorField": SEARCH_TEXT_FIELD,
+            "_haeorumVectorSource": TEXT_LEXICAL_AUXILIARY_SOURCE,
         }
         filters = build_filter_terms(query, include_numeric=False)
         if filters:
@@ -2648,9 +2667,9 @@ def rerank_text_to_image_hits(query: EngineQuery, hits: list[EngineHit]) -> list
     reranked: list[tuple[int, EngineHit]] = []
     for rank, hit, lexical_score, category_score, evidence_score in scored:
         if evidence_score > 0:
-            combined_score = min(1.0, hit.score + min(0.045, evidence_score * 0.04))
+            combined_score = min(1.0, (hit.score * 0.68) + (evidence_score * 0.32))
         else:
-            combined_score = max(0.0, hit.score - 0.04)
+            combined_score = max(0.0, hit.score * 0.72)
         source_scores = dict(hit.source_scores)
         source_scores["lexical"] = round(lexical_score, 6)
         source_scores["category_intent"] = round(category_score, 6)
@@ -2667,6 +2686,15 @@ def rerank_text_to_image_hits(query: EngineQuery, hits: list[EngineHit]) -> list
         )
     reranked.sort(key=lambda item: (-item[1].score, -item[1].source_scores.get("text_evidence", 0.0), item[0]))
     return [hit for _rank, hit in reranked]
+
+
+def qwen_text_auxiliary_query_text(query: EngineQuery) -> str | None:
+    expanded = expanded_query_text(query.q, query.query_synonyms)
+    return append_inferred_categories(expanded, query.inferred_categories) or normalize_text(query.q or "") or None
+
+
+def is_text_lexical_auxiliary_source(source: str) -> bool:
+    return source == TEXT_LEXICAL_AUXILIARY_SOURCE or source.startswith(f"{TEXT_LEXICAL_AUXILIARY_SOURCE}:")
 
 
 def build_text_to_image_evidence_query(query: EngineQuery) -> TextRelevanceQuery:

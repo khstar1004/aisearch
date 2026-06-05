@@ -584,6 +584,7 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         self.assertEqual(["P002", "P001"], [hit.document.product_id for hit in reranked])
         self.assertGreater(reranked[0].source_scores["text_evidence"], 0)
         self.assertEqual(0, reranked[1].source_scores["text_evidence"])
+        self.assertGreater(reranked[0].score - reranked[1].score, 0.1)
 
     def test_text_search_logs_normalized_query_and_searches_common_corrections(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -662,6 +663,9 @@ class HaeorumSearchServiceTest(unittest.TestCase):
             self.assertEqual(("달력",), infer_category_intents("카렌다", limit=1))
             self.assertEqual(("마우스/키보드",), infer_category_intents("무선 마우스", limit=1))
             self.assertEqual(("마우스패드",), infer_category_intents("마우스패드", limit=1))
+            self.assertEqual(("만년필",), infer_category_intents("갈색 만년필", limit=1))
+            self.assertEqual(("샤프",), infer_category_intents("제도 샤프", limit=1))
+            self.assertEqual(("볼펜",), infer_category_intents("우드 볼펜", limit=1))
 
         self.assertGreaterEqual(normalize_query_text.cache_info().hits, 7)
         self.assertGreaterEqual(build_search_query.cache_info().hits, 7)
@@ -22064,17 +22068,28 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         self.assertIn("_haeorumAuxTextPayload", text_payload)
         self.assertEqual(0.12, text_payload["_haeorumAuxTextWeight"])
         text_auxiliary_payload = text_payload["_haeorumAuxTextPayload"]
-        self.assertEqual(["qwen_text_vector"], text_auxiliary_payload["searchableAttributes"])
-        self.assertEqual([0.1, 0.2], text_auxiliary_payload["context"]["tensor"][0]["vector"])
-        self.assertEqual("qwen_text_vector", text_auxiliary_payload["_haeorumVectorField"])
-        self.assertTrue(str(text_auxiliary_payload["_haeorumVectorSource"]).startswith("text_auxiliary"))
+        self.assertEqual("LEXICAL", text_auxiliary_payload["searchMethod"])
+        self.assertEqual([*engine_module.TEXT_FIELDS, SEARCH_TEXT_FIELD], text_auxiliary_payload["searchableAttributes"])
+        self.assertIn("호텔", text_auxiliary_payload["q"])
+        self.assertIn("수건", text_auxiliary_payload["q"])
+        self.assertIn("타올", text_auxiliary_payload["q"])
+        self.assertNotIn("context", text_auxiliary_payload)
+        self.assertEqual(SEARCH_TEXT_FIELD, text_auxiliary_payload["_haeorumVectorField"])
+        self.assertEqual(engine_module.TEXT_LEXICAL_AUXILIARY_SOURCE, text_auxiliary_payload["_haeorumVectorSource"])
+        self.assertIn(SEARCH_TEXT_FIELD, text_auxiliary_payload["attributesToRetrieve"])
         self.assertEqual(["qwen_image_vector"], image_payload["searchableAttributes"])
         self.assertNotIn("_haeorumAuxTextPayload", image_payload)
         self.assertEqual([0.3, 0.4], image_payload["context"]["tensor"][0]["vector"])
         self.assertEqual(["data:image/png;base64,AAAA"], engine.image_calls[0])
         self.assertEqual(["qwen_image_vector"], mixed_payload["searchableAttributes"])
         self.assertIn("_haeorumAuxTextPayload", mixed_payload)
-        self.assertEqual(["qwen_text_vector"], mixed_payload["_haeorumAuxTextPayload"]["searchableAttributes"])
+        self.assertEqual(
+            [*engine_module.TEXT_FIELDS, SEARCH_TEXT_FIELD],
+            mixed_payload["_haeorumAuxTextPayload"]["searchableAttributes"],
+        )
+        self.assertIn("노란", mixed_payload["_haeorumAuxTextPayload"]["q"])
+        self.assertIn("우산", mixed_payload["_haeorumAuxTextPayload"]["q"])
+        self.assertIn("umbrella", mixed_payload["_haeorumAuxTextPayload"]["q"])
         self.assertEqual([0.1, 0.2], mixed_payload["context"]["tensor"][0]["vector"])
         self.assertEqual(0.4, mixed_payload["context"]["tensor"][0]["weight"])
         self.assertEqual([0.3, 0.4], mixed_payload["context"]["tensor"][1]["vector"])
@@ -22217,6 +22232,68 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         self.assertEqual(0.9, boosted[1].source_scores["text_auxiliary"])
         self.assertEqual(0.9, boosted[1].source_scores["qwen_text_vector"])
         self.assertEqual(0.6, boosted[1].source_scores["marqo_primary"])
+
+    def test_qwen_lexical_auxiliary_score_normalizes_marqo_lexical_scores(self) -> None:
+        engine = MarqoSearchEngine(
+            "http://marqo.example.test",
+            "products",
+            embedding_backend="qwen",
+            qwen_embedding_dimensions=2,
+            text_auxiliary_weight=0.2,
+        )
+        hits = [
+            EngineHit(
+                document=ProductDocument(
+                    product_id="P001",
+                    name="시각적으로 가까운 볼펜",
+                    category="볼펜",
+                    status="active",
+                    mall_id="shop001",
+                ),
+                score=0.70,
+                source_scores={"marqo": 0.70, "text_to_image": 0.70, "qwen_image_vector": 0.70},
+            )
+        ]
+        auxiliary_data = {
+            "hits": [
+                {
+                    "_id": product_document_id("shop001", "P002"),
+                    "product_id": "P002",
+                    "product_name": "피에르가르뎅 만년필",
+                    "category_name": "볼펜/필기구 > 만년필",
+                    "status": "active",
+                    "display_yn": "Y",
+                    "mall_id": "shop001",
+                    "_score": 24.0,
+                },
+                {
+                    "_id": product_document_id("shop001", "P003"),
+                    "product_id": "P003",
+                    "product_name": "고급 볼펜",
+                    "category_name": "볼펜/필기구 > 중가볼펜(1천원~1만원미만)",
+                    "status": "active",
+                    "display_yn": "Y",
+                    "mall_id": "shop001",
+                    "_score": 12.0,
+                },
+            ]
+        }
+
+        boosted = engine.apply_text_auxiliary_scores(
+            hits,
+            auxiliary_data,
+            auxiliary_weight=0.2,
+            auxiliary_field=SEARCH_TEXT_FIELD,
+            auxiliary_source=engine_module.TEXT_LEXICAL_AUXILIARY_SOURCE,
+        )
+
+        self.assertEqual(["P002", "P001", "P003"], [hit.document.product_id for hit in boosted])
+        self.assertAlmostEqual(0.8, boosted[0].score)
+        self.assertAlmostEqual(0.56, boosted[1].score)
+        self.assertAlmostEqual(0.4, boosted[2].score)
+        self.assertEqual(1.0, boosted[0].source_scores[engine_module.TEXT_LEXICAL_AUXILIARY_SOURCE])
+        self.assertEqual(24.0, boosted[0].source_scores[f"{engine_module.TEXT_LEXICAL_AUXILIARY_SOURCE}_raw"])
+        self.assertEqual(0.5, boosted[2].source_scores[engine_module.TEXT_LEXICAL_AUXILIARY_SOURCE])
 
     def test_qwen_marqo_upsert_payload_uses_structured_custom_vector_fields(self) -> None:
         class FakeQwenMarqoSearchEngine(MarqoSearchEngine):
