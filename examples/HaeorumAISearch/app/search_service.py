@@ -1007,7 +1007,7 @@ class AISearchService:
         payload = str(image_base64 or "").strip()
         return json.dumps(
             {
-                "version": 1,
+                "version": 2,
                 "payload_sha256": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
                 "max_bytes": self.settings.max_image_mb * 1024 * 1024,
                 "max_dimension": self.settings.max_image_dimension,

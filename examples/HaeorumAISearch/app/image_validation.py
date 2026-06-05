@@ -25,6 +25,9 @@ DEFAULT_JSON_BODY_OVERHEAD_BYTES = 1024 * 1024
 DEFAULT_MIN_IMAGE_DIMENSION = 16
 DEFAULT_MAX_DECODE_DIMENSION_MULTIPLIER = 8
 DEFAULT_MAX_DECODE_PIXELS_MULTIPLIER = 16
+DEFAULT_BORDER_TRIM_THRESHOLD = 18
+DEFAULT_BORDER_TRIM_PADDING_RATIO = 0.035
+DEFAULT_BORDER_TRIM_MIN_REMOVED_RATIO = 0.04
 EXIF_ORIENTATION_TAG = 274
 MIME_TYPE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9.+-]*/[a-z0-9][a-z0-9.+-]*$")
 
@@ -297,7 +300,8 @@ def normalize_image_bytes(
         except (AttributeError, OSError, ValueError):
             orientation = None
         image = ImageOps.exif_transpose(image)
-        normalized = bool(orientation and orientation != 1)
+        image, border_trimmed = trim_plain_image_border(image)
+        normalized = bool(orientation and orientation != 1) or border_trimmed
         if max_dimension and max(image.size) > max_dimension:
             image.thumbnail((max_dimension, max_dimension))
             normalized = True
@@ -315,6 +319,154 @@ def normalize_image_bytes(
         else:
             raise ValueError("only JPG, PNG, and WEBP images are supported")
         return output.getvalue(), image.size, True
+
+
+def trim_plain_image_border(image):
+    width, height = image.size
+    if width < DEFAULT_MIN_IMAGE_DIMENSION * 2 or height < DEFAULT_MIN_IMAGE_DIMENSION * 2:
+        return image, False
+    bbox = plain_background_content_bbox(image)
+    if bbox is None:
+        return image, False
+    left, top, right, bottom = bbox
+    content_width = right - left
+    content_height = bottom - top
+    if content_width < DEFAULT_MIN_IMAGE_DIMENSION or content_height < DEFAULT_MIN_IMAGE_DIMENSION:
+        return image, False
+    pad = max(2, int(round(min(width, height) * DEFAULT_BORDER_TRIM_PADDING_RATIO)))
+    crop_left = max(0, left - pad)
+    crop_top = max(0, top - pad)
+    crop_right = min(width, right + pad)
+    crop_bottom = min(height, bottom + pad)
+    removed = max(crop_left, crop_top, width - crop_right, height - crop_bottom)
+    min_removed = max(8, int(round(min(width, height) * DEFAULT_BORDER_TRIM_MIN_REMOVED_RATIO)))
+    if removed < min_removed:
+        return image, False
+    if crop_left == 0 and crop_top == 0 and crop_right == width and crop_bottom == height:
+        return image, False
+    return image.crop((crop_left, crop_top, crop_right, crop_bottom)), True
+
+
+def plain_background_content_bbox(image):
+    from PIL import Image, ImageChops
+
+    rgba = image.convert("RGBA")
+    background = Image.new("RGBA", rgba.size, average_corner_rgba(rgba))
+    diff = ImageChops.difference(rgba, background)
+    mask = diff.convert("L").point(lambda value: 255 if value > DEFAULT_BORDER_TRIM_THRESHOLD else 0)
+    bbox = mask.getbbox()
+    if bbox is None:
+        return None
+    return focused_content_bbox(mask, bbox) or bbox
+
+
+def focused_content_bbox(mask, bbox):
+    left, top, right, bottom = bbox
+    crop = mask.crop((left, top, right, bottom))
+    width, height = crop.size
+    if width < DEFAULT_MIN_IMAGE_DIMENSION or height < DEFAULT_MIN_IMAGE_DIMENSION:
+        return None
+    data = crop.tobytes()
+    row_counts = [
+        sum(data[row * width : (row + 1) * width]) // 255
+        for row in range(height)
+    ]
+    bands = foreground_bands(
+        row_counts,
+        threshold=max(2, int(round(width * 0.01))),
+        merge_gap=max(2, int(round(height * 0.01))),
+    )
+    if len(bands) < 2:
+        return None
+    largest_gap = max(next_start - end for (_start, end), (next_start, _next_end) in zip(bands, bands[1:]))
+    if largest_gap < max(24, int(round(height * 0.08))):
+        return None
+    total_pixels = sum(row_counts)
+    if total_pixels <= 0:
+        return None
+    image_center = height / 2
+    best_band = None
+    best_score = -1.0
+    best_pixels = 0
+    for start, end in bands:
+        pixels = sum(row_counts[start:end])
+        band_center = (start + end) / 2
+        center_bonus = 1.0 - min(abs(band_center - image_center) / max(image_center, 1), 1.0)
+        score = pixels * (1.0 + (0.25 * center_bonus))
+        if score > best_score:
+            best_band = (start, end)
+            best_score = score
+            best_pixels = pixels
+    if best_band is None or best_pixels < total_pixels * 0.3:
+        return None
+    start, end = best_band
+    if end - start >= height * 0.85:
+        return None
+    global_top = top + start
+    global_bottom = top + end
+    band_bbox = mask.crop((left, global_top, right, global_bottom)).getbbox()
+    if band_bbox is None:
+        return None
+    band_left, band_top, band_right, band_bottom = band_bbox
+    focused = (
+        left + band_left,
+        global_top + band_top,
+        left + band_right,
+        global_top + band_bottom,
+    )
+    focused_width = focused[2] - focused[0]
+    focused_height = focused[3] - focused[1]
+    if focused_width < DEFAULT_MIN_IMAGE_DIMENSION or focused_height < DEFAULT_MIN_IMAGE_DIMENSION:
+        return None
+    return focused
+
+
+def foreground_bands(counts: list[int], *, threshold: int, merge_gap: int) -> list[tuple[int, int]]:
+    bands: list[tuple[int, int]] = []
+    start = None
+    for index, count in enumerate(counts):
+        if count >= threshold:
+            if start is None:
+                start = index
+        elif start is not None:
+            bands.append((start, index))
+            start = None
+    if start is not None:
+        bands.append((start, len(counts)))
+    if not bands:
+        return []
+    merged = [bands[0]]
+    for start, end in bands[1:]:
+        previous_start, previous_end = merged[-1]
+        if start - previous_end <= merge_gap:
+            merged[-1] = (previous_start, end)
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def average_corner_rgba(image, sample_size: int = 8) -> tuple[int, int, int, int]:
+    width, height = image.size
+    sample = max(1, min(sample_size, width, height))
+    boxes = (
+        (0, 0, sample, sample),
+        (width - sample, 0, width, sample),
+        (0, height - sample, sample, height),
+        (width - sample, height - sample, width, height),
+    )
+    totals = [0, 0, 0, 0]
+    count = 0
+    for box in boxes:
+        data = image.crop(box).tobytes()
+        for offset in range(0, len(data), 4):
+            totals[0] += data[offset]
+            totals[1] += data[offset + 1]
+            totals[2] += data[offset + 2]
+            totals[3] += data[offset + 3]
+            count += 1
+    if count <= 0:
+        return (255, 255, 255, 255)
+    return tuple(int(round(total / count)) for total in totals)  # type: ignore[return-value]
 
 
 def analyze_image_quality(raw: bytes) -> tuple[str, ...]:

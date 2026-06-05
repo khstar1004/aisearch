@@ -385,6 +385,32 @@ def make_png_bytes(width: int = 16, height: int = 16) -> bytes:
     return buffer.getvalue()
 
 
+def make_bordered_product_png_bytes(width: int = 220, height: int = 180) -> bytes:
+    from PIL import Image, ImageDraw
+
+    buffer = io.BytesIO()
+    image = Image.new("RGB", (width, height), color=(255, 255, 255))
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle((74, 58, 146, 122), radius=8, fill=(12, 120, 110), outline=(8, 80, 70), width=2)
+    draw.rectangle((96, 78, 124, 102), fill=(235, 245, 242))
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def make_screenshot_product_png_bytes(width: int = 900, height: int = 620) -> bytes:
+    from PIL import Image, ImageDraw
+
+    buffer = io.BytesIO()
+    image = Image.new("RGB", (width, height), color=(250, 250, 250))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 0, width, 76), fill=(255, 255, 255))
+    draw.rounded_rectangle((48, 24, 520, 54), radius=14, outline=(220, 220, 220), width=2, fill=(255, 255, 255))
+    draw.rounded_rectangle((360, 230, 540, 410), radius=20, fill=(12, 120, 110), outline=(8, 80, 70), width=3)
+    draw.rectangle((420, 292, 480, 340), fill=(235, 245, 242))
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
 def make_transparent_png_bytes(width: int = 32, height: int = 32) -> bytes:
     from PIL import Image
 
@@ -6420,6 +6446,43 @@ class HaeorumSearchServiceTest(unittest.TestCase):
 
         self.assertTrue(image.normalized)
         self.assertEqual((48, 24), (image.width, image.height))
+
+    def test_image_validation_trims_large_plain_upload_border(self) -> None:
+        image = validate_image_bytes(
+            make_bordered_product_png_bytes(),
+            max_bytes=1024 * 1024,
+            max_dimension=1600,
+            resize_dimension=512,
+        )
+        normalized_raw = base64.b64decode(image.data_url.split(",", 1)[1])
+
+        self.assertTrue(image.normalized)
+        self.assertLess(image.width or 0, 140)
+        self.assertLess(image.height or 0, 120)
+        self.assertEqual(compute_average_hash(normalized_raw), image.perceptual_hash)
+
+    def test_image_validation_focuses_product_band_in_screenshot_upload(self) -> None:
+        image = validate_image_bytes(
+            make_screenshot_product_png_bytes(),
+            max_bytes=1024 * 1024,
+            max_dimension=1600,
+            resize_dimension=512,
+        )
+
+        self.assertTrue(image.normalized)
+        self.assertLess(image.width or 0, 240)
+        self.assertLess(image.height or 0, 240)
+
+    def test_image_validation_leaves_full_frame_image_untrimmed(self) -> None:
+        image = validate_image_bytes(
+            make_png_bytes(80, 40),
+            max_bytes=1024 * 1024,
+            max_dimension=1600,
+            resize_dimension=512,
+        )
+
+        self.assertFalse(image.normalized)
+        self.assertEqual((80, 40), (image.width, image.height))
 
     def test_image_validation_rejects_excessive_decode_dimensions_before_resize(self) -> None:
         with self.assertRaisesRegex(ValueError, "image dimensions are too large"):
