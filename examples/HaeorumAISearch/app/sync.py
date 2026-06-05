@@ -31,6 +31,8 @@ from .sql_safety import clean_readonly_query, validate_readonly_query
 
 
 SYNC_FAILURE_SAMPLE_LIMIT = 100
+SYNC_UPSERT_RETRY_DELAYS_SECONDS = (5.0, 10.0, 20.0)
+SYNC_UPSERT_BATCH_PAUSE_SECONDS = 1.0
 
 
 class SyncAlreadyRunning(RuntimeError):
@@ -671,7 +673,8 @@ class SyncService:
                             inactive_reasons[document_id] = inactive_product_reasons(product)
                             inactive_products[document_id] = product
 
-            upsert_result = self.engine.upsert_products(iter_active_products())
+            active_products = list(iter_active_products())
+            upsert_result = self._upsert_product_batches_with_image_fallback(active_products, mode)
             indexed = int(upsert_result.get("indexed", len(active_product_ids)))
             upsert_failures = product_failures_from_result(
                 upsert_result,
@@ -734,6 +737,66 @@ class SyncService:
         result = self._result(mode, started)
         self._finish_result(result)
         return result
+
+    def _upsert_product_batches_with_image_fallback(self, products: list[ProductDocument], mode: str) -> dict[str, Any]:
+        if not products:
+            return {"indexed": 0}
+        batch_size = max(1, int(self.settings.marqo_add_documents_batch_size))
+        indexed = 0
+        failed = 0
+        failed_products: list[dict[str, Any]] = []
+        image_fallback_products = 0
+        for offset in range(0, len(products), batch_size):
+            if offset:
+                time.sleep(SYNC_UPSERT_BATCH_PAUSE_SECONDS)
+            batch = products[offset : offset + batch_size]
+            result = self._upsert_products_with_image_fallback(batch, mode)
+            indexed += int(result.get("indexed", len(batch)) or 0)
+            failed += int(result.get("failed", 0) or 0)
+            failed_products.extend(result.get("failed_products") or [])
+            image_fallback_products += int(result.get("image_fallback_products", 0) or 0)
+        combined: dict[str, Any] = {
+            "indexed": indexed,
+            "failed": failed,
+        }
+        if failed_products:
+            combined["failed_products"] = failed_products[:SYNC_FAILURE_SAMPLE_LIMIT]
+        if image_fallback_products:
+            combined["image_fallback_products"] = image_fallback_products
+        return combined
+
+    def _upsert_products_with_image_fallback(self, products: list[ProductDocument], mode: str) -> dict[str, Any]:
+        fallback_count = 0
+        retry_index = 0
+        while True:
+            try:
+                result = self.engine.upsert_products(products)
+                if fallback_count:
+                    result["image_fallback_products"] = fallback_count
+                return result
+            except Exception as exc:
+                error = str(exc)
+                if not fallback_count and "Gemini embedding request failed" in error and any(product.image_url for product in products):
+                    for product in products:
+                        if not product.image_url:
+                            continue
+                        product.extra["image_embedding_fallback_error"] = error
+                        product.image_url = None
+                        fallback_count += 1
+                        self.logger.write_product_event(
+                            mode,
+                            product.product_id,
+                            action="upsert_to_index",
+                            outcome="requested",
+                            reason="image_embedding_fallback",
+                            product=product,
+                        )
+                    continue
+                if retry_index >= len(SYNC_UPSERT_RETRY_DELAYS_SECONDS) or not is_retriable_sync_upsert_error(error):
+                    raise
+                time.sleep(SYNC_UPSERT_RETRY_DELAYS_SECONDS[retry_index])
+                retry_index += 1
+
 
     def _busy_result(self, mode: str, started: float, message: str) -> SyncResult:
         now = datetime.now(timezone.utc).isoformat()
@@ -1315,6 +1378,26 @@ def product_failures_from_result(result: dict[str, Any], fallback_ids: list[str]
         for product_id in fallback_ids[:fallback_count]:
             failures.append({"product_id": product_id, "reason": f"{action}_failed"})
     return failures
+
+
+def is_retriable_sync_upsert_error(message: str) -> bool:
+    lowered = str(message or "").lower()
+    return any(
+        marker in lowered
+        for marker in (
+            "gemini embedding request failed",
+            "backendcircuitopenerror",
+            "circuit breaker is open",
+            "resource exhausted",
+            "too many requests",
+            "timed out",
+            "timeout",
+            "429",
+            "502",
+            "503",
+            "504",
+        )
+    )
 
 
 def normalize_product_failure(

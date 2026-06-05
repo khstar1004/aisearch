@@ -66,6 +66,11 @@ def main() -> int:
     parser.add_argument("--batch-retry-delay-seconds", type=float, default=10.0)
     parser.add_argument("--output", default="")
     parser.add_argument("--progress-every", type=int, default=1)
+    parser.add_argument(
+        "--prefetch-all",
+        action="store_true",
+        help="Read all MSSQL products before indexing so long indexing runs do not keep a DB cursor open.",
+    )
     args = parser.parse_args()
 
     try:
@@ -119,35 +124,33 @@ def main() -> int:
     if hasattr(engine, "ensure_index"):
         engine.ensure_index()
 
-    with pyodbc.connect(settings.mssql_connection_string, readonly=True, autocommit=True) as connection:
-        if args.workers <= 1:
-            buffer = []
+    def iter_products_from_mssql():
+        with pyodbc.connect(settings.mssql_connection_string, readonly=True, autocommit=True) as connection:
             for products in read_products(connection, active_query, max(1, args.fetch_size)):
-                for product in products:
-                    if product.extra.get("unsupported_image_url"):
-                        unsupported_image_urls += 1
-                    buffer.append(product)
-                    if len(buffer) >= args.batch_size:
-                        batch_report = upsert_batch_once(
-                            engine,
-                            buffer,
-                            max_retries=args.batch_retries,
-                            retry_delay_seconds=args.batch_retry_delay_seconds,
-                        )
-                        batches, indexed, failed = apply_batch_report(
-                            batch_report,
-                            batches,
-                            indexed,
-                            failed,
-                            failures,
-                            fallback_stats,
-                            started,
-                            args.progress_every,
-                            settings.qwen_embedding_url,
-                        )
-                        max_batch_size = max(max_batch_size, len(buffer))
-                        buffer = []
-            if buffer:
+                yield from products
+
+    product_iterable = list(iter_products_from_mssql()) if args.prefetch_all else iter_products_from_mssql()
+
+    if args.prefetch_all:
+        print(
+            json.dumps(
+                {
+                    "event": "live_mssql_full_reindex_prefetched",
+                    "products": len(product_iterable),
+                    "elapsed_ms": round((time.perf_counter() - started) * 1000, 1),
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+
+    if args.workers <= 1:
+        buffer = []
+        for product in product_iterable:
+            if product.extra.get("unsupported_image_url"):
+                unsupported_image_urls += 1
+            buffer.append(product)
+            if len(buffer) >= args.batch_size:
                 batch_report = upsert_batch_once(
                     engine,
                     buffer,
@@ -164,69 +167,88 @@ def main() -> int:
                     started,
                     args.progress_every,
                     settings.qwen_embedding_url,
-                    force_progress=True,
                 )
                 max_batch_size = max(max_batch_size, len(buffer))
-        else:
-            pending: set[Future] = set()
-            max_pending = max(1, args.workers * 2)
-
-            def submit_batch(executor: ThreadPoolExecutor, batch: list[Any]) -> None:
-                nonlocal max_batch_size
-                max_batch_size = max(max_batch_size, len(batch))
-                pending.add(
-                    executor.submit(
-                        upsert_batch_once,
-                        engine,
-                        list(batch),
-                        max_retries=args.batch_retries,
-                        retry_delay_seconds=args.batch_retry_delay_seconds,
-                    )
-                )
-
-            def collect_completed(force: bool = False) -> None:
-                nonlocal batches, indexed, failed
-                if not pending:
-                    return
-                done, remaining = wait(
-                    pending,
-                    timeout=None if force else 0,
-                    return_when=FIRST_COMPLETED,
-                )
-                if not done:
-                    return
-                pending.clear()
-                pending.update(remaining)
-                for future in done:
-                    batch_report = future.result()
-                    batches, indexed, failed = apply_batch_report(
-                        batch_report,
-                        batches,
-                        indexed,
-                        failed,
-                        failures,
-                        fallback_stats,
-                        started,
-                        args.progress_every,
-                        settings.qwen_embedding_url,
-                    )
-
-            with ThreadPoolExecutor(max_workers=max(1, args.workers)) as executor:
                 buffer = []
-                for products in read_products(connection, active_query, max(1, args.fetch_size)):
-                    for product in products:
-                        if product.extra.get("unsupported_image_url"):
-                            unsupported_image_urls += 1
-                        buffer.append(product)
-                        if len(buffer) >= args.batch_size:
-                            submit_batch(executor, buffer)
-                            buffer = []
-                            while len(pending) >= max_pending:
-                                collect_completed(force=True)
-                if buffer:
+        if buffer:
+            batch_report = upsert_batch_once(
+                engine,
+                buffer,
+                max_retries=args.batch_retries,
+                retry_delay_seconds=args.batch_retry_delay_seconds,
+            )
+            batches, indexed, failed = apply_batch_report(
+                batch_report,
+                batches,
+                indexed,
+                failed,
+                failures,
+                fallback_stats,
+                started,
+                args.progress_every,
+                settings.qwen_embedding_url,
+                force_progress=True,
+            )
+            max_batch_size = max(max_batch_size, len(buffer))
+    else:
+        pending: set[Future] = set()
+        max_pending = max(1, args.workers * 2)
+
+        def submit_batch(executor: ThreadPoolExecutor, batch: list[Any]) -> None:
+            nonlocal max_batch_size
+            max_batch_size = max(max_batch_size, len(batch))
+            pending.add(
+                executor.submit(
+                    upsert_batch_once,
+                    engine,
+                    list(batch),
+                    max_retries=args.batch_retries,
+                    retry_delay_seconds=args.batch_retry_delay_seconds,
+                )
+            )
+
+        def collect_completed(force: bool = False) -> None:
+            nonlocal batches, indexed, failed
+            if not pending:
+                return
+            done, remaining = wait(
+                pending,
+                timeout=None if force else 0,
+                return_when=FIRST_COMPLETED,
+            )
+            if not done:
+                return
+            pending.clear()
+            pending.update(remaining)
+            for future in done:
+                batch_report = future.result()
+                batches, indexed, failed = apply_batch_report(
+                    batch_report,
+                    batches,
+                    indexed,
+                    failed,
+                    failures,
+                    fallback_stats,
+                    started,
+                    args.progress_every,
+                    settings.qwen_embedding_url,
+                )
+
+        with ThreadPoolExecutor(max_workers=max(1, args.workers)) as executor:
+            buffer = []
+            for product in product_iterable:
+                if product.extra.get("unsupported_image_url"):
+                    unsupported_image_urls += 1
+                buffer.append(product)
+                if len(buffer) >= args.batch_size:
                     submit_batch(executor, buffer)
-                while pending:
-                    collect_completed(force=True)
+                    buffer = []
+                    while len(pending) >= max_pending:
+                        collect_completed(force=True)
+            if buffer:
+                submit_batch(executor, buffer)
+            while pending:
+                collect_completed(force=True)
 
     cache_report = search_cache.clear() if search_cache else {}
     elapsed_ms = round((time.perf_counter() - started) * 1000, 1)

@@ -40,6 +40,21 @@ PUBLIC_HTTP_OPENER = urllib.request.build_opener(SafePublicHTTPRedirectHandler()
 SAFE_ABSOLUTE_HTTP_URL_CACHE_MAX = 65536
 _SAFE_ABSOLUTE_HTTP_URL_CACHE: OrderedDict[str, str | None] = OrderedDict()
 _SAFE_ABSOLUTE_HTTP_URL_CACHE_LOCK = threading.RLock()
+PRODUCT_ID_QUERY_PARAM_NAMES = {
+    "id",
+    "p_idx",
+    "pidx",
+    "product_id",
+    "productid",
+    "product_no",
+    "productno",
+    "goods_id",
+    "goodsid",
+    "goods_no",
+    "goodsno",
+    "item_id",
+    "itemid",
+}
 
 
 def safe_absolute_http_url(value: object) -> str | None:
@@ -82,7 +97,16 @@ def product_url_contains_product_id(value: object, product_id: object) -> bool:
     parsed = urlparse(text)
     candidates = [unquote(part) for part in parsed.path.split("/") if part]
     candidates.extend(unquote(item) for item in parsed.params.split(";") if item)
-    candidates.extend(unquote(param_value) for _param_name, param_value in parse_qsl(parsed.query, keep_blank_values=True))
+    product_param_matches: list[bool] = []
+    for param_name, param_value in parse_qsl(parsed.query, keep_blank_values=True):
+        normalized_name = unquote(param_name).strip().lower().replace("-", "_")
+        decoded_value = unquote(param_value)
+        if normalized_name in PRODUCT_ID_QUERY_PARAM_NAMES:
+            product_param_matches.append(decoded_value == product_id_text)
+        else:
+            candidates.append(decoded_value)
+    if product_param_matches:
+        return any(product_param_matches)
     if parsed.fragment:
         candidates.append(unquote(parsed.fragment))
     return any(text_contains_token(candidate, product_id_text) for candidate in candidates)

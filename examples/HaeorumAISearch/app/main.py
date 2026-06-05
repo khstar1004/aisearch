@@ -160,6 +160,8 @@ app.add_middleware(
 if settings.api_gzip_minimum_size > 0:
     app.add_middleware(GZipMiddleware, minimum_size=settings.api_gzip_minimum_size)
 
+MAX_REJECTED_BODY_DRAIN_BYTES = 32 * 1024 * 1024
+
 
 @app.middleware("http")
 async def add_api_instance_header(request: Request, call_next):  # type: ignore[no-untyped-def]
@@ -269,9 +271,11 @@ async def ai_search(request: Request, service: AISearchService = Depends(get_sea
     try:
         validate_public_access_headers(request)
         await run_in_threadpool(enforce_search_client_rate_limit, request)
+        max_image_bytes = settings.max_image_mb * 1024 * 1024
         if is_multipart_search_request(request):
-            max_image_bytes = settings.max_image_mb * 1024 * 1024
-            validate_multipart_content_length(request.headers.get("content-length"), max_image_bytes=max_image_bytes)
+            await validate_multipart_content_length_or_drain(request, max_image_bytes=max_image_bytes)
+        else:
+            await validate_json_image_content_length_or_drain(request, max_image_bytes=max_image_bytes)
         parsed = await parse_search_request(request)
         payload = parsed.payload
         validate_public_access(payload, request)
@@ -315,7 +319,7 @@ async def click_log(request: Request, service: AISearchService = Depends(get_sea
         validate_public_access_headers(request)
         await run_in_threadpool(enforce_click_client_rate_limit, request)
         max_image_bytes = settings.max_image_mb * 1024 * 1024
-        validate_json_image_content_length(request.headers.get("content-length"), max_image_bytes=max_image_bytes)
+        await validate_json_image_content_length_or_drain(request, max_image_bytes=max_image_bytes)
         payload = await read_json_object(request, max_bytes=max_base64_json_body_bytes(max_image_bytes))
         validate_public_access(payload, request)
         click = ClickLogRequest.model_validate(payload)
@@ -526,6 +530,40 @@ async def read_json_object(request: Request, max_bytes: int | None = None) -> di
 
 def is_multipart_search_request(request: Request) -> bool:
     return request.headers.get("content-type", "").lower().startswith("multipart/form-data")
+
+
+async def validate_multipart_content_length_or_drain(request: Request, max_image_bytes: int) -> None:
+    try:
+        validate_multipart_content_length(request.headers.get("content-length"), max_image_bytes=max_image_bytes)
+    except ValueError as exc:
+        await drain_rejected_request_body_if_payload_too_large(request, exc)
+        raise
+
+
+async def validate_json_image_content_length_or_drain(request: Request, max_image_bytes: int) -> None:
+    try:
+        validate_json_image_content_length(request.headers.get("content-length"), max_image_bytes=max_image_bytes)
+    except ValueError as exc:
+        await drain_rejected_request_body_if_payload_too_large(request, exc)
+        raise
+
+
+async def drain_rejected_request_body_if_payload_too_large(request: Request, exc: ValueError) -> None:
+    if input_error_status(str(exc)) != 413:
+        return
+    content_length_text = request.headers.get("content-length")
+    try:
+        content_length = int(str(content_length_text or "0").strip())
+    except ValueError:
+        return
+    if content_length < 1 or content_length > MAX_REJECTED_BODY_DRAIN_BYTES:
+        return
+    total = 0
+    async for chunk in request.stream():
+        data = chunk.encode("utf-8") if isinstance(chunk, str) else bytes(chunk)
+        total += len(data)
+        if total >= content_length:
+            break
 
 
 def parse_int_field(value: Any, default: int, field_name: str) -> int:

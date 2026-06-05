@@ -1563,8 +1563,6 @@ def absolute_product_url(product_url: str, mall_id: str | None, settings: Settin
         base_parsed = urlparse(base)
         if parsed.scheme.lower() == base_parsed.scheme.lower() and parsed.netloc.lower() == base_parsed.netloc.lower():
             return product_url
-        if not settings.filter_by_mall_id:
-            return product_url
         return None
     if parsed.scheme or parsed.netloc:
         return None

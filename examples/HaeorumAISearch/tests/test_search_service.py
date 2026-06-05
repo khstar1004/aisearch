@@ -94,6 +94,7 @@ from app.image_validation import (
     validate_safe_decode_dimensions,
 )
 from app.identifiers import product_document_id
+from app.main import validate_json_image_content_length_or_drain, validate_multipart_content_length_or_drain
 from app.metrics import build_admin_metrics, build_operational_alerts, image_search_queue_summary, metrics_to_prometheus, safe_engine_health, search_cache_summary, search_execution_queue_summary
 from app.models import (
     MAX_ATTRIBUTE_FILTER_LENGTH,
@@ -2188,6 +2189,30 @@ class HaeorumSearchServiceTest(unittest.TestCase):
         body = make_oversized_json_image_body("shop001", 1)
         self.assertIn(b'"image_base64"', body)
         self.assertGreater(len(body), 2 * 1024 * 1024)
+
+    def test_oversized_image_request_drains_body_before_rejecting(self) -> None:
+        class FakeRequest:
+            def __init__(self, body: bytes):
+                self.headers = {"content-length": str(len(body))}
+                self.body = body
+                self.drained = 0
+
+            async def stream(self):
+                for index in range(0, len(self.body), 3):
+                    chunk = self.body[index : index + 3]
+                    self.drained += len(chunk)
+                    yield chunk
+
+        oversized_body = b"x" * (2 * 1024 * 1024)
+        multipart = FakeRequest(oversized_body)
+        with self.assertRaisesRegex(ValueError, "multipart body exceeds"):
+            asyncio.run(validate_multipart_content_length_or_drain(multipart, max_image_bytes=5))
+        self.assertEqual(len(oversized_body), multipart.drained)
+
+        json_request = FakeRequest(oversized_body)
+        with self.assertRaisesRegex(ValueError, "JSON body exceeds"):
+            asyncio.run(validate_json_image_content_length_or_drain(json_request, max_image_bytes=5))
+        self.assertEqual(len(oversized_body), json_request.drained)
 
     def test_csv_index_script_dry_runs_and_indexes_poc_csv(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -18717,6 +18742,55 @@ class HaeorumSearchServiceTest(unittest.TestCase):
             self.assertIn("P002", log_text)
             self.assertIn("vectorization failed", log_text)
 
+    def test_sync_retries_gemini_image_failures_without_image_url(self) -> None:
+        class ImageFailingEngine(LocalSearchEngine):
+            def __init__(self):
+                super().__init__([])
+                self.calls: list[list[str | None]] = []
+
+            def upsert_products(self, products):  # type: ignore[no-untyped-def]
+                product_list = list(products)
+                self.calls.append([product.image_url for product in product_list])
+                if len(self.calls) == 1:
+                    raise RuntimeError(
+                        'Gemini embedding request failed: 400 {"detail":"only JPG, PNG, and WEBP images are supported"}'
+                    )
+                if len(self.calls) == 2:
+                    raise RuntimeError(
+                        'Gemini embedding request failed: 429 {"detail":"Gemini embedding API returned HTTP 429"}'
+                    )
+                return super().upsert_products(product_list)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            csv_path = Path(temp_dir) / "products.csv"
+            sync_log = Path(temp_dir) / "sync.jsonl"
+            csv_path.write_text(
+                "\n".join(
+                    [
+                        "product_id,product_name,category_name,status,display_yn,price,main_image_url",
+                        "P001,지원 안되는 이미지 우산,우산,active,Y,8500,https://cdn.example.test/image.bmp",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            settings = Settings(
+                engine_backend="local",
+                index_name="test",
+                product_csv_path=csv_path,
+                sync_log_path=sync_log,
+            )
+            engine = ImageFailingEngine()
+            sync = SyncService(engine, CsvProductSource(csv_path), settings)
+
+            with patch("app.sync.SYNC_UPSERT_RETRY_DELAYS_SECONDS", (0.0,)):
+                result = sync.reindex_all()
+            log_text = sync_log.read_text(encoding="utf-8")
+
+            self.assertEqual(1, result.indexed)
+            self.assertEqual(0, result.failed)
+            self.assertEqual([["https://cdn.example.test/image.bmp"], [None], [None]], engine.calls)
+            self.assertIn("image_embedding_fallback", log_text)
+
     def test_sync_logs_source_fetch_failures(self) -> None:
         class FailingSource:
             def fetch_all(self):  # type: ignore[no-untyped-def]
@@ -25383,6 +25457,10 @@ class HaeorumSearchServiceTest(unittest.TestCase):
             )
         )
         self.assertFalse(product_url_contains_product_id("https://shop001.example.test/product/P0010", "P001"))
+        self.assertFalse(product_url_contains_product_id("https://shop001.example.test/view?p_idx=wrong-P001", "P001"))
+        self.assertFalse(
+            product_url_contains_product_id("https://shop001.example.test/view?p_idx=wrong-smoke-product", "smoke-product")
+        )
         self.assertFalse(product_url_contains_product_id("https://p001.example.test/product/view", "P001"))
 
     def test_safe_absolute_http_url_cache_handles_parallel_access(self) -> None:
