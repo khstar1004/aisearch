@@ -987,6 +987,7 @@
         queryType: "",
         inFlight: false,
         lastQuery: "",
+        renderedProductIds: Object.create(null),
         loadingTimer: null,
         loadingStartedAt: 0
       };
@@ -1380,6 +1381,7 @@
         els.summary.hidden = true;
         els.moreWrap.hidden = true;
         els.empty.hidden = true;
+        state.renderedProductIds = Object.create(null);
       }
 
       function renderResults(data, append) {
@@ -1388,16 +1390,16 @@
         const meta = data.meta || {};
         state.queryType = meta.query_type || (state.imageFile ? "image" : "text");
         if (!append) {
-          renderSummary(top.length + items.length);
           renderCategories(data.suggested_categories || []);
-          renderProducts(els.topGrid, top, false, 1);
-          renderProducts(els.itemGrid, items, false, 4 + Number(meta.offset || 0));
-          els.topSection.hidden = top.length === 0;
-          els.itemSection.hidden = items.length === 0;
-          els.empty.hidden = top.length + items.length > 0;
+          const renderedTop = renderProducts(els.topGrid, top, false, 1);
+          const renderedItems = renderProducts(els.itemGrid, items, false, 4 + Number(meta.offset || 0));
+          renderSummary(renderedTop + renderedItems);
+          els.topSection.hidden = renderedTop === 0;
+          els.itemSection.hidden = renderedItems === 0;
+          els.empty.hidden = renderedTop + renderedItems > 0;
         } else {
-          renderProducts(els.itemGrid, items, true, 4 + Number(meta.offset || 0));
-          if (items.length) {
+          const renderedItems = renderProducts(els.itemGrid, items, true, 4 + Number(meta.offset || 0));
+          if (renderedItems) {
             els.itemSection.hidden = false;
           }
         }
@@ -1436,12 +1438,19 @@
         if (!append) {
           container.innerHTML = "";
         }
+        let rendered = 0;
         products.forEach(function (product, index) {
+          const productId = String(product.product_id || "").trim();
+          if (productId && state.renderedProductIds[productId]) {
+            return;
+          }
+          if (productId) {
+            state.renderedProductIds[productId] = true;
+          }
           const card = document.createElement("a");
           const productUrl = safeUrl(product.product_url);
           const imageUrl = safeImageUrl(product.image_url);
           const productName = product.name || "";
-          const productId = product.product_id || "";
           card.className = "product-card";
           card.href = productUrl;
           card.target = "_blank";
@@ -1468,7 +1477,9 @@
             recordClick(Object.assign({}, product, { product_url: productUrl === "#" ? null : productUrl }), (basePosition || 1) + index);
           });
           container.appendChild(card);
+          rendered += 1;
         });
+        return rendered;
       }
 
       function recordClick(product, position) {
