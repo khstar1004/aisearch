@@ -148,6 +148,7 @@ dump.rdb
 .vscode/
 .deploy_keys/
 haeorum-ai-search-server82-*.tar.gz
+.tmp/
 .tmp-chrome-*/
 examples/HaeorumAISearch/logs/
 examples/HaeorumAISearch/reports/

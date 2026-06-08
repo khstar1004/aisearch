@@ -105,6 +105,20 @@ def unique_runtime_queries(candidates: Iterable[str], max_queries: int | None) -
     return queries
 
 
+def explicit_query_candidates(query_values: Iterable[str], query_files: Iterable[Path]) -> list[str]:
+    candidates: list[str] = []
+    for value in query_values:
+        text = " ".join(str(value or "").split()).strip()
+        if text:
+            candidates.append(text)
+    for query_file in query_files:
+        for raw_line in query_file.read_text(encoding="utf-8-sig").splitlines():
+            text = " ".join(raw_line.split()).strip()
+            if text and not text.startswith("#"):
+                candidates.append(text)
+    return candidates
+
+
 def chunks(values: list[str], size: int) -> Iterable[list[str]]:
     for index in range(0, len(values), size):
         yield values[index : index + size]
@@ -167,6 +181,19 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build a precomputed query embedding cache from product data.")
     parser.add_argument("--product-csv", type=Path, default=None)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--query",
+        action="append",
+        default=[],
+        help="Explicit representative query to include before product-derived candidates. Repeat this option.",
+    )
+    parser.add_argument(
+        "--query-file",
+        type=Path,
+        action="append",
+        default=[],
+        help="UTF-8 text file with one representative query per line. Blank lines and # comments are ignored.",
+    )
     parser.add_argument("--max-queries", type=int, default=20000, help="Maximum cached query count. Use 0 for no cap.")
     parser.add_argument("--chunk-size", type=int, default=64)
     parser.add_argument("--precision", type=int, default=6, help="Decimal places for cached vectors. Use -1 to keep raw floats.")
@@ -179,7 +206,10 @@ def main() -> None:
     settings = load_settings()
     product_csv = args.product_csv or settings.product_csv_path
     products = CsvProductSource(product_csv).fetch_all()
-    candidates = build_candidates(products)
+    candidates = [
+        *explicit_query_candidates(args.query, args.query_file),
+        *build_candidates(products),
+    ]
     max_queries = None if args.max_queries == 0 else args.max_queries
     precision = None if args.precision < 0 else args.precision
     queries = unique_runtime_queries(candidates, max_queries)

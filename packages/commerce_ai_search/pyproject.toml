@@ -12,9 +12,45 @@ dependencies = [
     "redis>=6.4",
     "psutil>=5.9",
     "google-auth>=2.38",
+    "httpx2>=2.3",
     "requests>=2.32",
+]
+
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["commerce_ai_search*"]
+
+[tool.setuptools.data-files]
+"share/commerce_ai_search/resources" = [
+    "resources/admin_dashboard.html",
+    "resources/sample_malls.json",
+    "resources/sample_products.csv",
+    "resources/sample_query_synonyms.json",
+]
+"share/commerce_ai_search/resources/contracts" = [
+    "resources/contracts/click_log_request.json",
+    "resources/contracts/image_request.json",
+    "resources/contracts/mixed_request.json",
+    "resources/contracts/openapi.json",
+    "resources/contracts/operational_evidence.config.example.json",
+    "resources/contracts/operational_evidence.env.example",
+    "resources/contracts/quality_cases.example.json",
+    "resources/contracts/representative_sites.example.json",
+    "resources/contracts/search_response.example.json",
+    "resources/contracts/site_id_request.json",
+    "resources/contracts/text_request.json",
+    "resources/contracts/widget_init.example.html",
+]
+"share/commerce_ai_search/resources/widget" = [
+    "resources/widget/ai-search.html",
+    "resources/widget/demo.html",
+    "resources/widget/haeorum-ai-hero-bg.jpg",
+    "resources/widget/haeorum-logo.jpg",
+    "resources/widget/widget.js",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-

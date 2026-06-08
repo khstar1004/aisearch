@@ -63,6 +63,8 @@ INACTIVE_STATUSES = {
 }
 MAX_PRODUCT_ID_LENGTH = 100
 MAX_QUERY_TEXT_LENGTH = 200
+MAX_PREWARM_QUERY_COUNT = 200
+MAX_PREWARM_BATCH_SIZE = 128
 MAX_CATEGORY_LENGTH = 100
 MAX_ATTRIBUTE_FILTER_LENGTH = 100
 MAX_PRODUCT_URL_LENGTH = 1000
@@ -265,6 +267,10 @@ class SearchRequest(BaseModel):
             raise ValueError("image_weight must be non-negative")
         if self.text_weight == 0 and self.image_weight == 0:
             raise ValueError("text_weight and image_weight cannot both be zero")
+        if self.text_weight is not None and self.image_weight is not None:
+            total_weight = float(self.text_weight) + float(self.image_weight)
+            if not math.isfinite(total_weight):
+                raise ValueError("text_weight and image_weight sum must be finite")
         if self.min_price is not None and self.max_price is not None and self.min_price > self.max_price:
             raise ValueError("min_price cannot be greater than max_price")
         return self
@@ -507,6 +513,35 @@ class AdminProductRequest(BaseModel):
         if not stripped:
             raise ValueError("product_id is required")
         return stripped
+
+
+class AdminQueryPrewarmRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    queries: list[str] = Field(min_length=1, max_length=MAX_PREWARM_QUERY_COUNT)
+    batch_size: int = Field(default=64, ge=1, le=MAX_PREWARM_BATCH_SIZE)
+
+    @field_validator("queries")
+    @classmethod
+    def normalize_queries(cls, value: list[str]) -> list[str]:
+        queries: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            text = " ".join(str(item or "").split()).strip()
+            if not text:
+                continue
+            if len(text) > MAX_QUERY_TEXT_LENGTH:
+                raise ValueError(f"queries must be at most {MAX_QUERY_TEXT_LENGTH} characters each")
+            if looks_like_malformed_query_text(text):
+                raise ValueError(MALFORMED_QUERY_MESSAGE)
+            key = text.casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            queries.append(text)
+        if not queries:
+            raise ValueError("queries must contain at least one non-empty query")
+        return queries
 
 
 class SyncStatus(BaseModel):

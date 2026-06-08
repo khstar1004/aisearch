@@ -40,9 +40,11 @@ CATEGORY_INTENT_RULES: dict[str, tuple[str, ...]] = {
     "타올": ("타올", "타월", "수건", "호텔수건", "핸드타월", "비치타월", "towel"),
     "클리어화일": ("클리어화일", "클리어파일", "화일", "파일", "바인더", "파일철", "clear file"),
     "생활용품": ("생활용품", "주방용품", "욕실용품", "위생용품", "칫솔", "치약", "비누", "핸드워시", "담요", "무릎담요"),
+    "오프너": ("오프너", "병따개", "와인오프너", "보틀오프너", "캔오프너"),
 }
 
 MOUSEPAD_INTENT_TERMS = ("마우스패드", "마우스 패드", "장패드", "데스크매트", "mousepad")
+OPENER_INTENT_TERMS = ("오프너", "병따개", "와인오프너", "보틀오프너", "캔오프너")
 
 
 @lru_cache(maxsize=4096)
@@ -58,6 +60,8 @@ def infer_category_intents(query: str | None, limit: int = 3) -> tuple[str, ...]
 
     for category, terms in CATEGORY_INTENT_RULES.items():
         if category == "마우스/키보드" and is_mousepad_intent(text, compact_text):
+            continue
+        if category == "텀블러" and is_opener_intent(text, compact_text):
             continue
         score = 0
         matched = 0
@@ -102,6 +106,16 @@ def append_inferred_categories(query: str | None, inferred_categories: Iterable[
 
 def is_mousepad_intent(text: str, compact_text: str) -> bool:
     for term in MOUSEPAD_INTENT_TERMS:
+        term_text = normalize_query_spacing(term)
+        if not term_text:
+            continue
+        if term_text in text or term_text.replace(" ", "") in compact_text:
+            return True
+    return False
+
+
+def is_opener_intent(text: str, compact_text: str) -> bool:
+    for term in OPENER_INTENT_TERMS:
         term_text = normalize_query_spacing(term)
         if not term_text:
             continue

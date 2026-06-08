@@ -190,6 +190,28 @@
       line-height: 1.55;
       overflow-wrap: anywhere;
     }
+    body.results-mode .hero {
+      min-height: auto;
+    }
+    body.results-mode .hero-inner {
+      padding: 18px 0;
+      gap: 12px;
+    }
+    body.results-mode .hero-copy,
+    body.results-mode .quick-row {
+      display: none;
+    }
+    body.results-mode .upload-zone {
+      min-height: 96px;
+    }
+    body.results-mode .upload-content {
+      padding: 14px 12px;
+      gap: 7px;
+    }
+    body.results-mode .upload-icon {
+      width: 44px;
+      height: 44px;
+    }
     .search-card {
       width: min(760px, 100%);
       display: grid;
@@ -743,6 +765,11 @@
         padding-bottom: 30px;
         gap: 18px;
       }
+      body.results-mode .hero-inner {
+        padding-top: 14px;
+        padding-bottom: 14px;
+        gap: 10px;
+      }
       .hero-copy {
         justify-self: start;
         width: var(--mobile-card-width);
@@ -765,36 +792,18 @@
       .search-line input { min-height: 48px; padding: 0 14px; font-size: 15px; }
       .search-line button { min-height: 48px; font-size: 15px; }
       .upload-zone { min-height: 128px; }
+      body.results-mode .upload-zone { min-height: 88px; }
       .upload-content { padding: 18px 12px; gap: 7px; }
+      body.results-mode .upload-content { padding: 12px 10px; }
       .upload-icon { width: 48px; height: 48px; }
+      body.results-mode .upload-icon { width: 40px; height: 40px; }
       .upload-zone strong { font-size: 15px; overflow-wrap: anywhere; }
       .upload-zone span:last-child { font-size: 13px; }
-      .quick-row {
-        display: flex;
-        flex-wrap: nowrap;
-        justify-content: flex-start;
-        gap: 6px;
-        width: 100%;
-        max-width: 100%;
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding-bottom: 2px;
-        scrollbar-width: none;
-        -webkit-overflow-scrolling: touch;
-      }
-      .quick-row::-webkit-scrollbar,
-      .category-list::-webkit-scrollbar {
-        display: none;
-      }
+      .quick-row { display: grid; grid-template-columns: 1fr; gap: 8px; width: 100%; max-width: 100%; overflow: hidden; }
       .quick-row button {
-        flex: 0 0 auto;
-        width: auto;
-        max-width: 150px;
-        min-height: 32px;
+        width: 100%;
         min-width: 0;
-        padding: 0 12px;
-        border-radius: 999px;
-        font-size: 13px;
+        padding: 0 8px;
         overflow: hidden;
         text-overflow: ellipsis;
       }
@@ -804,44 +813,7 @@
         margin-right: auto;
         padding-top: 20px;
       }
-      .summary {
-        min-height: 0;
-        align-items: center;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 12px;
-      }
-      .section {
-        margin-top: 12px;
-        padding: 14px 12px;
-      }
-      .section-head {
-        margin-bottom: 10px;
-      }
-      .section h2 {
-        font-size: 17px;
-      }
-      .category-list {
-        flex-wrap: nowrap;
-        gap: 6px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding: 0 12px 2px 0;
-        margin-right: -12px;
-        scrollbar-width: none;
-        -webkit-overflow-scrolling: touch;
-      }
-      .category-list button {
-        flex: 0 0 auto;
-        max-width: 220px;
-        min-height: 32px;
-        padding: 0 10px;
-        border-radius: 999px;
-        font-size: 13px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
+      .summary { align-items: flex-start; flex-direction: column; }
       .loading-head { align-items: flex-start; }
       .top-grid, .product-grid, .skeleton-grid { grid-template-columns: 1fr; }
       .product-card { grid-template-columns: 124px minmax(0, 1fr); grid-template-rows: 1fr; }
@@ -876,15 +848,15 @@
       <div class="hero-copy">
         <span class="eyebrow">해오름기프트 AI 검색</span>
         <h1>찾고 싶은 상품,<br>AI로 검색하세요</h1>
-        <p>색상, 모양, 재질을 말로 설명하면 비슷한 상품 이미지를 찾습니다</p>
+        <p>사진이나 설명으로 비슷한 상품 이미지를 찾습니다</p>
       </div>
       <form class="search-card" id="searchForm">
         <div class="search-line">
-          <input id="queryInput" type="text" autocomplete="off" placeholder="예: 파란색 앞치마, 투명 크리스탈 상패">
+          <input id="queryInput" type="text" autocomplete="off" placeholder="상품 이미지를 말로 설명">
           <button type="submit" id="searchButton">이미지 찾기</button>
         </div>
-        <label class="upload-zone" id="dropZone">
-          <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp">
+        <label class="upload-zone" id="dropZone" role="button" aria-label="상품 이미지 업로드">
+          <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp" aria-label="상품 이미지 파일 선택">
           <span class="upload-content">
             <span class="upload-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -902,11 +874,11 @@
           <button class="clear-image" id="clearImage" type="button" aria-label="이미지 삭제">X</button>
         </div>
         <div class="quick-row" aria-label="빠른 검색어">
-          <button type="button" data-query="파란색 앞치마">파란색 앞치마</button>
-          <button type="button" data-query="화이트 손잡이 머그컵">화이트 손잡이 머그컵</button>
-          <button type="button" data-query="검정색 물티슈">검정색 물티슈</button>
-          <button type="button" data-query="투명 크리스탈 상패">투명 크리스탈 상패</button>
-          <button type="button" data-query="원목 감사패">원목 감사패</button>
+          <button type="button" data-query="노란 부채">노란 부채</button>
+          <button type="button" data-query="접이식 우산">접이식 우산</button>
+          <button type="button" data-query="송월타올">송월타올</button>
+          <button type="button" data-query="무선 마우스">무선 마우스</button>
+          <button type="button" data-query="텀블러">텀블러</button>
         </div>
       </form>
     </div>
@@ -970,13 +942,12 @@
     (function () {
       const SESSION_PREFIX = "haeorumAiSearch:";
       let config = Object.assign({
-        apiBaseUrl: "/ai-api",
-        mallId: "haeorumgift",
-        apiKey: "",
+        apiBaseUrl: "http://127.0.0.1:8120",
+        mallId: "shop001",
+        apiKey: "public-shop001-dev-key",
         limit: 24,
         maxImageMb: 5
       }, window.HAEORUM_AI_SEARCH_CONFIG || {});
-      config.apiBaseUrl = publicSafeApiBaseUrl(config.apiBaseUrl);
 
       const state = {
         imageFile: null,
@@ -987,7 +958,6 @@
         queryType: "",
         inFlight: false,
         lastQuery: "",
-        renderedProductIds: Object.create(null),
         loadingTimer: null,
         loadingStartedAt: 0
       };
@@ -1024,7 +994,6 @@
         quickButtons: Array.prototype.slice.call(document.querySelectorAll("[data-query]"))
       };
 
-      installPreviewApiMock();
       init();
 
       function init() {
@@ -1117,106 +1086,6 @@
         });
       }
 
-      function installPreviewApiMock() {
-        const previewApiBaseUrl = "https://preview-ai-search.local";
-        const originalFetch = window.fetch ? window.fetch.bind(window) : null;
-        const sampleProducts = [
-          {
-            product_id: "H-10021",
-            name: "심플 스텐 텀블러 500ml",
-            category: "생활용품 > 텀블러",
-            price: 4200,
-            image_url: "https://placehold.co/480x480/e8f6ff/1554a3.png?text=Tumbler",
-            product_url: "https://www.jclgift.com/product_w/product_view.asp?p_idx=H-10021",
-            score_percent: 94
-          },
-          {
-            product_id: "H-20318",
-            name: "컬러 자동 장우산",
-            category: "우산 > 장우산",
-            price: 6900,
-            image_url: "https://placehold.co/480x480/fff1c2/ed1c24.png?text=Umbrella",
-            product_url: "https://www.jclgift.com/product_w/product_view.asp?p_idx=H-20318",
-            score_percent: 91
-          },
-          {
-            product_id: "H-33007",
-            name: "코튼 에코백 기본형",
-            category: "가방/지갑 > 에코백",
-            price: 2800,
-            image_url: "https://placehold.co/480x480/f2f2f2/333333.png?text=Eco+Bag",
-            product_url: "https://www.jclgift.com/product_w/product_view.asp?p_idx=H-33007",
-            score_percent: 88
-          },
-          {
-            product_id: "H-44012",
-            name: "점착 메모지 홍보형",
-            category: "사무문구 > 메모지",
-            price: 650,
-            image_url: "https://placehold.co/480x480/fff4d6/a05a00.png?text=Memo",
-            product_url: "https://www.jclgift.com/product_w/product_view.asp?p_idx=H-44012",
-            score_percent: 84
-          },
-          {
-            product_id: "H-51004",
-            name: "송월 호텔 타올 170g",
-            category: "타올 > 호텔수건",
-            price: 3900,
-            image_url: "https://placehold.co/480x480/eaf4ff/0f63e5.png?text=Towel",
-            product_url: "https://www.jclgift.com/product_w/product_view.asp?p_idx=H-51004",
-            score_percent: 81
-          },
-          {
-            product_id: "H-61009",
-            name: "휴대용 미니 선풍기",
-            category: "계절용품 > 선풍기",
-            price: 7600,
-            image_url: "https://placehold.co/480x480/e8fff3/00865a.png?text=Fan",
-            product_url: "https://www.jclgift.com/product_w/product_view.asp?p_idx=H-61009",
-            score_percent: 78
-          }
-        ];
-
-        window.fetch = function previewFetch(input, init) {
-          const url = typeof input === "string" ? input : (input && input.url) || "";
-          if (url.indexOf(previewApiBaseUrl + "/api/ai-search") === 0) {
-            const form = init && init.body instanceof FormData ? init.body : null;
-            const q = form ? String(form.get("q") || "") : "";
-            const image = form && form.get("image");
-            return previewJsonResponse({
-              top: sampleProducts.slice(0, 3),
-              items: sampleProducts.slice(3),
-              suggested_categories: ["텀블러", "우산", "타올", "에코백", "선풍기"],
-              meta: {
-                query_type: image && q ? "text_image" : image ? "image" : "text",
-                engine: "preview-marqo",
-                limit: 24,
-                offset: 0,
-                mall_id: "haeorum",
-                has_more: false,
-                next_offset: null,
-                low_confidence: false,
-                notice: null
-              }
-            });
-          }
-          if (url.indexOf(previewApiBaseUrl + "/api/click-log") === 0) {
-            return previewJsonResponse({ ok: true });
-          }
-          if (originalFetch) {
-            return originalFetch(input, init);
-          }
-          return Promise.reject(new Error("fetch is not available"));
-        };
-      }
-
-      function previewJsonResponse(body, init) {
-        return Promise.resolve(new Response(JSON.stringify(body), Object.assign({
-          status: 200,
-          headers: { "Content-Type": "application/json" }
-        }, init || {})));
-      }
-
       function readSession(sessionId) {
         if (!sessionId) {
           return null;
@@ -1244,7 +1113,7 @@
           return;
         }
         config = Object.assign({}, config, {
-          apiBaseUrl: publicSafeApiBaseUrl(session.apiBaseUrl || config.apiBaseUrl),
+          apiBaseUrl: session.apiBaseUrl || config.apiBaseUrl,
           mallId: session.mallId || config.mallId,
           apiKey: session.apiKey || config.apiKey,
           limit: session.limit || config.limit
@@ -1321,6 +1190,9 @@
         }
         state.inFlight = true;
         state.lastQuery = query;
+        if (!append) {
+          document.body.classList.add("results-mode");
+        }
         showStatus(append ? "AI 검색 중" : "", false, append);
         setLoading(true, append);
         if (!append) {
@@ -1381,7 +1253,6 @@
         els.summary.hidden = true;
         els.moreWrap.hidden = true;
         els.empty.hidden = true;
-        state.renderedProductIds = Object.create(null);
       }
 
       function renderResults(data, append) {
@@ -1390,16 +1261,16 @@
         const meta = data.meta || {};
         state.queryType = meta.query_type || (state.imageFile ? "image" : "text");
         if (!append) {
+          renderSummary(top.length + items.length);
           renderCategories(data.suggested_categories || []);
-          const renderedTop = renderProducts(els.topGrid, top, false, 1);
-          const renderedItems = renderProducts(els.itemGrid, items, false, 4 + Number(meta.offset || 0));
-          renderSummary(renderedTop + renderedItems);
-          els.topSection.hidden = renderedTop === 0;
-          els.itemSection.hidden = renderedItems === 0;
-          els.empty.hidden = renderedTop + renderedItems > 0;
+          renderProducts(els.topGrid, top, false, 1);
+          renderProducts(els.itemGrid, items, false, 4 + Number(meta.offset || 0));
+          els.topSection.hidden = top.length === 0;
+          els.itemSection.hidden = items.length === 0;
+          els.empty.hidden = top.length + items.length > 0;
         } else {
-          const renderedItems = renderProducts(els.itemGrid, items, true, 4 + Number(meta.offset || 0));
-          if (renderedItems) {
+          renderProducts(els.itemGrid, items, true, 4 + Number(meta.offset || 0));
+          if (items.length) {
             els.itemSection.hidden = false;
           }
         }
@@ -1411,6 +1282,9 @@
         const label = state.lastQuery || (state.imageFile ? "이미지" : "검색");
         els.summaryText.innerHTML = "<strong>" + escapeHtml(label) + "</strong> 검색 결과";
         const details = [];
+        if (state.category) {
+          details.push("카테고리 " + state.category);
+        }
         if (count) {
           details.push(Number(count).toLocaleString("ko-KR") + "개 상품");
         }
@@ -1420,12 +1294,13 @@
 
       function renderCategories(categories) {
         els.categoryList.innerHTML = "";
-        const values = categories.filter(Boolean).slice(0, 10);
+        const values = (Array.isArray(categories) ? categories : []).filter(Boolean).slice(0, 10);
         els.categorySection.hidden = values.length === 0;
         values.forEach(function (category) {
           const button = document.createElement("button");
           button.type = "button";
           button.textContent = category;
+          button.setAttribute("aria-pressed", state.category === category ? "true" : "false");
           button.addEventListener("click", function () {
             state.category = category;
             search(false);
@@ -1438,19 +1313,12 @@
         if (!append) {
           container.innerHTML = "";
         }
-        let rendered = 0;
         products.forEach(function (product, index) {
-          const productId = String(product.product_id || "").trim();
-          if (productId && state.renderedProductIds[productId]) {
-            return;
-          }
-          if (productId) {
-            state.renderedProductIds[productId] = true;
-          }
           const card = document.createElement("a");
           const productUrl = safeUrl(product.product_url);
           const imageUrl = safeImageUrl(product.image_url);
           const productName = product.name || "";
+          const productId = product.product_id || "";
           card.className = "product-card";
           card.href = productUrl;
           card.target = "_blank";
@@ -1477,9 +1345,7 @@
             recordClick(Object.assign({}, product, { product_url: productUrl === "#" ? null : productUrl }), (basePosition || 1) + index);
           });
           container.appendChild(card);
-          rendered += 1;
         });
-        return rendered;
       }
 
       function recordClick(product, position) {
@@ -1531,9 +1397,6 @@
         }
         els.loadingPanel.hidden = false;
         updateLoadingUx();
-        window.requestAnimationFrame(function () {
-          els.page.scrollIntoView({ block: "start", behavior: "smooth" });
-        });
         state.loadingTimer = window.setInterval(updateLoadingUx, 400);
       }
 
@@ -1658,24 +1521,6 @@
         return String(value || "").trim();
       }
 
-      function publicSafeApiBaseUrl(value) {
-        const fallback = "/ai-api";
-        const text = trimText(value) || fallback;
-        const currentHost = window.location && window.location.hostname ? window.location.hostname : "";
-        const isCurrentLoopback = /^(localhost|127(?:\.\d{1,3}){3}|\[?::1\]?)$/i.test(currentHost);
-        try {
-          const parsed = new URL(text, window.location.href);
-          const apiHost = parsed.hostname || "";
-          const isApiLoopback = /^(localhost|127(?:\.\d{1,3}){3}|::1)$/i.test(apiHost);
-          if (isApiLoopback && !isCurrentLoopback) {
-            return fallback;
-          }
-        } catch (error) {
-          return fallback;
-        }
-        return text;
-      }
-
       function safeUrl(value) {
         return safeBrowserUrl(value, "#");
       }
@@ -1686,16 +1531,97 @@
 
       function safeBrowserUrl(value, fallback) {
         const text = trimText(value);
-        if (!text || /[\u0000-\u001f\u007f\s\\]/.test(text)) {
+        if (!text || /[\u0000-\u001f\u007f\s\\]/.test(text) || !/^https?:\/\//i.test(text)) {
           return fallback;
         }
         try {
-          const url = new URL(text, window.location.href);
-          if (url.protocol === "http:" || url.protocol === "https:") {
+          const url = new URL(text);
+          if ((url.protocol === "http:" || url.protocol === "https:") && !hasUnsafeUrlAuthority(text)) {
             return url.href;
           }
         } catch (error) {}
         return fallback;
+      }
+
+      function hasUnsafeUrlAuthority(value) {
+        const authority = String(value || "").replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").split(/[/?#]/)[0];
+        if (!authority || authority.indexOf("@") !== -1) {
+          return true;
+        }
+        const host = extractAuthorityHost(authority);
+        return !host || isUnsafeLocalBrowserHost(host);
+      }
+
+      function extractAuthorityHost(authority) {
+        if (authority.charAt(0) === "[") {
+          const closeIndex = authority.indexOf("]");
+          if (closeIndex < 0) {
+            return "";
+          }
+          const host = authority.slice(1, closeIndex);
+          const portPart = authority.slice(closeIndex + 1);
+          if (portPart && !isValidPortPart(portPart)) {
+            return "";
+          }
+          return normalizeBrowserHost(host);
+        }
+        const colonIndex = authority.lastIndexOf(":");
+        if (colonIndex >= 0) {
+          const host = authority.slice(0, colonIndex);
+          const portPart = authority.slice(colonIndex);
+          if (!host || !isValidPortPart(portPart)) {
+            return "";
+          }
+          return normalizeBrowserHost(host);
+        }
+        return normalizeBrowserHost(authority);
+      }
+
+      function isValidPortPart(value) {
+        if (!/^:\d{1,5}$/.test(value)) {
+          return false;
+        }
+        const port = Number(value.slice(1));
+        return Number.isInteger(port) && port >= 1 && port <= 65535;
+      }
+
+      function normalizeBrowserHost(value) {
+        return String(value || "").trim().toLowerCase().replace(/\.$/, "");
+      }
+
+      function isUnsafeLocalBrowserHost(value) {
+        const host = normalizeBrowserHost(value);
+        if (!host) {
+          return true;
+        }
+        if (host === "localhost" || host === "0.0.0.0" || host === "::" || host === "::1" || host.endsWith(".localhost")) {
+          return true;
+        }
+        const ipv4 = parseIpv4Host(host);
+        if (ipv4) {
+          return ipv4[0] === 127 || (ipv4[0] === 169 && ipv4[1] === 254) || ipv4.every(function (part) { return part === 0; });
+        }
+        const firstIpv6Part = host.indexOf(":") >= 0 ? host.split(":")[0] : "";
+        return /^fe[89ab][0-9a-f]$/i.test(firstIpv6Part);
+      }
+
+      function parseIpv4Host(host) {
+        const parts = String(host || "").split(".");
+        if (parts.length !== 4) {
+          return null;
+        }
+        const numbers = [];
+        for (let index = 0; index < parts.length; index += 1) {
+          if (!/^\d{1,3}$/.test(parts[index])) {
+            return null;
+          }
+          const number = Number(parts[index]);
+          if (!Number.isInteger(number) || number < 0 || number > 255) {
+            return null;
+          }
+          numbers.push(number);
+        }
+        return numbers;
       }
 
       function formatScore(product) {

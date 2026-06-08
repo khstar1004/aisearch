@@ -85,14 +85,14 @@ HAEORUM_IMAGE_RATE_LIMIT_PER_MINUTE=300
 HAEORUM_MALL_SEARCH_RATE_LIMIT_PER_MINUTE=2000
 HAEORUM_MALL_IMAGE_RATE_LIMIT_PER_MINUTE=600
 HAEORUM_SEARCH_MAX_CONCURRENCY=16
-HAEORUM_IMAGE_SEARCH_MAX_CONCURRENCY=3
+HAEORUM_IMAGE_SEARCH_MAX_CONCURRENCY=8
 HAEORUM_SEARCH_QUEUE_TIMEOUT_SECONDS=6
-HAEORUM_IMAGE_SEARCH_QUEUE_TIMEOUT_SECONDS=30
+HAEORUM_IMAGE_SEARCH_QUEUE_TIMEOUT_SECONDS=5
 HAEORUM_DOCKER_LOG_MAX_SIZE=20m
 HAEORUM_DOCKER_LOG_MAX_FILE=5
 ```
 
-The longer queue timeouts are intentional on the 8GB profile. They let short bursts around 100 simultaneous text searches queue instead of failing immediately while still keeping image searches bounded. The per-IP search/image rate limits are intentionally high enough for the required 850-user mixed-traffic evidence; use Apache/Nginx/WAF abuse controls and mall-level limits for public protection during rollout.
+The image guardrails use the faster profile validated by the 10-concurrent real-image load check. They let a normal burst of simultaneous image searches finish instead of failing, while still returning 429 quickly when the image lane is actually saturated. The per-IP search/image rate limits are intentionally high enough for the required 850-user mixed-traffic evidence; use Apache/Nginx/WAF abuse controls and mall-level limits for public protection during rollout.
 
 ## 3. Start
 

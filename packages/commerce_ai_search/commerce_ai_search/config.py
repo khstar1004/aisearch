@@ -5,6 +5,7 @@ import ipaddress
 import math
 import os
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlparse
@@ -15,7 +16,16 @@ from .url_safety import is_link_or_unspecified_host, is_local_or_link_host, safe
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
-ROOT = Path(os.environ.get("AISEARCH_RESOURCE_ROOT", str(PACKAGE_ROOT / "resources")))
+
+
+def default_resource_root() -> Path:
+    source_root = PACKAGE_ROOT / "resources"
+    if source_root.exists():
+        return source_root
+    return Path(sys.prefix) / "share" / "commerce_ai_search" / "resources"
+
+
+ROOT = Path(os.environ.get("AISEARCH_RESOURCE_ROOT", str(default_resource_root())))
 REQUIRED_PRODUCT_URL_TEMPLATE_FIELD = "{product_id}"
 ORIGIN_EXAMPLE = "https://shop.example.com"
 DEFAULT_ADMIN_API_KEY = "dev-admin-key"
@@ -244,7 +254,8 @@ class Settings:
     max_offset: int = 200
     max_image_mb: int = 5
     max_image_dimension: int = 1600
-    query_image_max_dimension: int = 768
+    query_image_max_dimension: int = 640
+    query_image_analysis: bool = False
     min_image_dimension: int = 16
     image_validation_cache_ttl_seconds: float = 30.0
     image_validation_cache_max_entries: int = 32
@@ -274,7 +285,7 @@ class Settings:
     search_max_concurrency: int = 64
     search_queue_timeout_seconds: float = 2.0
     image_search_max_concurrency: int = 8
-    image_search_queue_timeout_seconds: float = 2.0
+    image_search_queue_timeout_seconds: float = 5.0
     api_threadpool_tokens: int = DEFAULT_API_THREADPOOL_TOKENS
     api_gzip_minimum_size: int = 1024
     redis_url: str | None = None
@@ -452,6 +463,7 @@ def load_settings() -> Settings:
         max_image_mb=_int_env("HAEORUM_MAX_IMAGE_MB", 5),
         max_image_dimension=_int_env("HAEORUM_MAX_IMAGE_DIMENSION", 1600),
         query_image_max_dimension=_int_env("HAEORUM_QUERY_IMAGE_MAX_DIMENSION", Settings.query_image_max_dimension),
+        query_image_analysis=_bool_env("HAEORUM_QUERY_IMAGE_ANALYSIS", Settings.query_image_analysis),
         min_image_dimension=_int_env("HAEORUM_MIN_IMAGE_DIMENSION", 16),
         image_validation_cache_ttl_seconds=_float_env(
             "HAEORUM_IMAGE_VALIDATION_CACHE_TTL_SECONDS",
@@ -508,7 +520,7 @@ def load_settings() -> Settings:
             Settings.search_queue_timeout_seconds,
         ),
         image_search_max_concurrency=_int_env("HAEORUM_IMAGE_SEARCH_MAX_CONCURRENCY", 8),
-        image_search_queue_timeout_seconds=_float_env("HAEORUM_IMAGE_SEARCH_QUEUE_TIMEOUT_SECONDS", 2.0),
+        image_search_queue_timeout_seconds=_float_env("HAEORUM_IMAGE_SEARCH_QUEUE_TIMEOUT_SECONDS", 5.0),
         api_threadpool_tokens=_int_env("HAEORUM_API_THREADPOOL_TOKENS", Settings.api_threadpool_tokens),
         api_gzip_minimum_size=_int_env("HAEORUM_API_GZIP_MINIMUM_SIZE", Settings.api_gzip_minimum_size),
         redis_url=optional_redis_url_env("HAEORUM_REDIS_URL"),
@@ -719,7 +731,10 @@ def validate_numeric_settings(settings: Settings) -> None:
     require_at_least("HAEORUM_IMAGE_VALIDATION_WAIT_SECONDS", settings.image_validation_wait_seconds, 0.0)
     require_at_least("HAEORUM_MIXED_TEXT_WEIGHT", settings.mixed_text_weight, 0.0)
     require_at_least("HAEORUM_MIXED_IMAGE_WEIGHT", settings.mixed_image_weight, 0.0)
-    if settings.mixed_text_weight + settings.mixed_image_weight <= 0:
+    mixed_weight_total = settings.mixed_text_weight + settings.mixed_image_weight
+    if not math.isfinite(float(mixed_weight_total)):
+        raise ValueError("HAEORUM_MIXED_TEXT_WEIGHT and HAEORUM_MIXED_IMAGE_WEIGHT sum must be finite")
+    if mixed_weight_total <= 0:
         raise ValueError("HAEORUM_MIXED_TEXT_WEIGHT and HAEORUM_MIXED_IMAGE_WEIGHT must not both be zero")
     require_at_least("HAEORUM_TEXT_AUXILIARY_WEIGHT", settings.text_auxiliary_weight, 0.0)
     require_at_least(

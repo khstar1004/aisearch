@@ -1,6 +1,21 @@
-const fs = require("fs");
+﻿const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+
+function resolveWidgetPath() {
+  const candidates = [
+    process.env.HAEORUM_WIDGET_JS,
+    path.join(__dirname, "..", "..", "resources", "widget", "widget.js"),
+    path.join(__dirname, "..", "widget", "widget.js"),
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    const resolved = path.resolve(candidate);
+    if (fs.existsSync(resolved)) {
+      return resolved;
+    }
+  }
+  throw new Error(`widget.js not found in candidates: ${candidates.join(", ")}`);
+}
 
 class FakeClassList {
   constructor() {
@@ -590,7 +605,7 @@ async function runScenario(scenario) {
   };
   context.window.window = context.window;
 
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   context.window.HaeorumAISearch.init(scenario.options);
 
@@ -935,7 +950,7 @@ function assertConflictingAliasRejected() {
     console,
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   let message = "";
   try {
@@ -976,7 +991,7 @@ function assertMallIdValidation() {
       console,
     };
     context.window.window = context.window;
-    const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+    const widgetPath = resolveWidgetPath();
     vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
     let message = "";
     try {
@@ -1003,7 +1018,7 @@ function assertMallIdValidation() {
     console,
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   let message = "";
   try {
@@ -1045,7 +1060,7 @@ function assertApiBaseUrlValidation() {
       console,
     };
     context.window.window = context.window;
-    const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+    const widgetPath = resolveWidgetPath();
     vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
     let message = "";
     try {
@@ -1094,7 +1109,7 @@ async function assertScriptSrcApiBaseUrlFallback() {
     },
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   context.window.HaeorumAISearch.init({
     target: "#script-src-ai-search",
@@ -1150,7 +1165,7 @@ async function assertScriptDataAttributeAutoInit() {
     },
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   const root = document.body.querySelector(".hai-root");
   const trigger = document.body.querySelector(".hai-trigger");
@@ -1268,7 +1283,7 @@ async function assertUnsafeProductUrlsNeutralized() {
   };
   context.window.window = context.window;
 
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   context.window.HaeorumAISearch.init({
     target: "#unsafe-ai-search",
@@ -1324,7 +1339,7 @@ function assertDeferredInitUntilDomReady() {
     fetch: async () => ({ ok: true, json: async () => ({ top: [], items: [], suggested_categories: [], meta: { query_type: "text", offset: 0, has_more: false, next_offset: null } }) }),
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   context.window.HaeorumAISearch.init({
     target: "#late-ai-search",
@@ -1370,7 +1385,7 @@ function assertRepeatedInitReplacesWidget() {
     fetch: async () => ({ ok: true, json: async () => ({ top: [], items: [], suggested_categories: [], meta: { query_type: "text", offset: 0, has_more: false, next_offset: null } }) }),
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   const options = {
     target: "",
@@ -1415,7 +1430,7 @@ function assertCssSpecialIdSelectorFallback() {
     fetch: async () => ({ ok: true, json: async () => ({ top: [], items: [], suggested_categories: [], meta: { query_type: "text", offset: 0, has_more: false, next_offset: null } }) }),
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   context.window.HaeorumAISearch.init({
     target: "#ctl00:ai-search",
@@ -1454,7 +1469,7 @@ function assertComplexCssSpecialIdSelectorFallback() {
     fetch: async () => ({ ok: true, json: async () => ({ top: [], items: [], suggested_categories: [], meta: { query_type: "text", offset: 0, has_more: false, next_offset: null } }) }),
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   context.window.HaeorumAISearch.init({
     target: "#legacyForm #ctl00:complex-ai-search",
@@ -1498,7 +1513,7 @@ function assertAmbiguousExplicitSelectorRejected() {
     fetch: async () => ({ ok: true, json: async () => ({ top: [], items: [], suggested_categories: [], meta: { query_type: "text", offset: 0, has_more: false, next_offset: null } }) }),
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   let message = "";
   try {
@@ -1543,7 +1558,7 @@ function assertDynamicAutoAttachAfterDomMutation() {
     fetch: async () => ({ ok: true, json: async () => ({ top: [], items: [], suggested_categories: [], meta: { query_type: "text", offset: 0, has_more: false, next_offset: null } }) }),
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   context.window.HaeorumAISearch.init({
     mallId: "shop-dynamic",
@@ -1628,7 +1643,7 @@ function assertAutoAttachSkipsHiddenAndDisabledSearchInputs() {
     FormData: FakeFormData,
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   context.window.HaeorumAISearch.init({
     mallId: "shop001",
@@ -1659,7 +1674,7 @@ function assertFallbackFloatingMountsWithoutSearchForm() {
     fetch: async () => ({ ok: true, json: async () => ({ top: [], items: [], suggested_categories: [], meta: { query_type: "text", offset: 0, has_more: false, next_offset: null } }) }),
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   context.window.HaeorumAISearch.init({
     target: "",
@@ -1695,7 +1710,7 @@ function assertFallbackFloatingCoversMissingExplicitTargetWithoutWait() {
     fetch: async () => ({ ok: true, json: async () => ({ top: [], items: [], suggested_categories: [], meta: { query_type: "text", offset: 0, has_more: false, next_offset: null } }) }),
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   context.window.HaeorumAISearch.init({
     target: "#missing-ai-search",
@@ -1741,7 +1756,7 @@ function assertFallbackFloatingCoversMissingExplicitTargetAfterWait() {
     fetch: async () => ({ ok: true, json: async () => ({ top: [], items: [], suggested_categories: [], meta: { query_type: "text", offset: 0, has_more: false, next_offset: null } }) }),
   };
   context.window.window = context.window;
-  const widgetPath = path.join(__dirname, "..", "widget", "widget.js");
+  const widgetPath = resolveWidgetPath();
   vm.runInNewContext(fs.readFileSync(widgetPath, "utf-8"), context, { filename: widgetPath });
   context.window.HaeorumAISearch.init({
     target: "#missing-ai-search",

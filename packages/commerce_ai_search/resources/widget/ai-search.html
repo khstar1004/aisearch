@@ -190,6 +190,28 @@
       line-height: 1.55;
       overflow-wrap: anywhere;
     }
+    body.results-mode .hero {
+      min-height: auto;
+    }
+    body.results-mode .hero-inner {
+      padding: 18px 0;
+      gap: 12px;
+    }
+    body.results-mode .hero-copy,
+    body.results-mode .quick-row {
+      display: none;
+    }
+    body.results-mode .upload-zone {
+      min-height: 96px;
+    }
+    body.results-mode .upload-content {
+      padding: 14px 12px;
+      gap: 7px;
+    }
+    body.results-mode .upload-icon {
+      width: 44px;
+      height: 44px;
+    }
     .search-card {
       width: min(760px, 100%);
       display: grid;
@@ -743,6 +765,11 @@
         padding-bottom: 30px;
         gap: 18px;
       }
+      body.results-mode .hero-inner {
+        padding-top: 14px;
+        padding-bottom: 14px;
+        gap: 10px;
+      }
       .hero-copy {
         justify-self: start;
         width: var(--mobile-card-width);
@@ -765,8 +792,11 @@
       .search-line input { min-height: 48px; padding: 0 14px; font-size: 15px; }
       .search-line button { min-height: 48px; font-size: 15px; }
       .upload-zone { min-height: 128px; }
+      body.results-mode .upload-zone { min-height: 88px; }
       .upload-content { padding: 18px 12px; gap: 7px; }
+      body.results-mode .upload-content { padding: 12px 10px; }
       .upload-icon { width: 48px; height: 48px; }
+      body.results-mode .upload-icon { width: 40px; height: 40px; }
       .upload-zone strong { font-size: 15px; overflow-wrap: anywhere; }
       .upload-zone span:last-child { font-size: 13px; }
       .quick-row { display: grid; grid-template-columns: 1fr; gap: 8px; width: 100%; max-width: 100%; overflow: hidden; }
@@ -825,8 +855,8 @@
           <input id="queryInput" type="text" autocomplete="off" placeholder="상품 이미지를 말로 설명">
           <button type="submit" id="searchButton">이미지 찾기</button>
         </div>
-        <label class="upload-zone" id="dropZone">
-          <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp">
+        <label class="upload-zone" id="dropZone" role="button" aria-label="상품 이미지 업로드">
+          <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp" aria-label="상품 이미지 파일 선택">
           <span class="upload-content">
             <span class="upload-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1160,6 +1190,9 @@
         }
         state.inFlight = true;
         state.lastQuery = query;
+        if (!append) {
+          document.body.classList.add("results-mode");
+        }
         showStatus(append ? "AI 검색 중" : "", false, append);
         setLoading(true, append);
         if (!append) {
@@ -1249,6 +1282,9 @@
         const label = state.lastQuery || (state.imageFile ? "이미지" : "검색");
         els.summaryText.innerHTML = "<strong>" + escapeHtml(label) + "</strong> 검색 결과";
         const details = [];
+        if (state.category) {
+          details.push("카테고리 " + state.category);
+        }
         if (count) {
           details.push(Number(count).toLocaleString("ko-KR") + "개 상품");
         }
@@ -1258,12 +1294,13 @@
 
       function renderCategories(categories) {
         els.categoryList.innerHTML = "";
-        const values = categories.filter(Boolean).slice(0, 10);
+        const values = (Array.isArray(categories) ? categories : []).filter(Boolean).slice(0, 10);
         els.categorySection.hidden = values.length === 0;
         values.forEach(function (category) {
           const button = document.createElement("button");
           button.type = "button";
           button.textContent = category;
+          button.setAttribute("aria-pressed", state.category === category ? "true" : "false");
           button.addEventListener("click", function () {
             state.category = category;
             search(false);
@@ -1360,9 +1397,6 @@
         }
         els.loadingPanel.hidden = false;
         updateLoadingUx();
-        window.requestAnimationFrame(function () {
-          els.page.scrollIntoView({ block: "start", behavior: "smooth" });
-        });
         state.loadingTimer = window.setInterval(updateLoadingUx, 400);
       }
 
@@ -1497,16 +1531,97 @@
 
       function safeBrowserUrl(value, fallback) {
         const text = trimText(value);
-        if (!text || /[\u0000-\u001f\u007f\s\\]/.test(text)) {
+        if (!text || /[\u0000-\u001f\u007f\s\\]/.test(text) || !/^https?:\/\//i.test(text)) {
           return fallback;
         }
         try {
-          const url = new URL(text, window.location.href);
-          if (url.protocol === "http:" || url.protocol === "https:") {
+          const url = new URL(text);
+          if ((url.protocol === "http:" || url.protocol === "https:") && !hasUnsafeUrlAuthority(text)) {
             return url.href;
           }
         } catch (error) {}
         return fallback;
+      }
+
+      function hasUnsafeUrlAuthority(value) {
+        const authority = String(value || "").replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").split(/[/?#]/)[0];
+        if (!authority || authority.indexOf("@") !== -1) {
+          return true;
+        }
+        const host = extractAuthorityHost(authority);
+        return !host || isUnsafeLocalBrowserHost(host);
+      }
+
+      function extractAuthorityHost(authority) {
+        if (authority.charAt(0) === "[") {
+          const closeIndex = authority.indexOf("]");
+          if (closeIndex < 0) {
+            return "";
+          }
+          const host = authority.slice(1, closeIndex);
+          const portPart = authority.slice(closeIndex + 1);
+          if (portPart && !isValidPortPart(portPart)) {
+            return "";
+          }
+          return normalizeBrowserHost(host);
+        }
+        const colonIndex = authority.lastIndexOf(":");
+        if (colonIndex >= 0) {
+          const host = authority.slice(0, colonIndex);
+          const portPart = authority.slice(colonIndex);
+          if (!host || !isValidPortPart(portPart)) {
+            return "";
+          }
+          return normalizeBrowserHost(host);
+        }
+        return normalizeBrowserHost(authority);
+      }
+
+      function isValidPortPart(value) {
+        if (!/^:\d{1,5}$/.test(value)) {
+          return false;
+        }
+        const port = Number(value.slice(1));
+        return Number.isInteger(port) && port >= 1 && port <= 65535;
+      }
+
+      function normalizeBrowserHost(value) {
+        return String(value || "").trim().toLowerCase().replace(/\.$/, "");
+      }
+
+      function isUnsafeLocalBrowserHost(value) {
+        const host = normalizeBrowserHost(value);
+        if (!host) {
+          return true;
+        }
+        if (host === "localhost" || host === "0.0.0.0" || host === "::" || host === "::1" || host.endsWith(".localhost")) {
+          return true;
+        }
+        const ipv4 = parseIpv4Host(host);
+        if (ipv4) {
+          return ipv4[0] === 127 || (ipv4[0] === 169 && ipv4[1] === 254) || ipv4.every(function (part) { return part === 0; });
+        }
+        const firstIpv6Part = host.indexOf(":") >= 0 ? host.split(":")[0] : "";
+        return /^fe[89ab][0-9a-f]$/i.test(firstIpv6Part);
+      }
+
+      function parseIpv4Host(host) {
+        const parts = String(host || "").split(".");
+        if (parts.length !== 4) {
+          return null;
+        }
+        const numbers = [];
+        for (let index = 0; index < parts.length; index += 1) {
+          if (!/^\d{1,3}$/.test(parts[index])) {
+            return null;
+          }
+          const number = Number(parts[index]);
+          if (!Number.isInteger(number) || number < 0 || number > 255) {
+            return null;
+          }
+          numbers.push(number);
+        }
+        return numbers;
       }
 
       function formatScore(product) {

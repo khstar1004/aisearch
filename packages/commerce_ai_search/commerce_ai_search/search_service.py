@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import math
 import os
 import re
 import threading
@@ -18,7 +19,7 @@ from .category_intent import infer_category_intents
 from .config import MAX_OPERATIONAL_SEARCH_OFFSET, Settings
 from .engine import EngineHit, EngineQuery, MARQO_MAX_SEARCH_CANDIDATES, SearchEngine
 from .identifiers import normalize_mall_id, product_identity_key
-from .image_validation import ValidatedImage, validate_image_base64
+from .image_validation import ValidatedImage, normalize_declared_mime_type, validate_image_base64
 from .models import ClickLogRequest, QueryType, SearchMeta, SearchRequest, SearchResponse, SearchResultItem
 from .query_normalizer import build_search_query, normalize_query_text
 from .url_safety import product_url_contains_product_id, safe_absolute_http_url
@@ -352,7 +353,7 @@ class SearchLogger:
             return
         if time.monotonic() - last_used_at < self.keep_open_seconds:
             return
-            self._idle_closes += 1
+        self._idle_closes += 1
         self._close_output_locked(record_errors=True)
 
     def _write_line_once_locked(self, line: bytes) -> None:
@@ -522,6 +523,30 @@ def is_sensitive_log_key(key: str) -> bool:
     )
 
 
+def canonical_image_payload_fingerprint(image_base64: str) -> dict[str, Any]:
+    payload = str(image_base64 or "").strip()
+    is_data_url = payload[:5].lower() == "data:"
+    declared_mime_type = "application/octet-stream"
+    has_base64_marker = False
+    encoded_payload = payload
+    if is_data_url:
+        header, separator, encoded = payload.partition(",")
+        has_base64_marker = ";base64" in header.lower()
+        declared_mime_type = (
+            normalize_declared_mime_type(header[5:].split(";", 1)[0])
+            or "application/octet-stream"
+        )
+        encoded_payload = encoded.strip() if separator else payload
+    else:
+        encoded_payload = payload.strip()
+    return {
+        "is_data_url": is_data_url,
+        "has_base64_marker": has_base64_marker,
+        "declared_mime_type": declared_mime_type,
+        "encoded_payload_sha256": hashlib.sha256(encoded_payload.encode("utf-8")).hexdigest(),
+    }
+
+
 class AISearchService:
     def __init__(
         self,
@@ -554,9 +579,12 @@ class AISearchService:
         self._image_validation_cache_ttl_seconds = max(0.0, float(settings.image_validation_cache_ttl_seconds))
         self._image_validation_cache_max_entries = max(1, int(settings.image_validation_cache_max_entries))
         self._image_validation_cache: OrderedDict[str, tuple[float, ValidatedImage]] = OrderedDict()
+        self._image_validation_error_cache: OrderedDict[str, tuple[float, str]] = OrderedDict()
         self._image_validation_cache_hits = 0
         self._image_validation_cache_misses = 0
         self._image_validation_cache_evictions = 0
+        self._image_validation_error_cache_hits = 0
+        self._image_validation_error_cache_evictions = 0
 
     def search(
         self,
@@ -900,6 +928,28 @@ class AISearchService:
         prepared = self._prepare_search(request)
         return self._cached_response(request, prepared, started)
 
+    def prewarm_query_cache(self, queries: list[str], *, batch_size: int = 64) -> dict[str, Any]:
+        engine_queries: list[EngineQuery] = []
+        for query in queries:
+            normalized_query = normalize_query_text(query)
+            search_query = build_search_query(query, normalized_query)
+            inferred_categories = infer_category_intents(normalized_query or query)
+            engine_queries.append(
+                EngineQuery(
+                    q=search_query,
+                    inferred_categories=inferred_categories,
+                    limit=1,
+                    text_weight=1.0,
+                    image_weight=0.0,
+                    query_synonyms=self.settings.query_synonyms,
+                )
+            )
+        result = self.engine.prewarm_text_query_vectors(engine_queries, batch_size=batch_size)
+        return {
+            **result,
+            "query_count": len(queries),
+        }
+
     def _prepare_search(
         self,
         request: SearchRequest,
@@ -951,6 +1001,9 @@ class AISearchService:
         cached = self._get_cached_validated_image(validation_key)
         if cached is not None:
             return cached
+        cached_error = self._get_cached_image_validation_error(validation_key)
+        if cached_error is not None:
+            raise cached_error
         with self._image_validation_lock:
             inflight = self._image_validation_inflight.get(validation_key)
             if inflight is None:
@@ -987,6 +1040,7 @@ class AISearchService:
             return image
         except BaseException as exc:
             inflight.exception = exc
+            self._set_cached_image_validation_error(validation_key, exc)
             raise
         finally:
             with self._image_validation_lock:
@@ -1000,17 +1054,20 @@ class AISearchService:
             max_dimension=self.settings.max_image_dimension,
             min_dimension=self.settings.min_image_dimension,
             resize_dimension=self.settings.query_image_max_dimension,
+            analyze_features=self.settings.query_image_analysis,
         )
 
     def _image_validation_key(self, image_base64: str) -> str:
         payload = str(image_base64 or "").strip()
+        payload_fingerprint = canonical_image_payload_fingerprint(payload)
         return json.dumps(
             {
                 "version": 1,
-                "payload_sha256": hashlib.sha256(payload.encode("utf-8")).hexdigest(),
+                **payload_fingerprint,
                 "max_bytes": self.settings.max_image_mb * 1024 * 1024,
                 "max_dimension": self.settings.max_image_dimension,
                 "query_image_max_dimension": self.settings.query_image_max_dimension,
+                "query_image_analysis": self.settings.query_image_analysis,
                 "min_dimension": self.settings.min_image_dimension,
             },
             sort_keys=True,
@@ -1034,16 +1091,44 @@ class AISearchService:
             self._image_validation_cache_hits += 1
             return image
 
+    def _get_cached_image_validation_error(self, validation_key: str) -> ValueError | None:
+        if self._image_validation_cache_ttl_seconds <= 0:
+            return None
+        now = time.time()
+        with self._image_validation_lock:
+            cached = self._image_validation_error_cache.get(validation_key)
+            if cached is None:
+                return None
+            expires_at, message = cached
+            if expires_at < now:
+                self._image_validation_error_cache.pop(validation_key, None)
+                return None
+            self._image_validation_error_cache.move_to_end(validation_key)
+            self._image_validation_error_cache_hits += 1
+            return ValueError(message)
+
     def _set_cached_validated_image(self, validation_key: str, image: ValidatedImage) -> None:
         if self._image_validation_cache_ttl_seconds <= 0:
             return
         expires_at = time.time() + self._image_validation_cache_ttl_seconds
         with self._image_validation_lock:
+            self._image_validation_error_cache.pop(validation_key, None)
             self._image_validation_cache[validation_key] = (expires_at, image)
             self._image_validation_cache.move_to_end(validation_key)
             while len(self._image_validation_cache) > self._image_validation_cache_max_entries:
                 self._image_validation_cache.popitem(last=False)
                 self._image_validation_cache_evictions += 1
+
+    def _set_cached_image_validation_error(self, validation_key: str, exc: BaseException) -> None:
+        if self._image_validation_cache_ttl_seconds <= 0 or not isinstance(exc, ValueError):
+            return
+        expires_at = time.time() + self._image_validation_cache_ttl_seconds
+        with self._image_validation_lock:
+            self._image_validation_error_cache[validation_key] = (expires_at, str(exc))
+            self._image_validation_error_cache.move_to_end(validation_key)
+            while len(self._image_validation_error_cache) > self._image_validation_cache_max_entries:
+                self._image_validation_error_cache.popitem(last=False)
+                self._image_validation_error_cache_evictions += 1
 
     def _record_image_validation_wait(self, completed: bool, elapsed_seconds: float) -> None:
         elapsed_seconds = max(float(elapsed_seconds or 0.0), 0.0)
@@ -1067,10 +1152,18 @@ class AISearchService:
             expired = [key for key, (expires_at, _) in self._image_validation_cache.items() if expires_at < now]
             for key in expired:
                 self._image_validation_cache.pop(key, None)
+            expired_errors = [
+                key for key, (expires_at, _) in self._image_validation_error_cache.items() if expires_at < now
+            ]
+            for key in expired_errors:
+                self._image_validation_error_cache.pop(key, None)
             cache_entry_count = len(self._image_validation_cache)
+            error_cache_entry_count = len(self._image_validation_error_cache)
             cache_hits = self._image_validation_cache_hits
             cache_misses = self._image_validation_cache_misses
             cache_evictions = self._image_validation_cache_evictions
+            error_cache_hits = self._image_validation_error_cache_hits
+            error_cache_evictions = self._image_validation_error_cache_evictions
         with self._image_validation_stats_lock:
             wait_events = self._image_validation_wait_events
             wait_timeouts = self._image_validation_wait_timeouts
@@ -1091,6 +1184,9 @@ class AISearchService:
             "cache_hits": cache_hits,
             "cache_misses": cache_misses,
             "cache_evictions": cache_evictions,
+            "error_cache_entry_count": error_cache_entry_count,
+            "error_cache_hits": error_cache_hits,
+            "error_cache_evictions": error_cache_evictions,
         }
 
     def _cached_response(
@@ -1136,6 +1232,8 @@ class AISearchService:
         text = request.text_weight if request.text_weight is not None else self.settings.mixed_text_weight
         image = request.image_weight if request.image_weight is not None else self.settings.mixed_image_weight
         total = text + image
+        if not math.isfinite(float(total)):
+            raise ValueError("text_weight and image_weight sum must be finite")
         if total <= 0:
             raise ValueError("text_weight and image_weight must be positive")
         return text / total, image / total
@@ -1518,6 +1616,14 @@ def response_category(category: str | None) -> str:
 
 def resolve_product_url(product_url: str | None, product_id: str, mall_id: str | None, settings: Settings) -> str | None:
     values = product_url_format_values(product_id, mall_id)
+    mall = settings.malls.get(mall_id or "") if mall_id else None
+    if mall and mall.product_url_template:
+        try:
+            fallback = safe_absolute_http_url(mall.product_url_template.format(**values))
+        except (KeyError, ValueError):
+            fallback = None
+        if fallback and product_url_contains_product_id(fallback, product_id):
+            return fallback
     if product_url:
         try:
             formatted = product_url.format(**values)
@@ -1526,13 +1632,6 @@ def resolve_product_url(product_url: str | None, product_id: str, mall_id: str |
         absolute = absolute_product_url(formatted, mall_id, settings, values)
         if absolute and product_url_contains_product_id(absolute, product_id):
             return absolute
-    mall = settings.malls.get(mall_id or "") if mall_id else None
-    if mall and mall.product_url_template:
-        try:
-            fallback = safe_absolute_http_url(mall.product_url_template.format(**values))
-        except (KeyError, ValueError):
-            return None
-        return fallback if product_url_contains_product_id(fallback, product_id) else None
     try:
         fallback = safe_absolute_http_url(settings.product_url_template.format(**values))
     except (KeyError, ValueError):

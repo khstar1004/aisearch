@@ -262,7 +262,7 @@ class Settings:
     search_max_concurrency: int = 64
     search_queue_timeout_seconds: float = 2.0
     image_search_max_concurrency: int = 8
-    image_search_queue_timeout_seconds: float = 2.0
+    image_search_queue_timeout_seconds: float = 5.0
     api_threadpool_tokens: int = DEFAULT_API_THREADPOOL_TOKENS
     api_gzip_minimum_size: int = 1024
     redis_url: str | None = None
@@ -496,7 +496,7 @@ def load_settings() -> Settings:
             Settings.search_queue_timeout_seconds,
         ),
         image_search_max_concurrency=_int_env("HAEORUM_IMAGE_SEARCH_MAX_CONCURRENCY", 8),
-        image_search_queue_timeout_seconds=_float_env("HAEORUM_IMAGE_SEARCH_QUEUE_TIMEOUT_SECONDS", 2.0),
+        image_search_queue_timeout_seconds=_float_env("HAEORUM_IMAGE_SEARCH_QUEUE_TIMEOUT_SECONDS", 5.0),
         api_threadpool_tokens=_int_env("HAEORUM_API_THREADPOOL_TOKENS", Settings.api_threadpool_tokens),
         api_gzip_minimum_size=_int_env("HAEORUM_API_GZIP_MINIMUM_SIZE", Settings.api_gzip_minimum_size),
         redis_url=optional_redis_url_env("HAEORUM_REDIS_URL"),
@@ -707,7 +707,10 @@ def validate_numeric_settings(settings: Settings) -> None:
     require_at_least("HAEORUM_IMAGE_VALIDATION_WAIT_SECONDS", settings.image_validation_wait_seconds, 0.0)
     require_at_least("HAEORUM_MIXED_TEXT_WEIGHT", settings.mixed_text_weight, 0.0)
     require_at_least("HAEORUM_MIXED_IMAGE_WEIGHT", settings.mixed_image_weight, 0.0)
-    if settings.mixed_text_weight + settings.mixed_image_weight <= 0:
+    mixed_weight_total = settings.mixed_text_weight + settings.mixed_image_weight
+    if not math.isfinite(float(mixed_weight_total)):
+        raise ValueError("HAEORUM_MIXED_TEXT_WEIGHT and HAEORUM_MIXED_IMAGE_WEIGHT sum must be finite")
+    if mixed_weight_total <= 0:
         raise ValueError("HAEORUM_MIXED_TEXT_WEIGHT and HAEORUM_MIXED_IMAGE_WEIGHT must not both be zero")
     require_at_least("HAEORUM_TEXT_AUXILIARY_WEIGHT", settings.text_auxiliary_weight, 0.0)
     require_at_least(

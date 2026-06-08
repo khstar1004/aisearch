@@ -143,7 +143,9 @@ class RateLimitBucketStore:
     ) -> tuple[bool, int]:
         current = time.time() if now is None else now
         self._prune_if_due(current, window_seconds, protected_key=key)
-        return record_rate_limit_hit(
+        before_bucket_count = len(self.buckets)
+        had_key_before = key in self.buckets
+        result = record_rate_limit_hit(
             self.buckets,
             key,
             limit,
@@ -151,6 +153,12 @@ class RateLimitBucketStore:
             window_seconds=window_seconds,
             max_buckets=self.max_buckets,
         )
+        expected_bucket_count_without_hit_pruning = before_bucket_count
+        if limit > 0 and not had_key_before and key in self.buckets:
+            expected_bucket_count_without_hit_pruning += 1
+        removed = max(0, expected_bucket_count_without_hit_pruning - len(self.buckets))
+        self._pruned_buckets += removed
+        return result
 
     def prune(
         self,

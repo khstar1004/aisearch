@@ -564,8 +564,8 @@
               </label>
               <button type="submit" class="hai-primary">AI 검색</button>
             </div>
-            <div class="hai-dropzone" tabindex="0">
-              <input class="hai-file" type="file" accept="image/jpeg,image/png,image/webp">
+            <div class="hai-dropzone" tabindex="0" role="button" aria-label="상품 이미지 업로드">
+              <input class="hai-file" type="file" accept="image/jpeg,image/png,image/webp" aria-label="상품 이미지 파일 선택">
               <div class="hai-upload-icon" aria-hidden="true">${aiSearchIcon()}</div>
               <div class="hai-upload-copy">
                 <strong>사진으로 비슷한 상품 찾기</strong>
@@ -578,8 +578,8 @@
             </div>
           </form>
           <div class="hai-error" role="alert" hidden></div>
-          <div class="hai-loading" hidden>검색 중입니다.</div>
-          <div class="hai-notice" hidden></div>
+          <div class="hai-loading" role="status" aria-live="polite" hidden>검색 중입니다.</div>
+          <div class="hai-notice" role="status" hidden></div>
           <section class="hai-categories" hidden>
             <h3><span></span>비슷한 카테고리 추천</h3>
             <div class="hai-category-list"></div>
@@ -972,12 +972,12 @@
   }
 
   function renderResults(data, append) {
-    const top = data.top || [];
-    const items = data.items || [];
+    const top = Array.isArray(data.top) ? data.top : [];
+    const items = Array.isArray(data.items) ? data.items : [];
     const meta = data.meta || {};
     if (!append) {
       renderNotice(meta);
-      renderCategories(data.suggested_categories || []);
+      renderCategories(data.suggested_categories);
       renderProductList(".hai-top", ".hai-top-list", top, false, 1);
       renderProductList(".hai-items", ".hai-item-list", items, false, 4 + (meta.offset || 0));
       const hasApiNotice = Boolean(meta.low_confidence && meta.notice);
@@ -1004,9 +1004,10 @@
   function renderCategories(categories) {
     const section = state.modal.querySelector(".hai-categories");
     const list = section.querySelector(".hai-category-list");
+    const values = Array.isArray(categories) ? categories.filter(Boolean).slice(0, 15) : [];
     list.innerHTML = "";
-    section.hidden = categories.length === 0;
-    categories.forEach(function (category) {
+    section.hidden = values.length === 0;
+    values.forEach(function (category) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "hai-chip";
@@ -1039,7 +1040,7 @@
       card.innerHTML = `
         <a class="hai-image-link" href="${escapeAttr(productUrl)}" target="_blank" rel="noreferrer" aria-label="${escapeAttr(productName || productId || "상품 상세 보기")}">
           <span class="hai-score">${escapeHtml(scoreText)}</span>
-          <img src="${escapeAttr(imageUrl)}" alt="${escapeAttr(productName)}">
+          ${imageUrl ? `<img src="${escapeAttr(imageUrl)}" alt="${escapeAttr(productName)}">` : '<span class="hai-image-empty">이미지 없음</span>'}
         </a>
         <div class="hai-card-body">
           <div class="hai-product-id">상품번호 ${escapeHtml(productId)}</div>
@@ -1054,8 +1055,27 @@
           recordClick(clickProduct, (basePosition || 1) + index);
         });
       });
+      const image = card.querySelector("img");
+      if (image) {
+        image.addEventListener("error", function () {
+          replaceImageWithEmptyState(image);
+        });
+      }
       list.appendChild(card);
     });
+  }
+
+  function replaceImageWithEmptyState(image) {
+    const empty = document.createElement("span");
+    empty.className = "hai-image-empty";
+    empty.textContent = "이미지 없음";
+    if (typeof image.replaceWith === "function") {
+      image.replaceWith(empty);
+      return;
+    }
+    if (image.parentNode) {
+      image.parentNode.replaceChild(empty, image);
+    }
   }
 
   function renderMore(meta) {
@@ -1269,6 +1289,10 @@
       .hai-card { border: 1px solid #d9e0e8; border-radius: 8px; overflow: hidden; background: #fff; min-width: 0; display: grid; }
       .hai-image-link { display: block; background: #edf1f5; }
       .hai-card img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
+      .hai-image-empty {
+        width: 100%; aspect-ratio: 1 / 1; display: grid; place-items: center;
+        color: #8a94a6; font-size: 13px; font-weight: 800; background: #f3f6f9;
+      }
       .hai-card-body { padding: 11px; display: grid; gap: 7px; }
       .hai-score { color: var(--hai-accent, #0f766e); font-weight: 800; font-size: 12px; }
       .hai-product-id, .hai-card-meta { color: #667085; font-size: 12px; line-height: 1.35; }
@@ -1320,10 +1344,14 @@
         min-width: 0;
       }
       .hai-mode-strip {
-        display: flex; align-items: center; min-height: 38px; background: #ee1b24; color: #fff;
-        font-size: 13px; font-weight: 800; overflow: hidden; min-width: 0; max-width: 100%;
+        display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; min-height: 38px;
+        background: #ee1b24; color: #fff; font-size: 13px; font-weight: 800; min-width: 0; max-width: 100%;
       }
-      .hai-mode-strip span { padding: 0 16px; border-right: 1px solid rgba(255, 255, 255, .34); white-space: nowrap; }
+      .hai-mode-strip span {
+        display: flex; align-items: center; justify-content: center; min-width: 0; padding: 6px 10px;
+        border-right: 1px solid rgba(255, 255, 255, .34); text-align: center; line-height: 1.25;
+        white-space: normal; overflow-wrap: anywhere; word-break: keep-all;
+      }
       .hai-mode-strip .hai-mode-active { background: #d51018; color: #fff; }
       .hai-row {
         grid-template-columns: minmax(0, 1fr) 116px; gap: 8px; align-items: stretch;
@@ -1410,8 +1438,7 @@
         .hai-icon-button { position: fixed; top: 14px; right: 12px; z-index: 3; }
         .hai-header h2 { font-size: 19px; }
         .hai-badges { display: none; }
-        .hai-mode-strip { flex-wrap: wrap; overflow: hidden; }
-        .hai-mode-strip span { flex: 1 1 33%; min-width: 0; padding: 0 6px; text-align: center; white-space: normal; font-size: 12px; }
+        .hai-mode-strip span { padding: 6px 5px; font-size: 12px; }
         .hai-upload-copy span { display: block; max-width: 250px; margin: 0 auto; }
         .hai-row, .hai-top-list, .hai-item-list { grid-template-columns: 1fr; }
       }
@@ -1421,8 +1448,7 @@
         .hai-header { padding-left: 0; padding-right: 0; }
         .hai-brand-head { padding-left: 16px; padding-right: 52px; }
         .hai-icon-button { position: fixed; top: 14px; right: 12px; z-index: 3; }
-        .hai-mode-strip { flex-wrap: wrap; overflow: hidden; }
-        .hai-mode-strip span { flex: 1 1 33%; min-width: 0; padding: 0 6px; text-align: center; white-space: normal; font-size: 12px; }
+        .hai-mode-strip span { padding: 6px 5px; font-size: 12px; }
         .hai-row { grid-template-columns: 1fr; }
         .hai-top-list, .hai-item-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }

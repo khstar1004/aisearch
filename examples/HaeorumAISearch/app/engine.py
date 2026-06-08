@@ -12,10 +12,11 @@ import urllib.error
 import urllib.parse
 from email.utils import parsedate_to_datetime
 from abc import ABC, abstractmethod
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Mapping, NoReturn
 
@@ -33,10 +34,6 @@ QWEN_TEXT_VECTOR_FIELD = "qwen_text_vector"
 QWEN_IMAGE_VECTOR_FIELD = "qwen_image_vector"
 GEMINI_TEXT_VECTOR_FIELD = "gemini_text_vector"
 GEMINI_IMAGE_VECTOR_FIELD = "gemini_image_vector"
-TEXT_LEXICAL_AUXILIARY_SOURCE = "text_lexical"
-TEXT_LEXICAL_FAST_PATH_SOURCE = "text_lexical_fast_path"
-TEXT_LEXICAL_FAST_PATH_MIN_CATEGORY_EVIDENCE = 0.65
-TEXT_LEXICAL_FAST_PATH_MIN_TEXT_EVIDENCE = 0.85
 QWEN_QUERY_PROMPT = "Retrieve relevant ecommerce product images for the user query."
 GEMINI_QUERY_PROMPT = "Retrieve relevant ecommerce products for the user query."
 MARQO_ADD_DOCUMENTS_BATCH_SIZE = 128
@@ -46,6 +43,7 @@ MARQO_BATCH_RESPONSE_SAMPLE_LIMIT = 10
 MARQO_BATCH_FAILURE_SAMPLE_LIMIT = 100
 MARQO_TEXT_RERANK_MIN_CANDIDATES = 100
 MARQO_MAX_SEARCH_CANDIDATES = 2000
+LOCAL_EXPANDED_TERMS_CACHE_MAX_ENTRIES = 16384
 JSON_DUMP_SEPARATORS = (",", ":")
 ATTRIBUTES_TO_RETRIEVE = [
     "document_id",
@@ -130,6 +128,16 @@ class LocalTextQuery:
 class TextRelevanceQuery:
     normalized: str
     terms: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CategoryMatchProfile:
+    normalized: str
+    compact: str
+    segments: tuple[str, ...]
+    leaf_segments: tuple[str, ...]
+    segment_compacts: frozenset[str]
+    leaf_compacts: frozenset[str]
 
 
 @dataclass(frozen=True)
@@ -267,6 +275,25 @@ class SearchEngine(ABC):
 
     def close(self) -> None:
         return None
+
+    def prewarm_text_query_vectors(
+        self,
+        queries: list[EngineQuery],
+        *,
+        batch_size: int = 64,
+    ) -> dict[str, Any]:
+        return {
+            "ok": True,
+            "supported": False,
+            "engine": self.name,
+            "requested": len(queries),
+            "prepared": 0,
+            "cached": 0,
+            "computed": 0,
+            "deduplicated": 0,
+            "skipped": len(queries),
+            "batch_size": max(1, int(batch_size or 1)),
+        }
 
     @abstractmethod
     def search(self, query: EngineQuery) -> list[EngineHit]:
@@ -866,13 +893,18 @@ class LocalSearchEngine(SearchEngine):
 
     name = "local"
 
-    def __init__(self, products: Iterable[ProductDocument] | None = None):
+    def __init__(
+        self,
+        products: Iterable[ProductDocument] | None = None,
+        *,
+        expanded_terms_cache_max_entries: int = LOCAL_EXPANDED_TERMS_CACHE_MAX_ENTRIES,
+    ):
         self._products: dict[str, ProductDocument] = {}
         self._records: dict[str, LocalProductRecord] = {}
         self._records_by_mall_id: dict[str, dict[str, LocalProductRecord]] = {}
         self._lock = threading.RLock()
-        self._expanded_terms_cache: dict[tuple[int, str, int], frozenset[str]] = {}
-        self._expanded_terms_synonym_digests: dict[int, str] = {}
+        self._expanded_terms_cache_max_entries = max(int(expanded_terms_cache_max_entries or 0), 0)
+        self._expanded_terms_cache: OrderedDict[tuple[str, frozenset[str]], frozenset[str]] = OrderedDict()
         self._expanded_terms_lock = threading.RLock()
         if products:
             self.upsert_products(products)
@@ -963,7 +995,18 @@ class LocalSearchEngine(SearchEngine):
         with self._lock:
             product_count = len(self._products)
             mall_bucket_count = len(self._records_by_mall_id)
-        return {"engine": self.name, "products": product_count, "mall_buckets": mall_bucket_count, "ready": True}
+        with self._expanded_terms_lock:
+            expanded_terms_cache_entries = len(self._expanded_terms_cache)
+        return {
+            "engine": self.name,
+            "products": product_count,
+            "mall_buckets": mall_bucket_count,
+            "ready": True,
+            "expanded_terms_cache": {
+                "entry_count": expanded_terms_cache_entries,
+                "max_entries": self._expanded_terms_cache_max_entries,
+            },
+        }
 
     def _remove_record_from_mall_index_locked(self, document_id: str, record: LocalProductRecord) -> None:
         bucket_key = record.product.mall_id or ""
@@ -982,7 +1025,7 @@ class LocalSearchEngine(SearchEngine):
         query: LocalTextQuery,
         record: LocalProductRecord,
         query_synonyms: Mapping[str, Iterable[str]] | None = None,
-        synonym_cache_token: tuple[int, str] | None = None,
+        synonym_cache_token: str | None = None,
     ) -> float:
         query_terms = query.terms
         doc_text = record.doc_text
@@ -1015,7 +1058,7 @@ class LocalSearchEngine(SearchEngine):
         query: EngineQuery,
         record: LocalProductRecord,
         query_terms: frozenset[str],
-        synonym_cache_token: tuple[int, str] | None = None,
+        synonym_cache_token: str | None = None,
     ) -> float:
         if query.image_hash and record.image_hash and record.image_hash == query.image_hash:
             return 1.0
@@ -1033,49 +1076,54 @@ class LocalSearchEngine(SearchEngine):
         self,
         terms: frozenset[str],
         custom_synonyms: Mapping[str, Iterable[str]] | None = None,
-        synonym_cache_token: tuple[int, str] | None = None,
+        synonym_cache_token: str | None = None,
     ) -> frozenset[str]:
         if not custom_synonyms:
             return terms
         token = synonym_cache_token or self._custom_synonym_cache_token(custom_synonyms)
         if token is None:
             return terms
-        key = (token[0], token[1], id(terms))
+        if self._expanded_terms_cache_max_entries <= 0:
+            return expanded_record_terms(terms, custom_synonyms)
+        key = (token, terms)
         with self._expanded_terms_lock:
             cached = self._expanded_terms_cache.get(key)
             if cached is not None:
+                self._expanded_terms_cache.move_to_end(key)
                 return cached
         expanded = expanded_record_terms(terms, custom_synonyms)
         with self._expanded_terms_lock:
-            return self._expanded_terms_cache.setdefault(key, expanded)
+            self._expanded_terms_cache[key] = expanded
+            self._expanded_terms_cache.move_to_end(key)
+            while len(self._expanded_terms_cache) > self._expanded_terms_cache_max_entries:
+                self._expanded_terms_cache.popitem(last=False)
+            return expanded
 
     def _custom_synonym_cache_token(
         self,
         custom_synonyms: Mapping[str, Iterable[str]] | None = None,
-    ) -> tuple[int, str] | None:
+    ) -> str | None:
         if not custom_synonyms:
             return None
-        digest = hashlib.sha256()
+        digest_payload: list[tuple[str, tuple[str, ...]]] = []
         for term in sorted(custom_synonyms.keys(), key=str):
-            digest.update(str(term).encode("utf-8"))
-            digest.update(b"\0")
-            for value in custom_synonyms.get(term, []):
-                digest.update(str(value).encode("utf-8"))
-                digest.update(b"\0")
-            digest.update(b"\1")
-        digest_hex = digest.hexdigest()
-        synonym_id = id(custom_synonyms)
-        with self._expanded_terms_lock:
-            previous_digest = self._expanded_terms_synonym_digests.get(synonym_id)
-            if previous_digest is not None and previous_digest != digest_hex:
-                self._expanded_terms_cache.clear()
-            self._expanded_terms_synonym_digests[synonym_id] = digest_hex
-        return synonym_id, digest_hex
+            values = tuple(
+                sorted(
+                    {
+                        stripped
+                        for value in query_synonym_audit_values(custom_synonyms.get(term))
+                        if (stripped := str(value).strip())
+                    }
+                )
+            )
+            digest_payload.append((str(term), values))
+        return hashlib.sha256(
+            json.dumps(digest_payload, ensure_ascii=False, separators=JSON_DUMP_SEPARATORS).encode("utf-8")
+        ).hexdigest()
 
     def _clear_expanded_terms_cache(self) -> None:
         with self._expanded_terms_lock:
             self._expanded_terms_cache.clear()
-            self._expanded_terms_synonym_digests.clear()
 
 
 def qwen_health_contract_problems(
@@ -1160,6 +1208,9 @@ class MarqoSearchEngine(SearchEngine):
         )
         self._qwen_runtime_query_embedding_cache: OrderedDict[str, list[float]] = OrderedDict()
         self._qwen_runtime_query_embedding_cache_lock = threading.RLock()
+        self._qwen_runtime_query_embedding_cache_hits: Counter[str] = Counter()
+        self._qwen_runtime_query_embedding_cache_misses: Counter[str] = Counter()
+        self._qwen_runtime_query_embedding_cache_evictions: Counter[str] = Counter()
         self._qwen_runtime_text_query_embedding_cache_max_entries = max(0, int(qwen_query_runtime_text_cache_entries))
         self._qwen_runtime_image_query_embedding_cache_max_entries = max(0, int(qwen_query_runtime_image_cache_entries))
         self._qwen_runtime_query_embedding_cache_max_entries = (
@@ -1257,9 +1308,6 @@ class MarqoSearchEngine(SearchEngine):
             self._text_auxiliary_search_executor.shutdown(wait=False, cancel_futures=True)
 
     def search(self, query: EngineQuery) -> list[EngineHit]:
-        fast_path_hits = self.try_qwen_text_lexical_fast_path(query)
-        if fast_path_hits is not None:
-            return fast_path_hits[: query.limit]
         payload = self.build_search_payload(query)
         payload_limit = int(payload.get("limit") or query.limit)
         vector_field = payload.pop("_haeorumVectorField", None)
@@ -1369,24 +1417,13 @@ class MarqoSearchEngine(SearchEngine):
         if not auxiliary_hits:
             return hits
         display_field = self.display_vector_field_name(auxiliary_field)
-        normalize_auxiliary = is_text_lexical_auxiliary_source(auxiliary_source)
-        max_auxiliary_score = max((float(hit.score) for hit in auxiliary_hits.values()), default=0.0)
-
-        def auxiliary_score_value(raw_score: float) -> float:
-            if not normalize_auxiliary:
-                return raw_score
-            if max_auxiliary_score <= 0:
-                return 0.0
-            return max(0.0, min(1.0, raw_score / max_auxiliary_score))
-
         weighted: list[tuple[int, EngineHit]] = []
         weight = max(0.0, float(auxiliary_weight))
         seen_document_keys: set[str] = set()
         for rank, hit in enumerate(hits):
             document_key = product_document_id(hit.document.mall_id, hit.document.product_id)
             seen_document_keys.add(document_key)
-            raw_auxiliary_score = float((auxiliary_hits.get(document_key) or hit).score if document_key in auxiliary_hits else 0.0)
-            auxiliary_score = auxiliary_score_value(raw_auxiliary_score)
+            auxiliary_score = float((auxiliary_hits.get(document_key) or hit).score if document_key in auxiliary_hits else 0.0)
             primary_score = float(hit.score)
             combined_score = (primary_score * (1.0 - weight)) + (auxiliary_score * weight)
             source_scores = dict(hit.source_scores)
@@ -1395,8 +1432,6 @@ class MarqoSearchEngine(SearchEngine):
             source_scores["hybrid"] = round(combined_score, 6)
             source_scores[auxiliary_source] = round(auxiliary_score, 6)
             source_scores[display_field] = round(auxiliary_score, 6)
-            if normalize_auxiliary:
-                source_scores[f"{auxiliary_source}_raw"] = round(raw_auxiliary_score, 6)
             weighted.append(
                 (
                     rank,
@@ -1414,8 +1449,7 @@ class MarqoSearchEngine(SearchEngine):
                 continue
             if prepared_filters is not None and not product_matches_prepared_filters(hit.document, prepared_filters):
                 continue
-            raw_auxiliary_score = float(hit.score)
-            auxiliary_score = auxiliary_score_value(raw_auxiliary_score)
+            auxiliary_score = float(hit.score)
             combined_score = auxiliary_score * auxiliary_only_multiplier
             source_scores = dict(hit.source_scores)
             source_scores["marqo_primary"] = 0.0
@@ -1423,8 +1457,6 @@ class MarqoSearchEngine(SearchEngine):
             source_scores["hybrid"] = round(combined_score, 6)
             source_scores[auxiliary_source] = round(auxiliary_score, 6)
             source_scores[display_field] = round(auxiliary_score, 6)
-            if normalize_auxiliary:
-                source_scores[f"{auxiliary_source}_raw"] = round(raw_auxiliary_score, 6)
             weighted.append(
                 (
                     next_rank,
@@ -1966,107 +1998,23 @@ class MarqoSearchEngine(SearchEngine):
             return None
         if QWEN_TEXT_VECTOR_FIELD in set(primary_vector_fields):
             return None
-        return self.build_qwen_text_lexical_search_payload(
-            query,
-            limit=qwen_text_auxiliary_candidate_limit(
+        vector, _field, source = self.qwen_text_query_vector(query)
+        payload: dict[str, Any] = {
+            "searchMethod": "TENSOR",
+            "context": {"tensor": [{"vector": vector, "weight": 1}]},
+            "searchableAttributes": [QWEN_TEXT_VECTOR_FIELD],
+            "limit": qwen_text_auxiliary_candidate_limit(
                 query,
                 multiplier=self.text_auxiliary_candidate_multiplier,
             ),
-            source=TEXT_LEXICAL_AUXILIARY_SOURCE,
-        )
-
-    def build_qwen_text_lexical_search_payload(
-        self,
-        query: EngineQuery,
-        *,
-        limit: int,
-        source: str,
-    ) -> dict[str, Any] | None:
-        text_query = qwen_text_auxiliary_query_text(query)
-        if not text_query:
-            return None
-        payload: dict[str, Any] = {
-            "q": text_query,
-            "searchMethod": "LEXICAL",
-            "searchableAttributes": [*TEXT_FIELDS, SEARCH_TEXT_FIELD],
-            "limit": limit,
-            "attributesToRetrieve": attributes_to_retrieve_for_query(query, rerank_text=True),
-            "_haeorumVectorField": SEARCH_TEXT_FIELD,
-            "_haeorumVectorSource": source,
+            "attributesToRetrieve": attributes_to_retrieve_for_query(query, rerank_text=False),
+            "_haeorumVectorField": QWEN_TEXT_VECTOR_FIELD,
+            "_haeorumVectorSource": qwen_auxiliary_text_source(source),
         }
         filters = build_filter_terms(query, include_numeric=False)
         if filters:
             payload["filter"] = filters
         return payload
-
-    def try_qwen_text_lexical_fast_path(self, query: EngineQuery) -> list[EngineHit] | None:
-        if self.embedding_backend != "qwen" or not query.q or query.image_data_url:
-            return None
-        if self.text_auxiliary_weight <= 0:
-            return None
-        payload = self.build_qwen_text_lexical_search_payload(
-            query,
-            limit=qwen_text_lexical_fast_path_candidate_limit(query),
-            source=TEXT_LEXICAL_FAST_PATH_SOURCE,
-        )
-        if payload is None:
-            return None
-        payload = dict(payload)
-        source = str(payload.pop("_haeorumVectorSource", TEXT_LEXICAL_FAST_PATH_SOURCE))
-        field = str(payload.pop("_haeorumVectorField", SEARCH_TEXT_FIELD))
-        prepared_filters = prepare_product_filters(query)
-        data = self._execute_search_payload(payload)
-        hits = self.lexical_fast_path_hits(data, source=source, field=field, prepared_filters=prepared_filters)
-        if not hits:
-            return None
-        reranked = rerank_text_to_image_hits(query, hits)
-        if not qwen_text_lexical_fast_path_is_confident(query, reranked):
-            return None
-        return reranked
-
-    def lexical_fast_path_hits(
-        self,
-        data: Mapping[str, Any],
-        *,
-        source: str,
-        field: str,
-        prepared_filters: PreparedProductFilters | None,
-    ) -> list[EngineHit]:
-        raw_hits: list[tuple[int, ProductDocument, float]] = []
-        for rank, raw_hit in enumerate(data.get("hits", []) if isinstance(data, Mapping) else []):
-            try:
-                if not isinstance(raw_hit, dict):
-                    raise ValueError("Marqo hit must be an object")
-                product = marqo_hit_to_product(raw_hit)
-                if prepared_filters is not None and not product_matches_prepared_filters(product, prepared_filters):
-                    continue
-                score = float(raw_hit.get("_score") or 0.0)
-            except Exception:
-                continue
-            if math.isfinite(score) and score > 0:
-                raw_hits.append((rank, product, score))
-        if not raw_hits:
-            return []
-        max_score = max(score for _rank, _product, score in raw_hits)
-        if max_score <= 0:
-            return []
-        display_field = self.display_vector_field_name(field)
-        hits: list[EngineHit] = []
-        for _rank, product, raw_score in raw_hits:
-            score = max(0.0, min(1.0, raw_score / max_score))
-            hits.append(
-                EngineHit(
-                    document=product,
-                    score=round(score, 6),
-                    source_scores={
-                        "marqo": round(score, 6),
-                        source: round(score, 6),
-                        f"{source}_raw": round(raw_score, 6),
-                        display_field: round(score, 6),
-                    },
-                )
-            )
-        return hits
 
     def build_qwen_upsert_payload(self, products: Iterable[ProductDocument]) -> dict[str, Any]:
         docs = [product_to_marqo_doc(product) for product in products]
@@ -2225,14 +2173,97 @@ class MarqoSearchEngine(SearchEngine):
             "text",
         )
 
+    def prewarm_text_query_vectors(
+        self,
+        queries: list[EngineQuery],
+        *,
+        batch_size: int = 64,
+    ) -> dict[str, Any]:
+        batch_size = max(1, min(int(batch_size or 1), 128))
+        if self.embedding_backend != "qwen":
+            return {
+                "ok": True,
+                "supported": False,
+                "engine": self.name,
+                "embedding_backend": self.embedding_provider,
+                "requested": len(queries),
+                "prepared": 0,
+                "cached": 0,
+                "computed": 0,
+                "deduplicated": 0,
+                "skipped": len(queries),
+                "batch_size": batch_size,
+                "reason": "query embedding cache is only used with gemini/qwen embedding backends",
+            }
+
+        pending_by_key: OrderedDict[str, str] = OrderedDict()
+        cached = 0
+        deduplicated = 0
+        skipped = 0
+        for query in queries:
+            expanded_text_query = expanded_query_text(query.q, query.query_synonyms) if query.q else ""
+            text_query = append_inferred_categories(expanded_text_query, query.inferred_categories)
+            cache_key = normalize_query_embedding_cache_key(text_query or "")
+            if not cache_key:
+                skipped += 1
+                continue
+            runtime_cache_key = qwen_text_query_embedding_cache_key(cache_key)
+            if (
+                self.qwen_query_embedding_cache.get(cache_key) is not None
+                or self._get_runtime_qwen_query_vector(cache_key) is not None
+                or self._get_runtime_qwen_query_vector(runtime_cache_key) is not None
+            ):
+                cached += 1
+                continue
+            if runtime_cache_key in pending_by_key:
+                deduplicated += 1
+                continue
+            pending_by_key[runtime_cache_key] = text_query or ""
+
+        pending_items = list(pending_by_key.items())
+        computed = 0
+        for index in range(0, len(pending_items), batch_size):
+            batch = pending_items[index : index + batch_size]
+            vectors = self.qwen_embed_query_texts(
+                [text for _key, text in batch],
+                timeout=self.qwen_query_timeout_seconds,
+                retry_count=self.search_retry_count,
+                retry_delay_seconds=self.search_retry_delay_seconds,
+            )
+            for (cache_key, _text), vector in zip(batch, vectors):
+                self._set_runtime_qwen_query_vector(cache_key, vector)
+                computed += 1
+
+        status = self.qwen_query_vector_status()
+        return {
+            "ok": True,
+            "supported": True,
+            "engine": self.name,
+            "embedding_backend": self.embedding_provider,
+            "requested": len(queries),
+            "prepared": len(pending_items) + cached + deduplicated,
+            "cached": cached,
+            "computed": computed,
+            "deduplicated": deduplicated,
+            "skipped": skipped,
+            "batch_size": batch_size,
+            "runtime_entries": status["runtime_entries"],
+            "runtime_text_entries": status["runtime_text_entries"],
+            "runtime_text_max_entries": status["runtime_text_max_entries"],
+            "precomputed_entries": status["precomputed_entries"],
+        }
+
     def _get_runtime_qwen_query_vector(self, key: str) -> list[float] | None:
         if not key:
             return None
+        cache_kind = runtime_qwen_query_cache_kind(key)
         with self._qwen_runtime_query_embedding_cache_lock:
             vector = self._qwen_runtime_query_embedding_cache.get(key)
             if vector is None:
+                self._qwen_runtime_query_embedding_cache_misses[cache_kind] += 1
                 return None
             self._qwen_runtime_query_embedding_cache.move_to_end(key)
+            self._qwen_runtime_query_embedding_cache_hits[cache_kind] += 1
             return list(vector)
 
     def _set_runtime_qwen_query_vector(self, key: str, vector: list[float]) -> None:
@@ -2257,7 +2288,8 @@ class MarqoSearchEngine(SearchEngine):
         ]
         while len(matching_keys) > max_entries:
             oldest_key = matching_keys.pop(0)
-            self._qwen_runtime_query_embedding_cache.pop(oldest_key, None)
+            if self._qwen_runtime_query_embedding_cache.pop(oldest_key, None) is not None:
+                self._qwen_runtime_query_embedding_cache_evictions[cache_kind] += 1
 
     def _compute_qwen_query_vector_once(self, key: str, compute: Any) -> list[float]:
         if not key:
@@ -2330,6 +2362,12 @@ class MarqoSearchEngine(SearchEngine):
                 for key in self._qwen_runtime_query_embedding_cache
                 if runtime_qwen_query_cache_kind(key) == "image"
             )
+            runtime_text_hits = int(self._qwen_runtime_query_embedding_cache_hits.get("text", 0))
+            runtime_image_hits = int(self._qwen_runtime_query_embedding_cache_hits.get("image", 0))
+            runtime_text_misses = int(self._qwen_runtime_query_embedding_cache_misses.get("text", 0))
+            runtime_image_misses = int(self._qwen_runtime_query_embedding_cache_misses.get("image", 0))
+            runtime_text_evictions = int(self._qwen_runtime_query_embedding_cache_evictions.get("text", 0))
+            runtime_image_evictions = int(self._qwen_runtime_query_embedding_cache_evictions.get("image", 0))
         with self._qwen_query_vector_inflight_lock:
             in_flight = len(self._qwen_query_vector_inflight)
         with self._qwen_query_vector_stats_lock:
@@ -2345,6 +2383,15 @@ class MarqoSearchEngine(SearchEngine):
             "runtime_max_entries": self._qwen_runtime_query_embedding_cache_max_entries,
             "runtime_text_max_entries": self._qwen_runtime_text_query_embedding_cache_max_entries,
             "runtime_image_max_entries": self._qwen_runtime_image_query_embedding_cache_max_entries,
+            "runtime_hits": runtime_text_hits + runtime_image_hits,
+            "runtime_text_hits": runtime_text_hits,
+            "runtime_image_hits": runtime_image_hits,
+            "runtime_misses": runtime_text_misses + runtime_image_misses,
+            "runtime_text_misses": runtime_text_misses,
+            "runtime_image_misses": runtime_image_misses,
+            "runtime_evictions": runtime_text_evictions + runtime_image_evictions,
+            "runtime_text_evictions": runtime_text_evictions,
+            "runtime_image_evictions": runtime_image_evictions,
             "in_flight": in_flight,
             "wait_timeout_seconds": self._qwen_query_vector_wait_timeout_seconds(),
             "wait_events": wait_events,
@@ -2616,12 +2663,6 @@ def qwen_text_auxiliary_candidate_limit(query: EngineQuery, *, multiplier: float
     return min(max(scaled, query.limit), max(int(query.max_candidates or 1), 1))
 
 
-def qwen_text_lexical_fast_path_candidate_limit(query: EngineQuery) -> int:
-    base_limit = qwen_text_auxiliary_candidate_limit(query, multiplier=1.0)
-    expanded_limit = max(base_limit, query.limit * 6, 60)
-    return min(expanded_limit, max(int(query.max_candidates or 1), 1))
-
-
 def attributes_to_retrieve_for_query(query: EngineQuery, *, rerank_text: bool | None = None) -> list[str]:
     fields = list(ATTRIBUTES_TO_RETRIEVE)
     should_rerank = should_rerank_text_query(query) if rerank_text is None else rerank_text
@@ -2719,14 +2760,16 @@ def rerank_text_hits(query: EngineQuery, hits: list[EngineHit]) -> list[EngineHi
     reranked = []
     for hit in hits:
         lexical_score = text_relevance_score_for_query(text_query, hit.document, query.query_synonyms)
+        category_query_score = category_query_relevance_score_for_query(text_query, hit.document.category)
         category_score = category_intent_score_for_categories(normalized_categories, hit.document)
-        relevance_score = max(lexical_score, category_score)
+        relevance_score = max(lexical_score, category_query_score, category_score)
         if relevance_score <= 0:
             combined_score = min(0.39, hit.score * 0.45)
         else:
             combined_score = min(1.0, (hit.score * 0.75) + (relevance_score * 0.25))
         source_scores = dict(hit.source_scores)
         source_scores["lexical"] = round(lexical_score, 6)
+        source_scores["category_query"] = round(category_query_score, 6)
         source_scores["category_intent"] = round(category_score, 6)
         reranked.append(
             EngineHit(
@@ -2737,6 +2780,8 @@ def rerank_text_hits(query: EngineQuery, hits: list[EngineHit]) -> list[EngineHi
         )
     reranked.sort(
         key=lambda hit: (
+            -category_query_evidence_bucket(hit.source_scores.get("category_query", 0.0)),
+            -hit.source_scores.get("category_query", 0.0),
             -max(hit.source_scores.get("lexical", 0.0), hit.source_scores.get("category_intent", 0.0)),
             -hit.score,
             hit.document.product_id,
@@ -2747,25 +2792,30 @@ def rerank_text_hits(query: EngineQuery, hits: list[EngineHit]) -> list[EngineHi
 
 def rerank_text_to_image_hits(query: EngineQuery, hits: list[EngineHit]) -> list[EngineHit]:
     text_query = build_text_to_image_evidence_query(query)
+    category_text_query = build_text_relevance_query(query.q or "", query.query_synonyms)
     normalized_categories = normalized_inferred_categories(query.inferred_categories)
-    scored: list[tuple[int, EngineHit, float, float, float]] = []
+    scored: list[tuple[int, EngineHit, float, float, float, float]] = []
     for rank, hit in enumerate(hits):
         lexical_score = text_relevance_score_for_query(text_query, hit.document, query.query_synonyms)
+        category_query_score = category_query_relevance_score_for_query(category_text_query, hit.document.category)
         category_score = category_intent_score_for_categories(normalized_categories, hit.document)
-        evidence_score = max(lexical_score, category_score)
-        scored.append((rank, hit, lexical_score, category_score, evidence_score))
+        evidence_score = max(lexical_score, category_query_score, category_score)
+        scored.append((rank, hit, lexical_score, category_query_score, category_score, evidence_score))
     has_evidence = any(evidence_score > 0 for *_prefix, evidence_score in scored)
     if not has_evidence:
         return hits
 
     reranked: list[tuple[int, EngineHit]] = []
-    for rank, hit, lexical_score, category_score, evidence_score in scored:
-        if evidence_score > 0:
-            combined_score = min(1.0, (hit.score * 0.68) + (evidence_score * 0.32))
+    for rank, hit, lexical_score, category_query_score, category_score, evidence_score in scored:
+        if evidence_score >= 0.95:
+            combined_score = min(1.0, hit.score + min(0.11, evidence_score * 0.10))
+        elif evidence_score > 0:
+            combined_score = min(1.0, hit.score + min(0.055, evidence_score * 0.05))
         else:
-            combined_score = max(0.0, hit.score * 0.72)
+            combined_score = max(0.0, hit.score - 0.08)
         source_scores = dict(hit.source_scores)
         source_scores["lexical"] = round(lexical_score, 6)
+        source_scores["category_query"] = round(category_query_score, 6)
         source_scores["category_intent"] = round(category_score, 6)
         source_scores["text_evidence"] = round(evidence_score, 6)
         reranked.append(
@@ -2778,52 +2828,51 @@ def rerank_text_to_image_hits(query: EngineQuery, hits: list[EngineHit]) -> list
                 ),
             )
         )
-    reranked.sort(key=lambda item: (-item[1].source_scores.get("text_evidence", 0.0), -item[1].score, item[0]))
+    reranked.sort(
+        key=lambda item: (
+            -category_query_evidence_bucket(item[1].source_scores.get("category_query", 0.0)),
+            -item[1].source_scores.get("category_query", 0.0),
+            -text_to_image_evidence_bucket(item[1].source_scores.get("text_evidence", 0.0)),
+            -item[1].score,
+            -item[1].source_scores.get("text_evidence", 0.0),
+            item[0],
+        )
+    )
     return [hit for _rank, hit in reranked]
 
 
-def qwen_text_auxiliary_query_text(query: EngineQuery) -> str | None:
-    text = normalize_text(query.q or "")
-    return append_inferred_categories(text, query.inferred_categories) or text or None
+def category_query_evidence_bucket(score: float) -> int:
+    if score >= 0.95:
+        return 3
+    if score >= 0.8:
+        return 2
+    if score > 0:
+        return 1
+    return 0
 
 
-def is_text_lexical_auxiliary_source(source: str) -> bool:
-    return source == TEXT_LEXICAL_AUXILIARY_SOURCE or source.startswith(f"{TEXT_LEXICAL_AUXILIARY_SOURCE}:")
-
-
-def qwen_text_lexical_fast_path_is_confident(query: EngineQuery, hits: list[EngineHit]) -> bool:
-    if not hits:
-        return False
-    top_evidence = float(hits[0].source_scores.get("text_evidence", 0.0) or 0.0)
-    if normalized_inferred_categories(query.inferred_categories):
-        return top_evidence >= TEXT_LEXICAL_FAST_PATH_MIN_CATEGORY_EVIDENCE
-    return top_evidence >= TEXT_LEXICAL_FAST_PATH_MIN_TEXT_EVIDENCE
+def text_to_image_evidence_bucket(score: float) -> int:
+    if score >= 0.95:
+        return 3
+    if score >= 0.6:
+        return 2
+    if score > 0:
+        return 1
+    return 0
 
 
 def build_text_to_image_evidence_query(query: EngineQuery) -> TextRelevanceQuery:
-    with_categories = qwen_text_auxiliary_query_text(query)
-    return build_text_relevance_query(
-        with_categories or query.q or "",
-        query.query_synonyms,
-        include_default_synonyms=False,
-    )
+    expanded = expanded_query_text(query.q or "", query.query_synonyms)
+    return build_text_relevance_query(expanded or query.q or "", query.query_synonyms)
 
 
 def build_text_relevance_query(
     query: str,
     query_synonyms: Mapping[str, Iterable[str]] | None = None,
-    *,
-    include_default_synonyms: bool = True,
 ) -> TextRelevanceQuery:
     return TextRelevanceQuery(
         normalized=normalize_text(query),
-        terms=tuple(
-            expand_terms(
-                tokenize(query),
-                query_synonyms,
-                include_default_synonyms=include_default_synonyms,
-            )
-        ),
+        terms=tuple(expand_terms(tokenize(query), query_synonyms)),
     )
 
 
@@ -2855,6 +2904,91 @@ def text_relevance_score_for_query(
     category_text = normalize_text(product.category)
     category_bonus = 0.25 if any(term_matches_document(term, category_text, category_terms) for term in query_terms) else 0.0
     return min(1.0, (matched / len(query_terms)) + phrase_bonus + category_bonus)
+
+
+def category_query_relevance_score_for_query(query: TextRelevanceQuery, category: str | None) -> float:
+    if not query.normalized:
+        return 0.0
+
+    normalized_query = normalize_category_match_text(query.normalized)
+    profile = category_match_profile(category)
+    if not normalized_query or not profile.normalized:
+        return 0.0
+
+    query_compact = normalized_query.replace(" ", "")
+    if query_compact == profile.compact:
+        return 1.0
+
+    if query_compact in profile.leaf_compacts:
+        return 0.98
+    if query_compact in profile.segment_compacts:
+        return 0.94
+
+    query_terms = frozenset(
+        normalized
+        for normalized in (normalize_category_match_text(term) for term in query.terms)
+        if normalized
+    )
+    if not query_terms:
+        return 0.0
+    leaf_terms = frozenset(profile.leaf_segments)
+    category_terms = frozenset(profile.segments)
+    if query_terms.issubset(leaf_terms):
+        return 0.9
+    if query_terms.issubset(category_terms):
+        return 0.82
+    if len(query_terms) == 1 and next(iter(query_terms)) in leaf_terms:
+        return 0.86
+    return 0.0
+
+
+@lru_cache(maxsize=16384)
+def category_match_profile(category: str | None) -> CategoryMatchProfile:
+    category_text = str(category or "").strip()
+    normalized = normalize_category_match_text(category_text)
+    segments = normalized_category_segments(category_text)
+    leaf_segments = normalized_category_leaf_segments(category_text)
+    return CategoryMatchProfile(
+        normalized=normalized,
+        compact=normalized.replace(" ", ""),
+        segments=segments,
+        leaf_segments=leaf_segments,
+        segment_compacts=frozenset(segment.replace(" ", "") for segment in segments),
+        leaf_compacts=frozenset(segment.replace(" ", "") for segment in leaf_segments),
+    )
+
+
+@lru_cache(maxsize=16384)
+def normalize_category_match_text(value: str | None) -> str:
+    text = normalize_text(str(value or ""))
+    for char in [">", "(", ")", "~", "·", "&", "+", "[", "]"]:
+        text = text.replace(char, " ")
+    return " ".join(text.replace(",", " ").split())
+
+
+@lru_cache(maxsize=16384)
+def normalized_category_segments(category: str | None) -> tuple[str, ...]:
+    return normalized_unique_category_segments(str(category or ""))
+
+
+@lru_cache(maxsize=16384)
+def normalized_category_leaf_segments(category: str | None) -> tuple[str, ...]:
+    text = str(category or "").split(">")[-1]
+    return normalized_unique_category_segments(text)
+
+
+def normalized_unique_category_segments(text: str) -> tuple[str, ...]:
+    segments = []
+    seen = set()
+    for part in text.replace(">", "/").replace(",", "/").replace("·", "/").replace("&", "/").replace("+", "/").split("/"):
+        segment = normalize_category_match_text(part)
+        if not segment:
+            continue
+        compact = segment.replace(" ", "")
+        if compact and compact not in seen:
+            seen.add(compact)
+            segments.append(segment)
+    return tuple(segments)
 
 
 def category_intent_score(query: EngineQuery, product: ProductDocument) -> float:
@@ -3396,20 +3530,33 @@ SYNONYMS = {
     "키링": ["열쇠고리", "키홀더", "keyring", "key holder"],
     "열쇠고리": ["키링", "키홀더", "keyring", "key holder"],
     "키홀더": ["키링", "열쇠고리", "keyring", "key holder"],
+    "오프너": ["병따개", "와인오프너", "보틀오프너"],
+    "병따개": ["오프너", "와인오프너", "보틀오프너"],
+    "와인오프너": ["오프너", "병따개", "보틀오프너"],
+    "보틀오프너": ["오프너", "병따개", "와인오프너"],
 }
 
+COMPOUND_QUERY_TERMS = tuple(sorted(SYNONYMS.keys(), key=len, reverse=True))
+COMPOUND_SYNONYM_BLOCKS: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
+    (("오프너", "병따개", "와인오프너", "보틀오프너"), ("보틀", "물병", "텀블러", "보온병", "보냉병")),
+)
 
-def expand_terms(
-    terms: Iterable[str],
-    custom_synonyms: Mapping[str, Iterable[str]] | None = None,
-    *,
-    include_default_synonyms: bool = True,
-) -> list[str]:
+
+def expand_terms(terms: Iterable[str], custom_synonyms: Mapping[str, Iterable[str]] | None = None) -> list[str]:
     expanded: list[str] = []
     for term in terms:
         expanded.append(term)
-        if include_default_synonyms:
-            expanded.extend(SYNONYMS.get(term, []))
+        expanded.extend(SYNONYMS.get(term, []))
+        for compound_term in decompose_compound_query_term(term):
+            expanded.append(compound_term)
+            if should_expand_compound_synonyms(term, compound_term):
+                expanded.extend(SYNONYMS.get(compound_term, []))
+            if custom_synonyms:
+                expanded.extend(
+                    str(value).strip()
+                    for value in custom_synonyms.get(compound_term, [])
+                    if str(value).strip()
+                )
         if custom_synonyms:
             expanded.extend(str(value).strip() for value in custom_synonyms.get(term, []) if str(value).strip())
     seen = set()
@@ -3419,6 +3566,113 @@ def expand_terms(
             seen.add(term)
             deduped.append(term)
     return deduped
+
+
+def should_expand_compound_synonyms(original_term: str, compound_term: str) -> bool:
+    original = normalize_text(original_term).replace(" ", "")
+    compound = normalize_text(compound_term).replace(" ", "")
+    for intent_terms, blocked_terms in COMPOUND_SYNONYM_BLOCKS:
+        if compound in blocked_terms and any(intent in original for intent in intent_terms):
+            return False
+    return True
+
+
+def audit_query_synonyms(
+    custom_synonyms: Mapping[str, Iterable[str]] | None,
+    built_in_synonyms: Mapping[str, Iterable[str]] = SYNONYMS,
+) -> dict[str, list[str]]:
+    built_in_terms = {normalize_query_synonym_audit_term(term) for term in built_in_synonyms}
+    normalized_keys: dict[str, list[str]] = {}
+    duplicate_terms: list[str] = []
+    built_in_term_overlaps: list[str] = []
+    built_in_value_overlaps: list[str] = []
+    self_references: list[str] = []
+    duplicate_values: list[str] = []
+
+    for raw_term, raw_values in (custom_synonyms or {}).items():
+        term = normalize_query_synonym_audit_term(raw_term)
+        if not term:
+            continue
+        normalized_keys.setdefault(term, []).append(str(raw_term))
+        if term in built_in_terms:
+            built_in_term_overlaps.append(term)
+        seen_values: set[str] = set()
+        for raw_value in query_synonym_audit_values(raw_values):
+            value = normalize_query_synonym_audit_term(raw_value)
+            if not value:
+                continue
+            if value == term:
+                self_references.append(term)
+            if value in seen_values:
+                duplicate_values.append(f"{term}:{value}")
+            seen_values.add(value)
+            if value in built_in_terms:
+                built_in_value_overlaps.append(f"{term}:{value}")
+
+    for term, raw_keys in normalized_keys.items():
+        if len(raw_keys) > 1:
+            duplicate_terms.append(term)
+
+    return {
+        "duplicate_terms": sorted(set(duplicate_terms)),
+        "duplicate_values": sorted(set(duplicate_values)),
+        "self_references": sorted(set(self_references)),
+        "built_in_term_overlaps": sorted(set(built_in_term_overlaps)),
+        "built_in_value_overlaps": sorted(set(built_in_value_overlaps)),
+    }
+
+
+def normalize_query_synonym_audit_term(value: object) -> str:
+    return normalize_text(str(value or ""))
+
+
+def query_synonym_audit_values(value: object) -> list[object]:
+    if value in (None, ""):
+        return []
+    if isinstance(value, str):
+        return [value]
+    try:
+        return list(value)  # type: ignore[arg-type]
+    except TypeError:
+        return [value]
+
+
+def decompose_compound_query_term(term: str) -> list[str]:
+    text = normalize_text(term).replace(" ", "")
+    if len(text) < 4:
+        return []
+    pieces: list[str] = []
+    boundaries = {0, len(text)}
+    for candidate in COMPOUND_QUERY_TERMS:
+        if len(candidate) < 2 or candidate == text:
+            continue
+        start = text.find(candidate)
+        while start >= 0:
+            end = start + len(candidate)
+            pieces.append(candidate)
+            boundaries.add(start)
+            boundaries.add(end)
+            start = text.find(candidate, start + 1)
+    ordered_boundaries = sorted(boundaries)
+    for index in range(len(ordered_boundaries) - 1):
+        start = ordered_boundaries[index]
+        end = ordered_boundaries[index + 1]
+        piece = text[start:end]
+        if len(piece) >= 2 and piece != text:
+            pieces.append(piece)
+    return ordered_unique_terms(pieces)
+
+
+def ordered_unique_terms(terms: Iterable[str]) -> list[str]:
+    seen = set()
+    unique = []
+    for term in terms:
+        text = str(term or "").strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        unique.append(text)
+    return unique
 
 
 def expanded_query_text(value: str | None, custom_synonyms: Mapping[str, Iterable[str]] | None = None) -> str | None:

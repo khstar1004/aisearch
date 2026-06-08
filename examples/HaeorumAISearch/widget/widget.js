@@ -7,8 +7,6 @@
     apiKey: "",
     resultPageUrl: "",
     resultPageTarget: "_self",
-    presentation: "modal",
-    autoSubmitOnImage: false,
     limit: 20,
     maxImageMb: 5,
     minImageDimension: 16,
@@ -44,9 +42,7 @@
     deferredInitScheduled: false,
     pendingMountOptions: null,
     pendingMountObserver: null,
-    pendingMountTimer: null,
-    popoverPositionHandler: null,
-    outsideClickHandler: null
+    pendingMountTimer: null
   };
 
   const MALL_ID_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$/;
@@ -88,8 +84,6 @@
       state.options.resultPageUrl = resultPageUrl;
     }
     state.options.resultPageTarget = normalizeResultPageTarget(state.options.resultPageTarget);
-    state.options.presentation = normalizePresentation(state.options.presentation);
-    state.options.autoSubmitOnImage = truthyOption(state.options.autoSubmitOnImage);
     const explicitTargetSelector = trimText(providedOptions.target);
     const explicitSearchInputSelector = trimText(providedOptions.attachToSearchInput);
     const explicitAttachAfterSelector = trimText(providedOptions.attachAfterSelector);
@@ -472,7 +466,6 @@
     state.lastCategory = "";
     state.lastQueryType = "";
     state.nextOffset = null;
-    unbindPopoverListeners();
     removeNode(state.modal);
     if (state.root) {
       if (state.root.classList && state.root.classList.contains("hai-attached")) {
@@ -537,9 +530,6 @@
   function buildModal() {
     const modal = document.createElement("div");
     modal.className = "hai-modal";
-    if (isPopoverPresentation()) {
-      modal.classList.add("hai-popover-mode");
-    }
     modal.setAttribute("aria-hidden", "true");
     modal.innerHTML = `
       <div class="hai-backdrop" data-close="true"></div>
@@ -549,8 +539,8 @@
             <div class="hai-brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
             <div>
               <div class="hai-eyebrow">해오름 판촉물 AI 검색</div>
-              <h2 id="hai-title">AI 이미지 검색</h2>
-              <p>사진이나 상품명으로 비슷한 판촉물을 찾습니다.</p>
+              <h2 id="hai-title">상품명과 사진으로 비슷한 판촉물을 찾습니다</h2>
+              <p>기존 검색 결과 흐름은 유지하면서, AI가 이미지와 의미를 함께 비교해 추천합니다.</p>
               <div class="hai-badges" aria-hidden="true">
                 <span>이미지 검색</span>
                 <span>유사도 추천</span>
@@ -574,12 +564,12 @@
               </label>
               <button type="submit" class="hai-primary">AI 검색</button>
             </div>
-            <div class="hai-dropzone" tabindex="0">
-              <input class="hai-file" type="file" accept="image/jpeg,image/png,image/webp">
+            <div class="hai-dropzone" tabindex="0" role="button" aria-label="상품 이미지 업로드">
+              <input class="hai-file" type="file" accept="image/jpeg,image/png,image/webp" aria-label="상품 이미지 파일 선택">
               <div class="hai-upload-icon" aria-hidden="true">${aiSearchIcon()}</div>
               <div class="hai-upload-copy">
                 <strong>사진으로 비슷한 상품 찾기</strong>
-                <span>클릭 또는 드래그 앤 드롭하면 AI 검색 결과 페이지로 이동합니다. (JPG, PNG, WEBP)</span>
+                <span>클릭 또는 드래그 앤 드롭 (JPG, PNG, WEBP, 최대 ${escapeHtml(String(state.options.maxImageMb))}MB, 최소 ${escapeHtml(String(minImageDimension()))}px)</span>
               </div>
             </div>
             <div class="hai-preview" hidden>
@@ -588,8 +578,8 @@
             </div>
           </form>
           <div class="hai-error" role="alert" hidden></div>
-          <div class="hai-loading" hidden>AI가 비슷한 상품을 찾고 있습니다.</div>
-          <div class="hai-notice" hidden></div>
+          <div class="hai-loading" role="status" aria-live="polite" hidden>검색 중입니다.</div>
+          <div class="hai-notice" role="status" hidden></div>
           <section class="hai-categories" hidden>
             <h3><span></span>비슷한 카테고리 추천</h3>
             <div class="hai-category-list"></div>
@@ -694,106 +684,19 @@
     state.lastFocusedElement = document.activeElement || null;
     state.modal.classList.add("hai-open");
     state.modal.setAttribute("aria-hidden", "false");
-    if (isPopoverPresentation()) {
-      updatePopoverPosition();
-      bindPopoverListeners();
-    }
     const input = state.modal.querySelector(".hai-query");
     if (state.options.prefillFromSearchInput && state.searchInput && state.searchInput.value) {
       input.value = state.searchInput.value.trim();
     }
-    const focusTarget = isPopoverPresentation() ? state.modal.querySelector(".hai-dropzone") : input;
-    window.setTimeout(function () {
-      if (focusTarget && typeof focusTarget.focus === "function") {
-        focusTarget.focus();
-      }
-    }, 30);
+    window.setTimeout(function () { input.focus(); }, 30);
   }
 
   function close() {
-    unbindPopoverListeners();
     state.modal.classList.remove("hai-open");
     state.modal.setAttribute("aria-hidden", "true");
     if (state.lastFocusedElement && typeof state.lastFocusedElement.focus === "function") {
       state.lastFocusedElement.focus();
     }
-  }
-
-  function isPopoverPresentation() {
-    return state.options.presentation === "popover";
-  }
-
-  function bindPopoverListeners() {
-    unbindPopoverListeners();
-    state.popoverPositionHandler = function () {
-      updatePopoverPosition();
-    };
-    if (typeof window.addEventListener === "function") {
-      window.addEventListener("resize", state.popoverPositionHandler);
-      window.addEventListener("scroll", state.popoverPositionHandler, true);
-    }
-    state.outsideClickHandler = function (event) {
-      if (!state.modal || !hasClass(state.modal, "hai-open")) {
-        return;
-      }
-      const target = event && event.target;
-      const dialog = state.modal.querySelector(".hai-dialog");
-      if (isElementInside(dialog, target) || isElementInside(state.root, target)) {
-        return;
-      }
-      close();
-    };
-    window.setTimeout(function () {
-      if (typeof document.addEventListener === "function" && state.outsideClickHandler) {
-        document.addEventListener("mousedown", state.outsideClickHandler, true);
-        document.addEventListener("touchstart", state.outsideClickHandler, true);
-      }
-    }, 0);
-  }
-
-  function unbindPopoverListeners() {
-    if (state.popoverPositionHandler && typeof window.removeEventListener === "function") {
-      window.removeEventListener("resize", state.popoverPositionHandler);
-      window.removeEventListener("scroll", state.popoverPositionHandler, true);
-    }
-    if (state.outsideClickHandler && typeof document.removeEventListener === "function") {
-      document.removeEventListener("mousedown", state.outsideClickHandler, true);
-      document.removeEventListener("touchstart", state.outsideClickHandler, true);
-    }
-    state.popoverPositionHandler = null;
-    state.outsideClickHandler = null;
-  }
-
-  function updatePopoverPosition() {
-    if (!state.modal || !state.root || !isPopoverPresentation()) {
-      return;
-    }
-    const anchor = state.root.querySelector(".hai-trigger") || state.root;
-    const dialog = state.modal.querySelector(".hai-dialog");
-    if (!anchor || !dialog || typeof anchor.getBoundingClientRect !== "function") {
-      return;
-    }
-    const rect = anchor.getBoundingClientRect();
-    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1024;
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 768;
-    const dialogWidth = Math.min(392, Math.max(320, viewportWidth - 20));
-    const preferredLeft = rect.left + rect.width - dialogWidth;
-    const left = clamp(10, preferredLeft, viewportWidth - dialogWidth - 10);
-    const measuredHeight = dialog.getBoundingClientRect && dialog.getBoundingClientRect().height;
-    const dialogHeight = measuredHeight || 330;
-    let top = rect.bottom + 8;
-    if (top + dialogHeight > viewportHeight - 10 && rect.top - dialogHeight - 8 > 10) {
-      top = rect.top - dialogHeight - 8;
-    }
-    top = clamp(10, top, Math.max(10, viewportHeight - Math.min(dialogHeight, viewportHeight - 20) - 10));
-    state.modal.style.setProperty("--hai-popover-left", left.toFixed(0) + "px");
-    state.modal.style.setProperty("--hai-popover-top", top.toFixed(0) + "px");
-    state.modal.style.setProperty("--hai-popover-width", dialogWidth.toFixed(0) + "px");
-    state.modal.style.setProperty("--hai-popover-max-height", Math.max(260, viewportHeight - top - 10).toFixed(0) + "px");
-  }
-
-  function clamp(min, value, max) {
-    return Math.max(min, Math.min(value, max));
   }
 
   function setFile(file) {
@@ -826,9 +729,6 @@
       }
       state.file = file;
       preview.hidden = false;
-      if (state.options.autoSubmitOnImage && state.options.resultPageUrl) {
-        window.setTimeout(function () { submitSearch(); }, 0);
-      }
     };
     previewImage.onerror = function () {
       if (state.objectUrl !== objectUrl) {
@@ -1072,12 +972,12 @@
   }
 
   function renderResults(data, append) {
-    const top = data.top || [];
-    const items = data.items || [];
+    const top = Array.isArray(data.top) ? data.top : [];
+    const items = Array.isArray(data.items) ? data.items : [];
     const meta = data.meta || {};
     if (!append) {
       renderNotice(meta);
-      renderCategories(data.suggested_categories || []);
+      renderCategories(data.suggested_categories);
       renderProductList(".hai-top", ".hai-top-list", top, false, 1);
       renderProductList(".hai-items", ".hai-item-list", items, false, 4 + (meta.offset || 0));
       const hasApiNotice = Boolean(meta.low_confidence && meta.notice);
@@ -1104,9 +1004,10 @@
   function renderCategories(categories) {
     const section = state.modal.querySelector(".hai-categories");
     const list = section.querySelector(".hai-category-list");
+    const values = Array.isArray(categories) ? categories.filter(Boolean).slice(0, 15) : [];
     list.innerHTML = "";
-    section.hidden = categories.length === 0;
-    categories.forEach(function (category) {
+    section.hidden = values.length === 0;
+    values.forEach(function (category) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "hai-chip";
@@ -1139,7 +1040,7 @@
       card.innerHTML = `
         <a class="hai-image-link" href="${escapeAttr(productUrl)}" target="_blank" rel="noreferrer" aria-label="${escapeAttr(productName || productId || "상품 상세 보기")}">
           <span class="hai-score">${escapeHtml(scoreText)}</span>
-          <img src="${escapeAttr(imageUrl)}" alt="${escapeAttr(productName)}">
+          ${imageUrl ? `<img src="${escapeAttr(imageUrl)}" alt="${escapeAttr(productName)}">` : '<span class="hai-image-empty">이미지 없음</span>'}
         </a>
         <div class="hai-card-body">
           <div class="hai-product-id">상품번호 ${escapeHtml(productId)}</div>
@@ -1154,8 +1055,27 @@
           recordClick(clickProduct, (basePosition || 1) + index);
         });
       });
+      const image = card.querySelector("img");
+      if (image) {
+        image.addEventListener("error", function () {
+          replaceImageWithEmptyState(image);
+        });
+      }
       list.appendChild(card);
     });
+  }
+
+  function replaceImageWithEmptyState(image) {
+    const empty = document.createElement("span");
+    empty.className = "hai-image-empty";
+    empty.textContent = "이미지 없음";
+    if (typeof image.replaceWith === "function") {
+      image.replaceWith(empty);
+      return;
+    }
+    if (image.parentNode) {
+      image.parentNode.replaceChild(empty, image);
+    }
   }
 
   function renderMore(meta) {
@@ -1369,6 +1289,10 @@
       .hai-card { border: 1px solid #d9e0e8; border-radius: 8px; overflow: hidden; background: #fff; min-width: 0; display: grid; }
       .hai-image-link { display: block; background: #edf1f5; }
       .hai-card img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
+      .hai-image-empty {
+        width: 100%; aspect-ratio: 1 / 1; display: grid; place-items: center;
+        color: #8a94a6; font-size: 13px; font-weight: 800; background: #f3f6f9;
+      }
       .hai-card-body { padding: 11px; display: grid; gap: 7px; }
       .hai-score { color: var(--hai-accent, #0f766e); font-weight: 800; font-size: 12px; }
       .hai-product-id, .hai-card-meta { color: #667085; font-size: 12px; line-height: 1.35; }
@@ -1420,10 +1344,14 @@
         min-width: 0;
       }
       .hai-mode-strip {
-        display: flex; align-items: center; min-height: 38px; background: #ee1b24; color: #fff;
-        font-size: 13px; font-weight: 800; overflow: hidden; min-width: 0; max-width: 100%;
+        display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; min-height: 38px;
+        background: #ee1b24; color: #fff; font-size: 13px; font-weight: 800; min-width: 0; max-width: 100%;
       }
-      .hai-mode-strip span { padding: 0 16px; border-right: 1px solid rgba(255, 255, 255, .34); white-space: nowrap; }
+      .hai-mode-strip span {
+        display: flex; align-items: center; justify-content: center; min-width: 0; padding: 6px 10px;
+        border-right: 1px solid rgba(255, 255, 255, .34); text-align: center; line-height: 1.25;
+        white-space: normal; overflow-wrap: anywhere; word-break: keep-all;
+      }
       .hai-mode-strip .hai-mode-active { background: #d51018; color: #fff; }
       .hai-row {
         grid-template-columns: minmax(0, 1fr) 116px; gap: 8px; align-items: stretch;
@@ -1501,127 +1429,8 @@
       .hai-detail:hover { border-color: var(--hai-accent, #ee1b24); background: var(--hai-accent, #ee1b24); color: #fff; }
       .hai-more { border: 1px solid #d8d8d8; background: #fff; color: #333; }
       .hai-empty { border-radius: 0; }
-      .hai-modal.hai-popover-mode {
-        pointer-events: none;
-      }
-      .hai-modal.hai-popover-mode .hai-backdrop {
-        display: none;
-      }
-      .hai-modal.hai-popover-mode .hai-dialog {
-        position: fixed;
-        left: var(--hai-popover-left, 12px);
-        top: var(--hai-popover-top, 80px);
-        width: var(--hai-popover-width, min(392px, calc(100vw - 20px)));
-        max-height: var(--hai-popover-max-height, calc(100vh - 92px));
-        min-width: 0;
-        margin: 0;
-        border: 1px solid #e2e2e2;
-        border-radius: 6px;
-        pointer-events: auto;
-        box-shadow: 0 18px 42px rgba(15, 23, 42, .18);
-      }
-      .hai-modal.hai-popover-mode .hai-header {
-        border-bottom: 1px solid #eeeeee;
-      }
-      .hai-modal.hai-popover-mode .hai-header::before,
-      .hai-modal.hai-popover-mode .hai-brand-mark,
-      .hai-modal.hai-popover-mode .hai-eyebrow,
-      .hai-modal.hai-popover-mode .hai-header p,
-      .hai-modal.hai-popover-mode .hai-badges,
-      .hai-modal.hai-popover-mode .hai-mode-strip,
-      .hai-modal.hai-popover-mode .hai-row,
-      .hai-modal.hai-popover-mode .hai-categories,
-      .hai-modal.hai-popover-mode .hai-top,
-      .hai-modal.hai-popover-mode .hai-items,
-      .hai-modal.hai-popover-mode .hai-empty,
-      .hai-modal.hai-popover-mode .hai-notice {
-        display: none !important;
-      }
-      .hai-modal.hai-popover-mode .hai-brand-head {
-        display: block;
-        padding: 12px 46px 10px 14px;
-      }
-      .hai-modal.hai-popover-mode .hai-header h2 {
-        margin: 0;
-        color: #222;
-        font-size: 12px;
-        font-weight: 800;
-        line-height: 1.2;
-      }
-      .hai-modal.hai-popover-mode .hai-icon-button {
-        top: 7px;
-        right: 8px;
-        width: 28px;
-        height: 28px;
-        border: 0;
-        background: transparent;
-        color: #111;
-      }
-      .hai-modal.hai-popover-mode .hai-icon-button:hover {
-        background: #f5f5f5;
-      }
-      .hai-modal.hai-popover-mode .hai-body {
-        padding: 14px;
-        gap: 10px;
-      }
-      .hai-modal.hai-popover-mode .hai-search-form {
-        border: 0;
-      }
-      .hai-modal.hai-popover-mode .hai-dropzone {
-        min-height: 116px;
-        margin: 0;
-        border: 1px dashed #d6d6d6;
-        background: #fff;
-        border-radius: 6px;
-        gap: 8px;
-      }
-      .hai-modal.hai-popover-mode .hai-dropzone::after {
-        display: none;
-      }
-      .hai-modal.hai-popover-mode .hai-upload-icon {
-        width: 36px;
-        height: 36px;
-        background: #fff3f0;
-        color: var(--hai-accent, #ee1b24);
-        border: 1px solid #ffd4cf;
-      }
-      .hai-modal.hai-popover-mode .hai-upload-icon svg {
-        width: 19px;
-        height: 19px;
-      }
-      .hai-modal.hai-popover-mode .hai-upload-copy {
-        color: #777;
-        font-size: 11px;
-        line-height: 1.45;
-      }
-      .hai-modal.hai-popover-mode .hai-upload-copy strong {
-        color: #777;
-        font-size: 13px;
-        font-weight: 800;
-      }
-      .hai-modal.hai-popover-mode .hai-preview {
-        padding: 10px 0 0;
-      }
-      .hai-modal.hai-popover-mode .hai-preview img {
-        width: 54px;
-        height: 54px;
-        border-radius: 4px;
-      }
-      .hai-modal.hai-popover-mode .hai-error,
-      .hai-modal.hai-popover-mode .hai-loading {
-        border-radius: 4px;
-        padding: 8px 10px;
-        font-size: 12px;
-      }
       @media (max-width: 560px) {
         .hai-dialog { width: min(100vw - 16px, 680px); margin: 8px auto; max-height: calc(100vh - 16px); }
-        .hai-modal.hai-popover-mode .hai-dialog {
-          left: 10px;
-          top: var(--hai-popover-top, 74px);
-          width: calc(100vw - 20px);
-          max-height: calc(100vh - 84px);
-          margin: 0;
-        }
         .hai-header, .hai-body { padding-left: 14px; padding-right: 14px; }
         .hai-header { padding-left: 0; padding-right: 0; }
         .hai-brand-head { grid-template-columns: 1fr; padding: 22px 48px 14px 14px; gap: 8px; }
@@ -1629,26 +1438,17 @@
         .hai-icon-button { position: fixed; top: 14px; right: 12px; z-index: 3; }
         .hai-header h2 { font-size: 19px; }
         .hai-badges { display: none; }
-        .hai-mode-strip { flex-wrap: wrap; overflow: hidden; }
-        .hai-mode-strip span { flex: 1 1 33%; min-width: 0; padding: 0 6px; text-align: center; white-space: normal; font-size: 12px; }
+        .hai-mode-strip span { padding: 6px 5px; font-size: 12px; }
         .hai-upload-copy span { display: block; max-width: 250px; margin: 0 auto; }
         .hai-row, .hai-top-list, .hai-item-list { grid-template-columns: 1fr; }
       }
       @media (min-width: 561px) and (max-width: 860px) {
         .hai-dialog { width: min(100vw - 20px, 760px); margin: 10px auto; max-height: calc(100vh - 20px); }
-        .hai-modal.hai-popover-mode .hai-dialog {
-          left: var(--hai-popover-left, 10px);
-          top: var(--hai-popover-top, 74px);
-          width: var(--hai-popover-width, min(392px, calc(100vw - 20px)));
-          max-height: var(--hai-popover-max-height, calc(100vh - 84px));
-          margin: 0;
-        }
         .hai-header, .hai-body { padding-left: 16px; padding-right: 16px; }
         .hai-header { padding-left: 0; padding-right: 0; }
         .hai-brand-head { padding-left: 16px; padding-right: 52px; }
         .hai-icon-button { position: fixed; top: 14px; right: 12px; z-index: 3; }
-        .hai-mode-strip { flex-wrap: wrap; overflow: hidden; }
-        .hai-mode-strip span { flex: 1 1 33%; min-width: 0; padding: 0 6px; text-align: center; white-space: normal; font-size: 12px; }
+        .hai-mode-strip span { padding: 6px 5px; font-size: 12px; }
         .hai-row { grid-template-columns: 1fr; }
         .hai-top-list, .hai-item-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
@@ -1693,21 +1493,6 @@
 
   function normalizeResultPageTarget(value) {
     return trimText(value) === "_blank" ? "_blank" : "_self";
-  }
-
-  function normalizePresentation(value) {
-    return lowerText(value) === "popover" ? "popover" : "modal";
-  }
-
-  function truthyOption(value) {
-    if (value === true) {
-      return true;
-    }
-    if (value === false || value === null || value === undefined) {
-      return false;
-    }
-    const text = lowerText(value).trim();
-    return ["1", "true", "yes", "y", "on"].indexOf(text) !== -1;
   }
 
   function inferApiBaseUrlFromScript() {
@@ -1931,7 +1716,6 @@
       ["attachAfterSelector", ["data-hai-attach-after-selector", "data-attach-after-selector"]],
       ["triggerTitle", ["data-hai-trigger-title", "data-trigger-title"]],
       ["triggerAriaLabel", ["data-hai-trigger-aria-label", "data-trigger-aria-label"]],
-      ["presentation", ["data-hai-presentation", "data-presentation"]],
       ["accentColor", ["data-hai-accent-color", "data-accent-color"]],
       ["accentTextColor", ["data-hai-accent-text-color", "data-accent-text-color"]],
       ["accentSoftColor", ["data-hai-accent-soft-color", "data-accent-soft-color"]]
@@ -1956,8 +1740,7 @@
     [
       ["autoAttach", ["data-hai-auto-attach", "data-auto-attach"]],
       ["fallbackFloating", ["data-hai-fallback-floating", "data-fallback-floating"]],
-      ["prefillFromSearchInput", ["data-hai-prefill-from-search-input", "data-prefill-from-search-input"]],
-      ["autoSubmitOnImage", ["data-hai-auto-submit-on-image", "data-auto-submit-on-image"]]
+      ["prefillFromSearchInput", ["data-hai-prefill-from-search-input", "data-prefill-from-search-input"]]
     ].forEach(function (entry) {
       const value = booleanAttribute(firstAttributeValue(script, entry[1]));
       if (value !== null) {

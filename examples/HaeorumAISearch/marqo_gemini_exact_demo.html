@@ -3,299 +3,494 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Haeorum AI Search - Marqo Gemini Demo</title>
+  <title>Haeorum AI Search Demo</title>
   <style>
     :root {
-      --bg: #f6f7f9;
+      --bg: #f4f6f8;
       --panel: #ffffff;
-      --ink: #111827;
+      --ink: #101828;
       --muted: #667085;
-      --line: #d7dce3;
-      --accent: #0f766e;
-      --accent-strong: #115e59;
-      --warn: #a16207;
-      --bad: #b42318;
+      --line: #d8dee6;
+      --soft: #eef2f6;
+      --brand: #d7252a;
+      --brand-dark: #b91c1c;
+      --teal: #0f766e;
+      --blue: #2563eb;
+      --amber: #b45309;
       --good: #067647;
+      --bad: #b42318;
+      --shadow: 0 10px 24px rgba(16, 24, 40, .07);
     }
-    * { box-sizing: border-box; }
+
+    * { box-sizing: border-box; letter-spacing: 0; }
+
     body {
       margin: 0;
       background: var(--bg);
       color: var(--ink);
       font-family: Arial, "Noto Sans KR", sans-serif;
-      letter-spacing: 0;
     }
-    header {
-      border-bottom: 1px solid var(--line);
-      background: var(--panel);
+
+    button,
+    input,
+    textarea {
+      font: inherit;
     }
+
+    button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      min-height: 38px;
+      padding: 0 12px;
+      border-radius: 6px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:hover { border-color: #9aa4b2; }
+
+    button.primary {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+
+    button.primary:hover {
+      background: var(--brand-dark);
+      border-color: var(--brand-dark);
+    }
+
+    button.secondary {
+      color: var(--teal);
+      border-color: rgba(15, 118, 110, .35);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: .58;
+    }
+
     .wrap {
-      width: min(1180px, calc(100vw - 32px));
+      width: min(1240px, calc(100vw - 32px));
       margin: 0 auto;
     }
-    .topbar {
-      min-height: 68px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
     }
+
+    .topbar {
+      min-height: 72px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+    }
+
     h1 {
       margin: 0;
       font-size: 22px;
       line-height: 1.2;
     }
+
+    .subtitle {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
     .status {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       color: var(--muted);
       font-size: 13px;
       white-space: nowrap;
     }
+
     .dot {
       width: 10px;
       height: 10px;
       border-radius: 50%;
-      background: var(--warn);
+      background: var(--amber);
     }
+
     .dot.ok { background: var(--good); }
+    .dot.bad { background: var(--bad); }
+
     main {
-      padding: 24px 0 40px;
+      padding: 18px 0 36px;
     }
+
     .layout {
       display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 18px;
+      grid-template-columns: 380px minmax(0, 1fr);
+      gap: 16px;
       align-items: start;
     }
+
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .controls {
       padding: 16px;
+      display: grid;
+      gap: 14px;
+      position: sticky;
+      top: 14px;
     }
-    label {
+
+    label,
+    .section-label {
       display: block;
-      margin: 0 0 8px;
       color: var(--muted);
-      font-size: 13px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 900;
+      margin: 0 0 8px;
     }
+
     textarea,
     input[type="text"] {
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 6px;
-      color: var(--ink);
       background: #fff;
-      font: inherit;
-      font-size: 15px;
-      padding: 10px 12px;
+      color: var(--ink);
       outline: none;
+      padding: 10px 12px;
+      font-size: 15px;
     }
+
     textarea {
-      min-height: 96px;
+      min-height: 88px;
       resize: vertical;
     }
+
     textarea:focus,
     input[type="text"]:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(215, 37, 42, .13);
     }
-    .row {
+
+    .query-row {
       display: grid;
-      grid-template-columns: 1fr 110px;
-      gap: 10px;
-      margin-top: 12px;
+      grid-template-columns: 1fr 86px;
+      gap: 8px;
     }
-    .actions {
+
+    .actions,
+    .chips {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-top: 12px;
     }
-    button {
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: #fff;
-      color: var(--ink);
-      min-height: 38px;
-      padding: 0 12px;
-      font: inherit;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    button.primary {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-    }
-    button.primary:hover { background: var(--accent-strong); }
-    button:disabled {
-      cursor: wait;
-      opacity: 0.65;
-    }
-    .examples button {
-      font-size: 13px;
+
+    .chips button {
       min-height: 32px;
-    }
-    .filebox {
-      display: grid;
-      gap: 10px;
-      margin-top: 14px;
-    }
-    input[type="file"] {
-      width: 100%;
+      padding: 0 10px;
       font-size: 13px;
+      font-weight: 800;
+      background: var(--soft);
+      border-color: transparent;
     }
-    .preview {
-      width: 100%;
-      aspect-ratio: 4 / 3;
-      border: 1px dashed var(--line);
-      border-radius: 6px;
+
+    .chips button:hover {
+      border-color: #bcc5d1;
+      background: #fff;
+    }
+
+    .dropzone {
+      min-height: 170px;
+      border: 1px dashed #aeb8c6;
+      border-radius: 8px;
+      background: #fbfcfe;
       display: grid;
       place-items: center;
       overflow: hidden;
+      text-align: center;
       color: var(--muted);
-      font-size: 13px;
-      background: #fafafa;
+      cursor: pointer;
     }
-    .preview img {
+
+    .dropzone.dragging {
+      border-color: var(--brand);
+      box-shadow: inset 0 0 0 2px rgba(215, 37, 42, .12);
+    }
+
+    .dropzone img {
       width: 100%;
       height: 100%;
+      max-height: 260px;
       object-fit: contain;
+      background: #fff;
     }
-    .metrics {
+
+    .file-meta {
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    input[type="file"] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .summary {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       margin-bottom: 14px;
     }
+
     .metric {
+      background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: var(--panel);
       padding: 12px;
-      min-height: 74px;
+      min-height: 76px;
     }
-    .metric b {
-      display: block;
-      font-size: 20px;
-      margin-top: 4px;
-    }
+
     .metric span {
       color: var(--muted);
+      display: block;
       font-size: 12px;
+      font-weight: 900;
+    }
+
+    .metric b {
+      display: block;
+      margin-top: 5px;
+      font-size: 20px;
+      line-height: 1.15;
+    }
+
+    .notice {
+      min-height: 22px;
+      margin: 0 0 12px;
+      color: var(--bad);
+      font-size: 13px;
       font-weight: 700;
     }
+
+    .run-note {
+      min-height: 22px;
+      margin: -4px 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
     .results {
       display: grid;
       gap: 10px;
     }
+
     .item {
       display: grid;
-      grid-template-columns: 92px 1fr auto;
+      grid-template-columns: 104px minmax(0, 1fr) 84px;
       gap: 14px;
+      align-items: start;
+      background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: var(--panel);
       padding: 10px;
-      min-height: 112px;
+      min-height: 126px;
     }
+
     .thumb {
-      width: 92px;
-      height: 92px;
+      width: 104px;
+      height: 104px;
       border-radius: 6px;
-      background: #eef1f4;
       object-fit: cover;
+      background: #edf1f5;
+      border: 1px solid #e6ebf1;
     }
+
     .item h2 {
-      margin: 2px 0 8px;
+      margin: 1px 0 8px;
       font-size: 16px;
       line-height: 1.35;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
     }
+
     .item p {
       margin: 0;
       color: var(--muted);
       font-size: 13px;
       line-height: 1.5;
+      overflow-wrap: anywhere;
     }
-    .score {
-      min-width: 72px;
-      text-align: right;
-      color: var(--accent-strong);
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      max-width: 100%;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #344054;
+      padding: 0 8px;
+      font-size: 12px;
       font-weight: 800;
+      margin: 0 0 8px;
+    }
+
+    .score {
+      text-align: right;
+      color: var(--teal);
+      font-weight: 900;
       font-size: 15px;
-      padding-top: 4px;
     }
-    .notice {
-      margin: 0 0 12px;
-      color: var(--bad);
-      font-size: 14px;
-      min-height: 20px;
+
+    .bar {
+      height: 6px;
+      margin-top: 7px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      overflow: hidden;
     }
-    .empty {
-      min-height: 260px;
-      display: grid;
-      place-items: center;
-      color: var(--muted);
+
+    .bar span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--teal);
+    }
+
+    .empty,
+    .loading {
+      min-height: 300px;
       border: 1px dashed var(--line);
       border-radius: 8px;
       background: var(--panel);
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-weight: 800;
     }
-    @media (max-width: 860px) {
-      .layout { grid-template-columns: 1fr; }
-      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .item { grid-template-columns: 76px 1fr; }
-      .thumb { width: 76px; height: 76px; }
-      .score { grid-column: 2; text-align: left; padding-top: 0; }
-      .topbar { align-items: flex-start; flex-direction: column; padding: 14px 0; }
+
+    .loading {
+      color: var(--blue);
+      background: linear-gradient(90deg, #fff, #f7fbff, #fff);
+      background-size: 220% 100%;
+      animation: shimmer 1.2s linear infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -120% 0; }
+    }
+
+    @media (max-width: 920px) {
+      .topbar,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+      }
+
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .wrap {
+        width: min(100vw - 20px, 520px);
+      }
+
+      .query-row {
+        grid-template-columns: 1fr 74px;
+      }
+
+      .item {
+        grid-template-columns: 82px minmax(0, 1fr);
+      }
+
+      .thumb {
+        width: 82px;
+        height: 82px;
+      }
+
+      .score {
+        grid-column: 2;
+        text-align: left;
+      }
     }
   </style>
 </head>
 <body>
   <header>
     <div class="wrap topbar">
-      <h1>Haeorum AI Search</h1>
-      <div class="status"><span id="healthDot" class="dot"></span><span id="healthText">Marqo / Gemini 확인 중</span></div>
+      <div>
+        <h1>해오름 AI 검색 체감 테스트</h1>
+        <p class="subtitle">로컬 Marqo/Gemini 서버에 직접 연결 중</p>
+      </div>
+      <div class="status"><span id="healthDot" class="dot"></span><span id="healthText">확인 중</span></div>
     </div>
   </header>
 
   <main class="wrap">
     <div class="layout">
-      <section class="panel">
-        <label for="query">검색어</label>
-        <textarea id="query">스탠리 텀블러</textarea>
-        <div class="row">
+      <section class="panel controls">
+        <div>
+          <label for="query">검색어</label>
+          <textarea id="query">스텐텀블러</textarea>
+        </div>
+
+        <div class="query-row">
           <input id="limit" type="text" value="8" aria-label="결과 수">
           <button id="searchBtn" class="primary">검색</button>
         </div>
 
-        <div class="actions examples">
-          <button data-query="검은 우산">검은 우산</button>
-          <button data-query="골프공 12구">골프공 12구</button>
-          <button data-query="크리스탈 감사패">크리스탈 감사패</button>
-          <button data-query="네프킨 젓가락집">네프킨 젓가락집</button>
-          <button data-query="자개 USB">자개 USB</button>
-          <button data-query="넥워머 방한">넥워머 방한</button>
+        <div>
+          <div class="section-label">정확도 샘플</div>
+          <div class="chips">
+            <button data-query="스텐텀블러">스텐텀블러</button>
+            <button data-query="검은 3단 우산">검은 3단 우산</button>
+            <button data-query="골프공 12구">골프공 12구</button>
+            <button data-query="스마트폰 충전 케이블">충전 케이블</button>
+            <button data-query="보틀오프너">보틀오프너</button>
+            <button data-query="냄비 손잡이">냄비 손잡이</button>
+            <button data-query="크리스탈 감사패">크리스탈 감사패</button>
+            <button data-query="손소독티슈">손소독티슈</button>
+          </div>
         </div>
 
-        <div class="filebox">
-          <label for="imageInput">이미지</label>
+        <div>
+          <div class="section-label">이미지</div>
           <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp">
-          <div id="preview" class="preview">이미지 없음</div>
+          <div id="dropzone" class="dropzone" role="button" tabindex="0">이미지 선택</div>
+          <div id="fileMeta" class="file-meta">선택된 이미지 없음</div>
+        </div>
+
+        <div class="actions">
           <button id="clearImageBtn">이미지 제거</button>
+          <button id="batchBtn" class="secondary">10건 동시</button>
         </div>
       </section>
 
       <section>
-        <div class="metrics">
+        <div class="summary">
           <div class="metric"><span>API 시간</span><b id="apiMs">-</b></div>
           <div class="metric"><span>전체 시간</span><b id="wallMs">-</b></div>
           <div class="metric"><span>검색 유형</span><b id="queryType">-</b></div>
           <div class="metric"><span>결과</span><b id="count">-</b></div>
         </div>
+        <p id="runNote" class="run-note">대기 중</p>
         <p id="notice" class="notice"></p>
         <div id="results" class="results">
           <div class="empty">검색 결과 대기 중</div>
@@ -308,7 +503,12 @@
     const API_BASE = "http://127.0.0.1:8120";
     const API_KEY = "public-shop001-dev-key";
     const MALL_ID = "shop001";
-    let imageBase64 = "";
+    const MAX_IMAGE_DIMENSION = 640;
+    const CONCURRENT_REQUESTS = 10;
+
+    let imageDataUrl = "";
+    let imageMeta = null;
+    let latestController = null;
 
     const $ = (id) => document.getElementById(id);
 
@@ -316,75 +516,257 @@
       try {
         const res = await fetch(`${API_BASE}/health`);
         const data = await res.json();
-        const gemini = data.gemini || {};
-        const provider = gemini.provider || data.embedding_backend || "-";
-        const model = data.gemini_model || gemini.model || "-";
-        $("healthDot").classList.toggle("ok", Boolean(data.ready || data.ok));
-        $("healthText").textContent = `${data.engine} / ${data.embedding_backend} / ${provider} / ${model}`;
+        const ok = Boolean(data.ready || data.ok);
+        $("healthDot").classList.toggle("ok", ok);
+        $("healthDot").classList.toggle("bad", !ok);
+        const engine = data.engine || "-";
+        const model = data.gemini_model || data.gemini?.model || "-";
+        const index = data.index || "-";
+        $("healthText").textContent = `${engine} / ${model} / ${index}`;
       } catch (error) {
+        $("healthDot").classList.add("bad");
         $("healthText").textContent = "API 연결 실패";
       }
     }
 
-    function setBusy(value) {
+    function currentPayload() {
+      const q = $("query").value.trim();
+      const limit = Math.max(1, Math.min(20, Number($("limit").value || 8)));
+      const payload = { mall_id: MALL_ID, limit };
+      if (q) payload.q = q;
+      if (imageDataUrl) payload.image_base64 = imageDataUrl;
+      return payload;
+    }
+
+    function hasSearchInput(payload) {
+      return Boolean(payload.q || payload.image_base64);
+    }
+
+    function setBusy(value, label = "검색") {
       $("searchBtn").disabled = value;
-      $("searchBtn").textContent = value ? "검색 중" : "검색";
+      $("batchBtn").disabled = value;
+      $("searchBtn").textContent = value ? "검색 중" : label;
+    }
+
+    function setLoading(text) {
+      $("results").innerHTML = `<div class="loading">${escapeHtml(text)}</div>`;
+    }
+
+    async function searchApi(payload, signal) {
+      const started = performance.now();
+      const res = await fetch(`${API_BASE}/api/ai-search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "X-API-Key": API_KEY
+        },
+        body: JSON.stringify(payload),
+        signal
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || `HTTP ${res.status}`);
+      }
+      return { data, wallMs: performance.now() - started };
+    }
+
+    async function search() {
+      const payload = currentPayload();
+      if (!hasSearchInput(payload)) {
+        $("notice").textContent = "검색어 또는 이미지를 넣어주세요.";
+        return;
+      }
+      latestController?.abort();
+      latestController = new AbortController();
+      setBusy(true);
+      $("notice").textContent = "";
+      $("runNote").textContent = imageMeta ? `${imageMeta.name} / ${imageMeta.normalizedLabel}` : "단일 검색";
+      setLoading("검색 중");
+      try {
+        const { data, wallMs } = await searchApi(payload, latestController.signal);
+        render(data, wallMs);
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          $("notice").textContent = error.message;
+          $("results").innerHTML = `<div class="empty">검색 실패</div>`;
+        }
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function runConcurrentSearch() {
+      const payload = currentPayload();
+      if (!hasSearchInput(payload)) {
+        $("notice").textContent = "검색어 또는 이미지를 넣어주세요.";
+        return;
+      }
+      setBusy(true);
+      $("notice").textContent = "";
+      setLoading("10건 동시 실행 중");
+      const started = performance.now();
+      try {
+        const jobs = Array.from({ length: CONCURRENT_REQUESTS }, () => searchApi(payload));
+        const settled = await Promise.allSettled(jobs);
+        const successes = settled
+          .filter((item) => item.status === "fulfilled")
+          .map((item) => item.value);
+        const failures = settled.length - successes.length;
+        if (!successes.length) {
+          throw new Error("10건 모두 실패했습니다.");
+        }
+        const latencies = successes.map((item) => item.wallMs).sort((a, b) => a - b);
+        const p95 = latencies[Math.min(latencies.length - 1, Math.ceil(latencies.length * .95) - 1)];
+        const avg = latencies.reduce((sum, value) => sum + value, 0) / latencies.length;
+        $("runNote").textContent =
+          `10건 동시: 성공 ${successes.length}/${CONCURRENT_REQUESTS}, 실패 ${failures}, 평균 ${avg.toFixed(0)}ms, 느린 쪽 ${p95.toFixed(0)}ms`;
+        render(successes[0].data, performance.now() - started);
+      } catch (error) {
+        $("notice").textContent = error.message;
+        $("results").innerHTML = `<div class="empty">동시 테스트 실패</div>`;
+      } finally {
+        setBusy(false);
+      }
     }
 
     function resultRows(data) {
-      return [...(data.top || []), ...(data.items || [])];
+      const rows = [...(data.top || []), ...(data.items || [])];
+      const seen = new Set();
+      return rows.filter((item) => {
+        const key = `${item.mall_id || ""}:${item.product_id || item.name || ""}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     }
 
     function render(data, wallMs) {
       const rows = resultRows(data);
-      $("apiMs").textContent = `${data.meta?.elapsed_ms ?? "-"} ms`;
+      const meta = data.meta || {};
+      $("apiMs").textContent = `${meta.elapsed_ms ?? "-"} ms`;
       $("wallMs").textContent = `${wallMs.toFixed(1)} ms`;
-      $("queryType").textContent = data.meta?.query_type || "-";
+      $("queryType").textContent = queryTypeLabel(meta.query_type);
       $("count").textContent = String(rows.length);
-      $("notice").textContent = data.meta?.notice || "";
+      $("notice").textContent = meta.notice || "";
+      if (!$("runNote").textContent || $("runNote").textContent === "대기 중") {
+        $("runNote").textContent = `${queryTypeLabel(meta.query_type)} / ${rows.length}개`;
+      }
       if (!rows.length) {
         $("results").innerHTML = `<div class="empty">결과 없음</div>`;
         return;
       }
-      $("results").innerHTML = rows.map((item) => `
-        <article class="item">
-          <img class="thumb" src="${item.image_url || ""}" alt="">
-          <div>
-            <h2>${escapeHtml(item.name || "")}</h2>
-            <p>${escapeHtml(item.category || "")} · ${escapeHtml(item.product_id || "")}</p>
-            <p>${formatPrice(item.price)}</p>
-          </div>
-          <div class="score">${Number(item.score_percent || 0).toFixed(1)}%</div>
-        </article>
-      `).join("");
+      $("results").innerHTML = rows.map((item) => resultCard(item)).join("");
     }
 
-    async function search() {
-      const q = $("query").value.trim();
-      const limit = Math.max(1, Math.min(20, Number($("limit").value || 8)));
-      if (!q && !imageBase64) return;
-      const payload = { mall_id: MALL_ID, limit };
-      if (q) payload.q = q;
-      if (imageBase64) payload.image_base64 = imageBase64;
-      setBusy(true);
-      const started = performance.now();
-      try {
-        const res = await fetch(`${API_BASE}/api/ai-search`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json; charset=utf-8",
-            "X-API-Key": API_KEY
-          },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-        render(data, performance.now() - started);
-      } catch (error) {
-        $("notice").textContent = error.message;
-      } finally {
-        setBusy(false);
-      }
+    function resultCard(item) {
+      const score = Math.max(0, Math.min(100, Number(item.score_percent || 0)));
+      const image = item.image_url
+        ? `<img class="thumb" src="${escapeAttr(item.image_url)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">`
+        : `<div class="thumb"></div>`;
+      const name = escapeHtml(item.name || "");
+      const productId = escapeHtml(item.product_id || "");
+      const category = escapeHtml(item.category || "카테고리 없음");
+      const price = formatPrice(item.price);
+      const title = item.product_url
+        ? `<a href="${escapeAttr(item.product_url)}" target="_blank" rel="noopener">${name}</a>`
+        : name;
+      return `
+        <article class="item">
+          ${image}
+          <div>
+            <div class="pill">${category}</div>
+            <h2>${title}</h2>
+            <p>${productId}${price ? ` · ${price}` : ""}</p>
+          </div>
+          <div class="score">
+            ${score.toFixed(1)}%
+            <div class="bar"><span style="width:${score.toFixed(1)}%"></span></div>
+          </div>
+        </article>
+      `;
+    }
+
+    async function handleImageFile(file) {
+      if (!file) return;
+      $("notice").textContent = "";
+      const originalBytes = file.size;
+      const raw = await readFileDataUrl(file);
+      const normalized = await resizeImageDataUrl(raw, file.type);
+      imageDataUrl = normalized.dataUrl;
+      imageMeta = {
+        name: file.name,
+        originalBytes,
+        normalizedBytes: dataUrlBytes(imageDataUrl),
+        width: normalized.width,
+        height: normalized.height,
+        normalizedLabel: `${normalized.width}x${normalized.height}, ${formatBytes(dataUrlBytes(imageDataUrl))}`
+      };
+      $("dropzone").innerHTML = `<img src="${imageDataUrl}" alt="">`;
+      $("fileMeta").textContent =
+        `${file.name} / 원본 ${formatBytes(originalBytes)} / 검색용 ${imageMeta.normalizedLabel}`;
+    }
+
+    function readFileDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error || new Error("파일을 읽지 못했습니다."));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function resizeImageDataUrl(dataUrl, fileType) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(img.naturalWidth, img.naturalHeight));
+          const width = Math.max(1, Math.round(img.naturalWidth * scale));
+          const height = Math.max(1, Math.round(img.naturalHeight * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d", { alpha: false });
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          const outputType = fileType === "image/png" && scale === 1 ? "image/png" : "image/jpeg";
+          resolve({ dataUrl: canvas.toDataURL(outputType, .9), width, height });
+        };
+        img.onerror = () => reject(new Error("이미지를 열지 못했습니다."));
+        img.src = dataUrl;
+      });
+    }
+
+    function clearImage() {
+      imageDataUrl = "";
+      imageMeta = null;
+      $("imageInput").value = "";
+      $("dropzone").textContent = "이미지 선택";
+      $("fileMeta").textContent = "선택된 이미지 없음";
+    }
+
+    function queryTypeLabel(value) {
+      if (value === "text") return "텍스트";
+      if (value === "image") return "이미지";
+      if (value === "text_image") return "텍스트+이미지";
+      return value || "-";
+    }
+
+    function formatPrice(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number) || number <= 0) return "";
+      return `${number.toLocaleString("ko-KR")}원`;
+    }
+
+    function formatBytes(value) {
+      if (!Number.isFinite(value) || value <= 0) return "0B";
+      if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)}MB`;
+      return `${Math.round(value / 1024)}KB`;
+    }
+
+    function dataUrlBytes(value) {
+      const base64 = String(value || "").split(",", 2)[1] || "";
+      return Math.round(base64.length * 3 / 4);
     }
 
     function escapeHtml(value) {
@@ -397,36 +779,50 @@
       }[char]));
     }
 
-    function formatPrice(value) {
-      const number = Number(value);
-      if (!Number.isFinite(number) || number <= 0) return "가격 정보 없음";
-      return `${number.toLocaleString("ko-KR")}원`;
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, "&#096;");
     }
 
     $("searchBtn").addEventListener("click", search);
+    $("batchBtn").addEventListener("click", runConcurrentSearch);
+    $("clearImageBtn").addEventListener("click", clearImage);
     $("query").addEventListener("keydown", (event) => {
       if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) search();
     });
+
     document.querySelectorAll("[data-query]").forEach((button) => {
       button.addEventListener("click", () => {
-        $("query").value = button.dataset.query;
+        $("query").value = button.dataset.query || "";
         search();
       });
     });
+
     $("imageInput").addEventListener("change", () => {
-      const file = $("imageInput").files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        imageBase64 = String(reader.result || "");
-        $("preview").innerHTML = `<img src="${imageBase64}" alt="">`;
-      };
-      reader.readAsDataURL(file);
+      handleImageFile($("imageInput").files?.[0]).catch((error) => {
+        $("notice").textContent = error.message;
+      });
     });
-    $("clearImageBtn").addEventListener("click", () => {
-      imageBase64 = "";
-      $("imageInput").value = "";
-      $("preview").textContent = "이미지 없음";
+
+    $("dropzone").addEventListener("click", () => $("imageInput").click());
+    $("dropzone").addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        $("imageInput").click();
+      }
+    });
+    $("dropzone").addEventListener("dragover", (event) => {
+      event.preventDefault();
+      $("dropzone").classList.add("dragging");
+    });
+    $("dropzone").addEventListener("dragleave", () => {
+      $("dropzone").classList.remove("dragging");
+    });
+    $("dropzone").addEventListener("drop", (event) => {
+      event.preventDefault();
+      $("dropzone").classList.remove("dragging");
+      handleImageFile(event.dataTransfer?.files?.[0]).catch((error) => {
+        $("notice").textContent = error.message;
+      });
     });
 
     health();

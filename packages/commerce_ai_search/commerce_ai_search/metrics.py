@@ -911,6 +911,69 @@ def metrics_to_prometheus(metrics: dict[str, Any]) -> str:
         add_prometheus_metric(
             lines,
             emitted,
+            f"{query_cache_metric_prefix}_runtime_cache_hits",
+            query_cache.get("runtime_hits"),
+            f"Runtime {query_cache_provider} query vector cache hits since process start.",
+        )
+        add_prometheus_metric(
+            lines,
+            emitted,
+            f"{query_cache_metric_prefix}_runtime_text_cache_hits",
+            query_cache.get("runtime_text_hits"),
+            f"Runtime {query_cache_provider} text query vector cache hits since process start.",
+        )
+        add_prometheus_metric(
+            lines,
+            emitted,
+            f"{query_cache_metric_prefix}_runtime_image_cache_hits",
+            query_cache.get("runtime_image_hits"),
+            f"Runtime {query_cache_provider} image query vector cache hits since process start.",
+        )
+        add_prometheus_metric(
+            lines,
+            emitted,
+            f"{query_cache_metric_prefix}_runtime_cache_misses",
+            query_cache.get("runtime_misses"),
+            f"Runtime {query_cache_provider} query vector cache misses since process start.",
+        )
+        add_prometheus_metric(
+            lines,
+            emitted,
+            f"{query_cache_metric_prefix}_runtime_text_cache_misses",
+            query_cache.get("runtime_text_misses"),
+            f"Runtime {query_cache_provider} text query vector cache misses since process start.",
+        )
+        add_prometheus_metric(
+            lines,
+            emitted,
+            f"{query_cache_metric_prefix}_runtime_image_cache_misses",
+            query_cache.get("runtime_image_misses"),
+            f"Runtime {query_cache_provider} image query vector cache misses since process start.",
+        )
+        add_prometheus_metric(
+            lines,
+            emitted,
+            f"{query_cache_metric_prefix}_runtime_cache_evictions",
+            query_cache.get("runtime_evictions"),
+            f"Runtime {query_cache_provider} query vector cache evictions since process start.",
+        )
+        add_prometheus_metric(
+            lines,
+            emitted,
+            f"{query_cache_metric_prefix}_runtime_text_cache_evictions",
+            query_cache.get("runtime_text_evictions"),
+            f"Runtime {query_cache_provider} text query vector cache evictions since process start.",
+        )
+        add_prometheus_metric(
+            lines,
+            emitted,
+            f"{query_cache_metric_prefix}_runtime_image_cache_evictions",
+            query_cache.get("runtime_image_evictions"),
+            f"Runtime {query_cache_provider} image query vector cache evictions since process start.",
+        )
+        add_prometheus_metric(
+            lines,
+            emitted,
             f"{query_cache_metric_prefix}_in_flight",
             query_cache.get("in_flight"),
             f"Current in-flight {query_cache_provider} query vector computations.",
@@ -1723,6 +1786,27 @@ def metrics_to_prometheus(metrics: dict[str, Any]) -> str:
         "haeorum_image_validation_cache_evictions",
         image_validation.get("cache_evictions"),
         "Validated upload image cache evictions since process start.",
+    )
+    add_prometheus_metric(
+        lines,
+        emitted,
+        "haeorum_image_validation_error_cache_entries",
+        image_validation.get("error_cache_entry_count"),
+        "Current rejected upload image validation errors cached in this API process.",
+    )
+    add_prometheus_metric(
+        lines,
+        emitted,
+        "haeorum_image_validation_error_cache_hits",
+        image_validation.get("error_cache_hits"),
+        "Rejected upload image validation error cache hits since process start.",
+    )
+    add_prometheus_metric(
+        lines,
+        emitted,
+        "haeorum_image_validation_error_cache_evictions",
+        image_validation.get("error_cache_evictions"),
+        "Rejected upload image validation error cache evictions since process start.",
     )
     search_queue = metrics.get("search_queue") or {}
     add_prometheus_metric(

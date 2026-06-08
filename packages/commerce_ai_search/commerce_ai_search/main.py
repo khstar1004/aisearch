@@ -5,7 +5,7 @@ from pathlib import Path
 import secrets
 import threading
 import time
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from typing import Any
 
@@ -24,7 +24,14 @@ from .image_validation import (
 )
 from .instance import API_INSTANCE_HEADER, api_instance_id
 from .metrics import build_admin_metrics, metrics_to_prometheus, safe_engine_health
-from .models import MAX_PRODUCT_ID_LENGTH, AdminProductRequest, ClickLogRequest, SearchRequest, preferred_mall_id_alias
+from .models import (
+    MAX_PRODUCT_ID_LENGTH,
+    AdminProductRequest,
+    AdminQueryPrewarmRequest,
+    ClickLogRequest,
+    SearchRequest,
+    preferred_mall_id_alias,
+)
 from .openapi_contract import load_public_openapi_schema
 from .rate_limit import RateLimitBucketStore, make_rate_limiter
 from .request_body import read_json_object_limited
@@ -134,7 +141,16 @@ def normalize_admin_product_id(product_id: str) -> str:
     return value
 
 
-app = FastAPI(title="Commerce AI Search", version="0.1.0")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    await startup()
+    try:
+        yield
+    finally:
+        await shutdown()
+
+
+app = FastAPI(title="Commerce AI Search", version="0.1.0", lifespan=lifespan)
 
 
 def custom_openapi() -> dict[str, Any]:
@@ -212,7 +228,6 @@ async def log_unhandled_exception(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": "internal server error"})
 
 
-@app.on_event("startup")
 async def startup() -> None:
     global engine, search_service, sync_service, shared_rate_limiter, search_execution_gate, image_search_gate, api_threadpool_status, rate_limit_bucket_store
     api_threadpool_status = configure_api_threadpool(settings)
@@ -248,7 +263,6 @@ async def startup() -> None:
     )
 
 
-@app.on_event("shutdown")
 async def shutdown() -> None:
     if engine is not None:
         engine.close()
@@ -337,6 +351,23 @@ def admin_sync(since: str | None = None, service: SyncService = Depends(get_sync
 @app.post("/admin/reindex", dependencies=[Depends(require_admin)])
 def admin_reindex(service: SyncService = Depends(get_sync_service)) -> dict[str, Any]:
     return service.reindex_all().model_dump(mode="json")
+
+
+@app.post("/admin/prewarm-query-cache", dependencies=[Depends(require_admin)])
+async def admin_prewarm_query_cache(
+    payload: AdminQueryPrewarmRequest,
+    service: AISearchService = Depends(get_search_service),
+) -> dict[str, Any]:
+    try:
+        return await run_in_threadpool(
+            service.prewarm_query_cache,
+            payload.queries,
+            batch_size=payload.batch_size,
+        )
+    except BackendCircuitOpenError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except BackendRequestError as exc:
+        raise HTTPException(status_code=backend_error_status(exc), detail=backend_error_detail(exc)) from exc
 
 
 @app.post("/admin/reindex/{product_id:path}", dependencies=[Depends(require_admin)])
@@ -526,6 +557,32 @@ async def read_json_object(request: Request, max_bytes: int | None = None) -> di
 
 def is_multipart_search_request(request: Request) -> bool:
     return request.headers.get("content-type", "").lower().startswith("multipart/form-data")
+
+
+async def drain_rejected_request_body_if_payload_too_large(request: Request, exc: ValueError) -> None:
+    if "exceeds" not in str(exc):
+        return
+    try:
+        async for _chunk in request.stream():
+            pass
+    except Exception:
+        return
+
+
+async def validate_multipart_content_length_or_drain(request: Request, max_image_bytes: int) -> None:
+    try:
+        validate_multipart_content_length(request.headers.get("content-length"), max_image_bytes=max_image_bytes)
+    except ValueError as exc:
+        await drain_rejected_request_body_if_payload_too_large(request, exc)
+        raise
+
+
+async def validate_json_image_content_length_or_drain(request: Request, max_image_bytes: int) -> None:
+    try:
+        validate_json_image_content_length(request.headers.get("content-length"), max_image_bytes=max_image_bytes)
+    except ValueError as exc:
+        await drain_rejected_request_body_if_payload_too_large(request, exc)
+        raise
 
 
 def parse_int_field(value: Any, default: int, field_name: str) -> int:

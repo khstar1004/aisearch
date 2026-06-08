@@ -62,6 +62,7 @@ def validate_image_base64(
     max_dimension: int | None = None,
     min_dimension: int | None = None,
     resize_dimension: int | None = None,
+    analyze_features: bool = True,
 ) -> ValidatedImage:
     mime_type = "application/octet-stream"
     payload = value.strip()
@@ -84,6 +85,7 @@ def validate_image_base64(
         max_dimension=max_dimension,
         min_dimension=min_dimension,
         resize_dimension=resize_dimension,
+        analyze_features=analyze_features,
     )
 
 
@@ -94,6 +96,7 @@ def validate_image_bytes(
     max_dimension: int | None = None,
     min_dimension: int | None = None,
     resize_dimension: int | None = None,
+    analyze_features: bool = True,
 ) -> ValidatedImage:
     if not raw:
         raise ValueError("image is empty")
@@ -119,7 +122,7 @@ def validate_image_bytes(
         validate_min_image_dimensions(dimensions, min_dimension)
         if len(raw) > max_bytes:
             raise ValueError(f"image exceeds {max_bytes} bytes after preprocessing")
-    features = analyze_image_features(raw)
+    features = analyze_image_features(raw) if analyze_features else ImageFeatures()
     encoded = base64.b64encode(raw).decode("ascii")
     return ValidatedImage(
         data_url=f"data:{detected};base64,{encoded}",
