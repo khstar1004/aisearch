@@ -64,6 +64,7 @@ try:
     from fastapi.responses import FileResponse
     from fastapi.responses import JSONResponse
     from fastapi.responses import PlainTextResponse
+    from fastapi.responses import RedirectResponse
     from starlette.middleware.gzip import GZipMiddleware
 except ImportError as exc:  # pragma: no cover
     raise RuntimeError("Install FastAPI dependencies: pip install -r requirements.txt") from exc
@@ -494,8 +495,25 @@ def admin_dashboard() -> FileResponse:
 
 
 @app.get("/widget.js")
+@app.get("/widget/widget.js")
 def widget_js() -> FileResponse:
     return FileResponse(Path(ROOT) / "widget" / "widget.js", media_type="text/javascript")
+
+
+@app.get("/widget/ai-search.html")
+def ai_search_page() -> FileResponse:
+    return FileResponse(Path(ROOT) / "widget" / "ai-search.html", media_type="text/html")
+
+
+@app.get("/widget/demo.html")
+def widget_demo_page() -> FileResponse:
+    return FileResponse(Path(ROOT) / "widget" / "demo.html", media_type="text/html")
+
+
+@app.get("/ai-search.html")
+def ai_search_page_redirect(request: Request) -> RedirectResponse:
+    query = f"?{request.url.query}" if request.url.query else ""
+    return RedirectResponse(f"/widget/ai-search.html{query}", status_code=307)
 
 
 async def parse_search_request(request: Request) -> ParsedSearchInput:
