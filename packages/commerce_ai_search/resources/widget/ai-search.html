@@ -988,16 +988,27 @@
   <script>
     (function () {
       const SESSION_PREFIX = "haeorumAiSearch:";
-      function defaultApiBaseUrl() {
+      function isLocalRuntime() {
         const host = window.location.hostname;
-        const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "::1";
-        return isLocalHost || window.location.protocol === "file:" ? "http://127.0.0.1:8120" : "/ai-api";
+        return host === "localhost" || host === "127.0.0.1" || host === "::1" || window.location.protocol === "file:";
+      }
+
+      function defaultApiBaseUrl() {
+        return isLocalRuntime() ? "http://127.0.0.1:8120" : "/ai-api";
+      }
+
+      function defaultMallId() {
+        return isLocalRuntime() ? "shop001" : "haeorumgift";
+      }
+
+      function defaultApiKey() {
+        return isLocalRuntime() ? "public-shop001-dev-key" : "";
       }
 
       let config = Object.assign({
         apiBaseUrl: defaultApiBaseUrl(),
-        mallId: "shop001",
-        apiKey: "public-shop001-dev-key",
+        mallId: defaultMallId(),
+        apiKey: defaultApiKey(),
         limit: 24,
         maxImageMb: 5
       }, window.HAEORUM_AI_SEARCH_CONFIG || {});
@@ -1166,9 +1177,9 @@
           return;
         }
         config = Object.assign({}, config, {
-          apiBaseUrl: session.apiBaseUrl || config.apiBaseUrl,
-          mallId: session.mallId || config.mallId,
-          apiKey: session.apiKey || config.apiKey,
+          apiBaseUrl: isLocalRuntime() ? (session.apiBaseUrl || config.apiBaseUrl) : config.apiBaseUrl,
+          mallId: isLocalRuntime() ? (session.mallId || config.mallId) : config.mallId,
+          apiKey: isLocalRuntime() ? (session.apiKey || config.apiKey) : config.apiKey,
           limit: session.limit || config.limit
         });
         if (session.query) {

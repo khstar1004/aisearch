@@ -501,15 +501,18 @@
   </main>
 
   <script>
-    function defaultApiBaseUrl() {
+    function isLocalRuntime() {
       const host = window.location.hostname;
-      const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "::1";
-      return isLocalHost || window.location.protocol === "file:" ? "http://127.0.0.1:8120" : "/ai-api";
+      return host === "localhost" || host === "127.0.0.1" || host === "::1" || window.location.protocol === "file:";
+    }
+
+    function defaultApiBaseUrl() {
+      return isLocalRuntime() ? "http://127.0.0.1:8120" : "/ai-api";
     }
 
     const API_BASE = defaultApiBaseUrl();
-    const API_KEY = "public-shop001-dev-key";
-    const MALL_ID = "shop001";
+    const API_KEY = isLocalRuntime() ? "public-shop001-dev-key" : "";
+    const MALL_ID = isLocalRuntime() ? "shop001" : "haeorumgift";
     const MAX_IMAGE_DIMENSION = 640;
     const CONCURRENT_REQUESTS = 10;
 
