@@ -151,7 +151,12 @@
   </main>
   <script src="./widget.js"></script>
   <script>
-    const demoApiBaseUrl = "http://127.0.0.1:8120";
+    function defaultApiBaseUrl() {
+      const host = window.location.hostname;
+      const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "::1";
+      return isLocalHost || window.location.protocol === "file:" ? "http://127.0.0.1:8120" : "/ai-api";
+    }
+    const demoApiBaseUrl = defaultApiBaseUrl();
     HaeorumAISearch.init({
       target: "#haeorum-ai-search",
       attachToSearchInput: "#demo-keyword",

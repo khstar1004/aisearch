@@ -988,8 +988,14 @@
   <script>
     (function () {
       const SESSION_PREFIX = "haeorumAiSearch:";
+      function defaultApiBaseUrl() {
+        const host = window.location.hostname;
+        const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "::1";
+        return isLocalHost || window.location.protocol === "file:" ? "http://127.0.0.1:8120" : "/ai-api";
+      }
+
       let config = Object.assign({
-        apiBaseUrl: "http://127.0.0.1:8120",
+        apiBaseUrl: defaultApiBaseUrl(),
         mallId: "shop001",
         apiKey: "public-shop001-dev-key",
         limit: 24,
