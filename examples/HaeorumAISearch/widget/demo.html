@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>해오름기프트 AI 검색 위젯 데모</title>
+  <link rel="icon" href="data:,">
   <style>
     * { box-sizing: border-box; letter-spacing: 0; }
     body { margin: 0; font-family: Arial, "Noto Sans KR", sans-serif; background: #fff; color: #111; }
@@ -131,10 +132,11 @@
       </div>
       <div id="demo-status" class="status">검색 서버 상태 확인 중...</div>
       <div class="quick">
-        <button type="button" data-query="텀블러">텀블러</button>
-        <button type="button" data-query="우산">우산</button>
-        <button type="button" data-query="노란 부채">노란 부채</button>
-        <button type="button" data-query="송월타올">송월타올</button>
+        <button type="button" data-query="파란색 앞치마">파란색 앞치마</button>
+        <button type="button" data-query="화이트 손잡이 머그컵">화이트 손잡이 머그컵</button>
+        <button type="button" data-query="검정색 물티슈">검정색 물티슈</button>
+        <button type="button" data-query="투명 크리스탈 상패">투명 크리스탈 상패</button>
+        <button type="button" data-query="원목 감사패">원목 감사패</button>
       </div>
     </section>
     <aside class="side right">
@@ -189,6 +191,12 @@
     fetch(`${demoApiBaseUrl}/health`)
       .then((response) => response.json())
       .then((data) => {
+        const lastEmbeddingError = data.gemini?.usage?.last_error || "";
+        if (/gemini backend unavailable|resource_exhausted|prepayment credits|quota/i.test(String(lastEmbeddingError))) {
+          document.querySelector("#demo-status").textContent =
+            "사진/검색어 처리 크레딧 소진 - 새 검색 불가";
+          return;
+        }
         const backend = data.backend || data.engine || "-";
         const index = data.index || "-";
         const embeddingModel = data.gemini_model || "";

@@ -560,7 +560,7 @@
             <div class="hai-row">
               <label class="hai-field">
                 <span>찾고 싶은 판촉물</span>
-                <input class="hai-query" name="q" type="search" placeholder="노란 부채, 송월타올, 접이식 우산">
+                <input class="hai-query" name="q" type="search" placeholder="파란색 앞치마, 투명 크리스탈 상패">
               </label>
               <button type="submit" class="hai-primary">AI 검색</button>
             </div>
@@ -855,6 +855,10 @@
   }
 
   function apiErrorMessage(status, data) {
+    const raw = String((data && (data.detail || data.message)) || "");
+    if (/gemini backend unavailable|resource_exhausted|prepayment credits|quota/i.test(raw)) {
+      return "사진/검색어 처리 크레딧이 소진되어 새 검색을 만들 수 없습니다. Gemini 결제/크레딧을 보충하면 바로 정상 동작합니다.";
+    }
     if (status === 401 || status === 403) {
       return "현재 사이트에서 AI 검색을 사용할 수 없습니다.";
     }
@@ -867,7 +871,7 @@
     if (status >= 500) {
       return "AI 검색 서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.";
     }
-    return data.detail || data.message || "검색 요청에 실패했습니다.";
+    return raw || "검색 요청에 실패했습니다.";
   }
 
   function normalizeSearchError(error) {

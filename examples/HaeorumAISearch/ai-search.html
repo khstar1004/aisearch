@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:,">
+  <title>해오름기프트 AI 검색</title>
+</head>
+<body>
+  <p>AI 검색 결과 페이지로 이동 중입니다.</p>
+  <script>
+    const target = new URL("./widget/ai-search.html", window.location.href);
+    target.search = window.location.search;
+    target.hash = window.location.hash;
+    window.location.replace(target.href);
+  </script>
+  <noscript>
+    <a href="./widget/ai-search.html">AI 검색 결과 페이지 열기</a>
+  </noscript>
+</body>
+</html>

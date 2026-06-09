@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Haeorum AI Search Demo</title>
+  <link rel="icon" href="data:,">
   <style>
     :root {
       --bg: #f4f6f8;
@@ -516,13 +517,17 @@
       try {
         const res = await fetch(`${API_BASE}/health`);
         const data = await res.json();
-        const ok = Boolean(data.ready || data.ok);
+        const lastEmbeddingError = data.gemini?.usage?.last_error || "";
+        const capacityBlocked = isEmbeddingCapacityBlocked(lastEmbeddingError);
+        const ok = Boolean(data.ready || data.ok) && !capacityBlocked;
         $("healthDot").classList.toggle("ok", ok);
         $("healthDot").classList.toggle("bad", !ok);
         const engine = data.engine || "-";
         const model = data.gemini_model || data.gemini?.model || "-";
         const index = data.index || "-";
-        $("healthText").textContent = `${engine} / ${model} / ${index}`;
+        $("healthText").textContent = capacityBlocked
+          ? "사진/검색어 처리 크레딧 소진 - 새 검색 불가"
+          : `${engine} / ${model} / ${index}`;
       } catch (error) {
         $("healthDot").classList.add("bad");
         $("healthText").textContent = "API 연결 실패";
@@ -565,9 +570,33 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.detail || `HTTP ${res.status}`);
+        throw new Error(apiErrorMessage(res.status, data));
       }
       return { data, wallMs: performance.now() - started };
+    }
+
+    function apiErrorMessage(status, data) {
+      const raw = String((data && (data.detail || data.message)) || "");
+      if (isEmbeddingCapacityBlocked(raw)) {
+        return "사진/검색어 처리 크레딧이 소진되어 새 검색을 만들 수 없습니다. Gemini 결제/크레딧을 보충하면 바로 정상 동작합니다.";
+      }
+      if (status === 401 || status === 403) {
+        return "현재 사이트에서 AI 검색을 사용할 수 없습니다.";
+      }
+      if (status === 413) {
+        return "이미지 용량이 제한을 초과했습니다.";
+      }
+      if (status === 429) {
+        return "요청이 많습니다. 잠시 후 다시 검색해 주세요.";
+      }
+      if (status >= 500) {
+        return "AI 검색 서버 응답이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.";
+      }
+      return raw || `HTTP ${status}`;
+    }
+
+    function isEmbeddingCapacityBlocked(value) {
+      return /gemini backend unavailable|resource_exhausted|prepayment credits|quota/i.test(String(value || ""));
     }
 
     async function search() {

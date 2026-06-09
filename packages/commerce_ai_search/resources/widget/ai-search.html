@@ -197,8 +197,7 @@
       padding: 18px 0;
       gap: 12px;
     }
-    body.results-mode .hero-copy,
-    body.results-mode .quick-row {
+    body.results-mode .hero-copy {
       display: none;
     }
     body.results-mode .upload-zone {
@@ -799,11 +798,32 @@
       body.results-mode .upload-icon { width: 40px; height: 40px; }
       .upload-zone strong { font-size: 15px; overflow-wrap: anywhere; }
       .upload-zone span:last-child { font-size: 13px; }
-      .quick-row { display: grid; grid-template-columns: 1fr; gap: 8px; width: 100%; max-width: 100%; overflow: hidden; }
-      .quick-row button {
+      .quick-row {
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        gap: 6px;
         width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .quick-row::-webkit-scrollbar,
+      .category-list::-webkit-scrollbar {
+        display: none;
+      }
+      .quick-row button {
+        flex: 0 0 auto;
+        width: auto;
+        max-width: 150px;
+        min-height: 32px;
         min-width: 0;
-        padding: 0 8px;
+        padding: 0 12px;
+        border-radius: 999px;
+        font-size: 13px;
         overflow: hidden;
         text-overflow: ellipsis;
       }
@@ -813,7 +833,34 @@
         margin-right: auto;
         padding-top: 20px;
       }
-      .summary { align-items: flex-start; flex-direction: column; }
+      .summary {
+        min-height: 0;
+        align-items: center;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 12px;
+      }
+      .category-list {
+        flex-wrap: nowrap;
+        gap: 6px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 0 12px 2px 0;
+        margin-right: -12px;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .category-list button {
+        flex: 0 0 auto;
+        max-width: 220px;
+        min-height: 32px;
+        padding: 0 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
       .loading-head { align-items: flex-start; }
       .top-grid, .product-grid, .skeleton-grid { grid-template-columns: 1fr; }
       .product-card { grid-template-columns: 124px minmax(0, 1fr); grid-template-rows: 1fr; }
@@ -848,11 +895,11 @@
       <div class="hero-copy">
         <span class="eyebrow">해오름기프트 AI 검색</span>
         <h1>찾고 싶은 상품,<br>AI로 검색하세요</h1>
-        <p>사진이나 설명으로 비슷한 상품 이미지를 찾습니다</p>
+        <p>색상, 모양, 재질을 말로 설명하면 비슷한 상품 이미지를 찾습니다</p>
       </div>
       <form class="search-card" id="searchForm">
         <div class="search-line">
-          <input id="queryInput" type="text" autocomplete="off" placeholder="상품 이미지를 말로 설명">
+          <input id="queryInput" type="text" autocomplete="off" placeholder="예: 파란색 앞치마, 투명 크리스탈 상패">
           <button type="submit" id="searchButton">이미지 찾기</button>
         </div>
         <label class="upload-zone" id="dropZone" role="button" aria-label="상품 이미지 업로드">
@@ -874,11 +921,11 @@
           <button class="clear-image" id="clearImage" type="button" aria-label="이미지 삭제">X</button>
         </div>
         <div class="quick-row" aria-label="빠른 검색어">
-          <button type="button" data-query="노란 부채">노란 부채</button>
-          <button type="button" data-query="접이식 우산">접이식 우산</button>
-          <button type="button" data-query="송월타올">송월타올</button>
-          <button type="button" data-query="무선 마우스">무선 마우스</button>
-          <button type="button" data-query="텀블러">텀블러</button>
+          <button type="button" data-query="파란색 앞치마">파란색 앞치마</button>
+          <button type="button" data-query="화이트 손잡이 머그컵">화이트 손잡이 머그컵</button>
+          <button type="button" data-query="검정색 물티슈">검정색 물티슈</button>
+          <button type="button" data-query="투명 크리스탈 상패">투명 크리스탈 상패</button>
+          <button type="button" data-query="원목 감사패">원목 감사패</button>
         </div>
       </form>
     </div>
@@ -1190,9 +1237,6 @@
         }
         state.inFlight = true;
         state.lastQuery = query;
-        if (!append) {
-          document.body.classList.add("results-mode");
-        }
         showStatus(append ? "AI 검색 중" : "", false, append);
         setLoading(true, append);
         if (!append) {

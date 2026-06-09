@@ -560,7 +560,7 @@
             <div class="hai-row">
               <label class="hai-field">
                 <span>찾고 싶은 판촉물</span>
-                <input class="hai-query" name="q" type="search" placeholder="노란 부채, 송월타올, 접이식 우산">
+                <input class="hai-query" name="q" type="search" placeholder="파란색 앞치마, 투명 크리스탈 상패">
               </label>
               <button type="submit" class="hai-primary">AI 검색</button>
             </div>
