@@ -24,7 +24,7 @@ The check must report `ready_for_env_and_server_preflight` before creating the p
 - Docker Compose plugin version: Docker Compose version v2.27.1
 - Linux release: CentOS Linux release 7.6.1810 (Core), unsupported baseline accepted only for server82 go-live exception
 - CPU cores: 8
-- RAM: 8GB installed, 7.5GiB usable, 15GB swap
+- RAM: upgraded to 64GB installed, about 62GiB usable, 15GB swap
 - Free SSD/NVMe disk path and size: /home/docker on SSD /dev/sda3, 97GB free after Docker data-root change
 - Public inbound ports allowed: 80,443 public; 22 admin access only; AI API/Marqo/Gemini ports not public
 - Outbound HTTPS allowed: yes

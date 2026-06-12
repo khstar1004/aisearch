@@ -18,7 +18,7 @@
 
 - [x] 서버 SSH host / port / user: `222.236.45.35:22`, `root`
 - [x] sudo/root 가능
-- [x] Linux/CPU/RAM/Docker disk 확인: CentOS 7.6, 8 core, 8GB installed, Docker root `/home/docker` 97GB free
+- [x] Linux/CPU/RAM/Docker disk 확인: CentOS 7.6, 8 core, 64GB installed, Docker root `/home/docker`
 - [x] Docker Engine 24+ 및 Docker Compose plugin 설치: Docker 26.1.4, Compose v2.27.1
 - [x] 외부 inbound는 `80/443` Apache 사용, AI API/Marqo/Gemini 포트는 loopback만 사용
 - [x] outbound HTTPS 허용: Gemini API endpoint HTTPS 응답 확인

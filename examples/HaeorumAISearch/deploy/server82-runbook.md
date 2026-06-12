@@ -23,13 +23,14 @@ Review `deploy/go-live-failure-scenarios.md` and `deploy/operational-risk-regist
 - Outbound HTTPS allowed for Gemini API
 - Inbound public traffic allowed only to Apache/Nginx reverse proxy `80/443`
 - API, Marqo, and Gemini embedding proxy published ports bind to `127.0.0.1` only; they are not bound to `0.0.0.0`
-- Enough memory for the conservative profile: recommended `8GB+ RAM`
+- Enough memory for the production profile: recommended `64GB RAM` for the current
+  server82 concurrency/cache settings
 
 ## 2. Environment
 
 Create a protected env file from `deploy/haeorum-ai-search.env.example`.
 For server 82, start from `deploy/server82.env.example` because it sets the
-8GB guardrails, loopback ports, and host-mounted config/log paths.
+64GB production resource profile, loopback ports, and host-mounted config/log paths.
 
 Required production overrides:
 
@@ -77,17 +78,25 @@ MARQO_API_KEEPALIVE_TIMEOUT=75
 MARQO_API_GZIP_MINIMUM_SIZE=1024
 ```
 
-Initial guardrails:
+Initial server82 guardrails after the 64GB RAM upgrade:
 
 ```bash
-HAEORUM_SEARCH_RATE_LIMIT_PER_MINUTE=900
-HAEORUM_IMAGE_RATE_LIMIT_PER_MINUTE=300
-HAEORUM_MALL_SEARCH_RATE_LIMIT_PER_MINUTE=2000
-HAEORUM_MALL_IMAGE_RATE_LIMIT_PER_MINUTE=600
-HAEORUM_SEARCH_MAX_CONCURRENCY=16
-HAEORUM_IMAGE_SEARCH_MAX_CONCURRENCY=8
+VESPA_MEM_LIMIT=20g
+MARQO_API_MEM_LIMIT=4g
+HAEORUM_AI_SEARCH_MEM_LIMIT=2g
+HAEORUM_SYNC_WORKER_MEM_LIMIT=2g
+HAEORUM_SEARCH_RATE_LIMIT_PER_MINUTE=3000
+HAEORUM_IMAGE_RATE_LIMIT_PER_MINUTE=600
+HAEORUM_MALL_SEARCH_RATE_LIMIT_PER_MINUTE=6000
+HAEORUM_MALL_IMAGE_RATE_LIMIT_PER_MINUTE=1200
+HAEORUM_SEARCH_MAX_CONCURRENCY=64
+HAEORUM_IMAGE_SEARCH_MAX_CONCURRENCY=12
 HAEORUM_SEARCH_QUEUE_TIMEOUT_SECONDS=6
 HAEORUM_IMAGE_SEARCH_QUEUE_TIMEOUT_SECONDS=5
+HAEORUM_API_THREADPOOL_TOKENS=96
+HAEORUM_BACKEND_HTTP_MAX_ACTIVE_REQUESTS=96
+HAEORUM_CACHE_MAX_ENTRIES=50000
+HAEORUM_CACHE_TTL_SECONDS=300
 HAEORUM_DOCKER_LOG_MAX_SIZE=20m
 HAEORUM_DOCKER_LOG_MAX_FILE=5
 ```
